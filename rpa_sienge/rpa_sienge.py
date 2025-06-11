@@ -986,3 +986,63 @@ class RPASienge(BaseRPA):
             
         except Exception:
             return None
+
+
+# ========================
+# FUNÇÃO STANDALONE PRINCIPAL
+# ========================
+
+async def executar_processamento_sienge(
+    contrato: Dict[str, Any],
+    indices_economicos: Dict[str, Any],
+    credenciais_sienge: Dict[str, str]
+) -> ResultadoRPA:
+    """
+    Função principal para executar processamento no Sienge
+    
+    Args:
+        contrato: Dados do contrato a ser processado
+        indices_economicos: Índices IPCA/IGPM atualizados
+        credenciais_sienge: Credenciais de acesso ao Sienge
+        
+    Returns:
+        ResultadoRPA: Resultado do processamento
+    """
+    rpa_sienge = None
+    
+    try:
+        # Inicializa RPA Sienge
+        rpa_sienge = RPASienge()
+        
+        if not await rpa_sienge.inicializar():
+            return ResultadoRPA(
+                sucesso=False,
+                mensagem="Falha na inicialização do RPA Sienge",
+                erro="Erro ao inicializar recursos do RPA"
+            )
+        
+        # Executa processamento
+        resultado = await rpa_sienge.executar(
+            contrato=contrato,
+            credenciais_sienge=credenciais_sienge,
+            indices=indices_economicos
+        )
+        
+        return resultado
+        
+    except Exception as e:
+        erro_msg = f"Erro na execução do processamento Sienge: {str(e)}"
+        
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem="Falha no processamento Sienge",
+            erro=erro_msg
+        )
+        
+    finally:
+        # Garante limpeza de recursos
+        if rpa_sienge:
+            try:
+                await rpa_sienge.finalizar()
+            except Exception as e:
+                print(f"⚠️ Erro ao finalizar RPA: {str(e)}")
