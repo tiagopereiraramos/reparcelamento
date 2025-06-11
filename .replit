@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["firefox", "geckodriver", "glibcLocales", "libxcrypt"]
 
 [workflows]
-runButton = "RPA 1 - Coleta Índices"
+runButton = "RPA 2 - Análise Planilhas"
 
 [[workflows.workflow]]
 name = "Project"
