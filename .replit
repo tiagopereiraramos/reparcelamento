@@ -139,6 +139,15 @@ mode = "sequential"
 task = "shell.exec"
 args = "python rpa_analise_planilhas/teste_analise_planilhas.py"
 
+[[workflows.workflow]]
+name = "RPA 3 - Sienge"
+author = 41010346
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python rpa_sienge/teste_sienge.py"
+
 [deployment]
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 deploymentTarget = "autoscale"
