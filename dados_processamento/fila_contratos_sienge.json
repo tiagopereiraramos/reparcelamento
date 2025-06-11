@@ -13,7 +13,7 @@
       "ultimo_reajuste": "jun.-24",
       "dias_desde_ultimo_reajuste": 0,
       "linha_planilha": 2,
-      "status_processamento": "pendente",
+      "status_processamento": "erro",
       "prioridade": 11,
       "timestamp_identificacao": "2025-06-11T20:40:25.602145",
       "dados_completos": {
@@ -52,8 +52,8 @@
         "cliente": "Cheila Soares Paiva",
         "numero_titulo": "N/A"
       },
-      "processado_em": null,
-      "erro_processamento": null
+      "processado_em": "2025-06-11T21:01:19.973466",
+      "erro_processamento": "Erro na execução do RPA Sienge: Falha no login Sienge: Message: Elemento com xpath (//input[@id=\"username\"])[1] não encontrado. Message: \nStacktrace:\nRemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:193:5\nNoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:511:5\ndom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16\n; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception\n"
     }
   ]
 }
