@@ -6,16 +6,19 @@ Permite testar o RPA fora da orquestração Temporal para desenvolvimento e homo
 Desenvolvido em Português Brasileiro
 """
 
-from rpa_sienge import RPASienge, executar_processamento_sienge
 import asyncio
 import sys
 import os
 from datetime import datetime
 from typing import Dict, Any, List
 import json
+from pathlib import Path
 
-# Adiciona diretório raiz ao path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Adiciona diretório raiz ao path para resolver imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Agora importa após ajustar o path
+from rpa_sienge.rpa_sienge import RPASienge, executar_processamento_sienge
 
 
 async def carregar_fila_contratos() -> List[Dict[str, Any]]:
