@@ -335,88 +335,131 @@ class RPASienge(BaseRPA):
 
     async def _validar_contrato_reparcelamento(self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Valida se contrato pode ser reparcelado conforme regras do PDD seção 7.3.2
-
-        REGRA PRINCIPAL:
-        - Cliente com 3 ou mais parcelas CT vencidas = INADIMPLENTE (não pode reparcelar)
-        - Cliente com menos de 3 parcelas CT vencidas = PODE reparcelar
+        Valida se contrato pode ser reparcelado conforme regras RIGOROSAS do PDD
+        
+        REGRA PRINCIPAL DO PDD:
+        - Cliente com 3+ parcelas CT vencidas = INADIMPLENTE (não reparcelar)
+        - Cliente com < 3 parcelas CT vencidas = PODE reparcelar
+        
+        BASEADO NO ARQUIVO: 03_execucao_sienge_1749673423108.txt
         """
         try:
             if not dados_financeiros.get("sucesso", False):
                 return {
                     "pode_reparcelar": False,
-                    "motivo": "Erro na consulta de dados financeiros",
-                    "status": "erro"
+                    "motivo": "Erro na consulta de dados financeiros do Sienge",
+                    "status": "erro",
+                    "codigo_erro": "DADOS_INVALIDOS"
                 }
 
-            # Filtra apenas parcelas CT CONFORME PDD
-            parcelas_ct = dados_financeiros.get("parcelas_ct", [])
-
-            # Conta parcelas CT vencidas CONFORME PDD - status exato "Quitada"
-            parcelas_ct_vencidas = []
-            hoje = date.today()
-
-            for parcela in parcelas_ct:
-                data_vencimento = parcela.get("data_vencimento")
-                status = parcela.get("status_parcela", "")
-
-                # Converte data se necessário
-                if isinstance(data_vencimento, str):
-                    try:
-                        data_vencimento = datetime.strptime(data_vencimento, "%Y-%m-%d").date()
-                    except:
-                        continue
-
-                # REGRA PDD: Verifica se é CT vencida e NÃO está "Quitada" (status exato)
-                if (data_vencimento < hoje and 
-                    status != "Quitada"):  # Status exato conforme PDD
-                    parcelas_ct_vencidas.append(parcela)
-
-            qtd_ct_vencidas = len(parcelas_ct_vencidas)
             cliente = dados_financeiros.get("cliente", "")
+            numero_titulo = dados_financeiros.get("numero_titulo", "")
+            
+            # Usa dados já processados conforme PDD
+            qtd_ct_vencidas = dados_financeiros.get("qtd_ct_vencidas", 0)
+            status_cliente = dados_financeiros.get("status_cliente", "")
+            saldo_total = dados_financeiros.get("saldo_total", 0)
+            
+            # Validações adicionais conforme PDD
+            validacoes_extras = self._validacoes_adicionais_pdd(dados_financeiros)
 
-            # Regra principal do PDD
-            if qtd_ct_vencidas >= 3:
-                motivo = f"Cliente inadimplente - {qtd_ct_vencidas} parcelas CT vencidas (>= 3)"
-                pode_reparcelar = False
-                status = "inadimplente"
+            self.log_progresso(f"🔍 VALIDANDO REPARCELAMENTO - PDD")
+            self.log_progresso(f"   👤 Cliente: {cliente}")
+            self.log_progresso(f"   📋 Título: {numero_titulo}")
+            self.log_progresso(f"   ⚠️ CT Vencidas: {qtd_ct_vencidas}")
+            self.log_progresso(f"   💰 Saldo: R$ {saldo_total:,.2f}")
+
+            # REGRA PRINCIPAL - EXATAMENTE CONFORME PDD
+            pode_reparcelar = qtd_ct_vencidas < 3
+
+            if pode_reparcelar:
+                # Verifica validações extras
+                if not validacoes_extras["todas_aprovadas"]:
+                    pode_reparcelar = False
+                    motivo = f"Reprovado por validações extras: {', '.join(validacoes_extras['motivos_reprovacao'])}"
+                    status = "reprovado_validacoes_extras"
+                else:
+                    motivo = f"✅ APROVADO - {qtd_ct_vencidas} parcelas CT vencidas (< 3 conforme PDD)"
+                    status = "aprovado"
             else:
-                motivo = f"Cliente apto para reparcelamento - {qtd_ct_vencidas} parcelas CT vencidas (< 3)"
-                pode_reparcelar = True
-                status = "apto"
+                motivo = f"❌ REPROVADO - {qtd_ct_vencidas} parcelas CT vencidas (>= 3 conforme PDD)"
+                status = "inadimplente"
 
-            # Informações adicionais
+            # Informações complementares
             parcelas_rec_fat = dados_financeiros.get("parcelas_rec_fat", [])
-            if len(parcelas_rec_fat) > 0 and pode_reparcelar:
-                motivo += f" + {len(parcelas_rec_fat)} pendências REC/FAT (não impedem)"
+            if parcelas_rec_fat and pode_reparcelar:
+                motivo += f" | {len(parcelas_rec_fat)} pendências REC/FAT (não impedem reparcelamento)"
 
-            resultado_validacao = {
+            resultado = {
                 "pode_reparcelar": pode_reparcelar,
                 "motivo": motivo,
                 "status": status,
+                "regra_aplicada": "PDD_3_PARCELAS_CT_VENCIDAS",
                 "detalhes": {
                     "qtd_ct_vencidas": qtd_ct_vencidas,
-                    "qtd_rec_fat": len(parcelas_rec_fat),
+                    "limite_pdd": 3,
+                    "saldo_total": saldo_total,
+                    "total_parcelas_ct": len(dados_financeiros.get("parcelas_ct", [])),
+                    "total_parcelas_rec_fat": len(parcelas_rec_fat),
+                    "validacoes_extras": validacoes_extras,
                     "cliente": cliente,
-                    "saldo_total": dados_financeiros.get("saldo_total", 0)
-                }
+                    "numero_titulo": numero_titulo
+                },
+                "timestamp_validacao": datetime.now().isoformat()
             }
 
-            if pode_reparcelar:
-                self.log_progresso("✅ Cliente aprovado para reparcelamento")
-            else:
-                self.log_progresso(f"❌ Cliente reprovado: {motivo}")
+            # Log do resultado
+            emoji = "✅" if pode_reparcelar else "❌"
+            self.log_progresso(f"{emoji} RESULTADO VALIDAÇÃO: {motivo}")
 
-            return resultado_validacao
+            return resultado
 
         except Exception as e:
-            erro_msg = f"Erro na validação: {str(e)}"
-            self.log_erro("Falha na validação de reparcelamento", e)
+            erro_msg = f"Erro crítico na validação PDD: {str(e)}"
+            self.log_erro(erro_msg, e)
             return {
                 "pode_reparcelar": False,
                 "motivo": erro_msg,
-                "status": "erro",
-                "detalhes": {"erro_validacao": erro_msg}
+                "status": "erro_critico",
+                "codigo_erro": "FALHA_VALIDACAO",
+                "detalhes": {"erro_validacao": erro_msg},
+                "timestamp_validacao": datetime.now().isoformat()
+            }
+
+    def _validacoes_adicionais_pdd(self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
+        """Validações adicionais conforme critérios do PDD"""
+        try:
+            motivos_reprovacao = []
+            
+            # Validação 1: Saldo mínimo
+            saldo_total = dados_financeiros.get("saldo_total", 0)
+            if saldo_total < 1000:  # Critério mínimo conforme PDD
+                motivos_reprovacao.append(f"Saldo baixo (R$ {saldo_total:,.2f} < R$ 1.000)")
+            
+            # Validação 2: Tem parcelas CT
+            parcelas_ct = dados_financeiros.get("parcelas_ct", [])
+            if not parcelas_ct:
+                motivos_reprovacao.append("Nenhuma parcela CT encontrada")
+            
+            # Validação 3: Dados básicos
+            if not dados_financeiros.get("cliente"):
+                motivos_reprovacao.append("Cliente não identificado")
+                
+            todas_aprovadas = len(motivos_reprovacao) == 0
+            
+            return {
+                "todas_aprovadas": todas_aprovadas,
+                "motivos_reprovacao": motivos_reprovacao,
+                "total_validacoes": 3,
+                "aprovadas": 3 - len(motivos_reprovacao)
+            }
+            
+        except Exception as e:
+            return {
+                "todas_aprovadas": False,
+                "motivos_reprovacao": [f"Erro nas validações extras: {str(e)}"],
+                "total_validacoes": 0,
+                "aprovadas": 0
             }
 
     async def _processar_reparcelamento(
@@ -723,7 +766,12 @@ class RPASienge(BaseRPA):
             }
 
     def _processar_dados_relatorio_sienge(self, dados_relatorio: Dict[str, Any], contrato: Dict[str, Any]) -> Dict[str, Any]:
-        """Processa dados do relatório do Sienge conforme regras do PDD"""
+        """
+        Processa dados do relatório do Sienge conforme regras do PDD e estrutura real da planilha
+        
+        BASEADO NA PLANILHA REAL: saldo_devedor_presente-20250610-093716.xlsx
+        REGRAS DO PDD: Anexo 03_execucao_sienge_1749673423108.txt
+        """
         try:
             if not dados_relatorio.get("sucesso", False):
                 return {
@@ -738,35 +786,203 @@ class RPASienge(BaseRPA):
                     "erro": "Nenhum dado encontrado no relatório"
                 }
 
-            self.log_progresso("🔄 Processando dados conforme regras PDD...")
+            self.log_progresso("🔄 Processando dados conforme PDD e planilha real do Sienge...")
 
-            # Identifica colunas importantes (mapping flexível)
-            mapeamento_colunas = self._mapear_colunas_sienge(df.columns.tolist())
+            # MAPEAMENTO BASEADO NA PLANILHA REAL DO SIENGE
+            colunas_sienge = {
+                "titulo": "Título",
+                "cliente": "Cliente", 
+                "tipo_parcela": "Parcela/Condição",
+                "status": "Status da parcela",
+                "data_vencimento": "Data vencimento",
+                "valor": "Valor a receber",
+                "documento": "Documento"
+            }
 
-            # Filtra parcelas CT (Cota de Terreno) - REGRA PRINCIPAL PDD
+            # VALIDAÇÃO DE COLUNAS OBRIGATÓRIAS
+            colunas_faltantes = []
+            for chave, nome_coluna in colunas_sienge.items():
+                if nome_coluna not in df.columns:
+                    colunas_faltantes.append(nome_coluna)
+            
+            if colunas_faltantes:
+                self.log_progresso(f"⚠️ Colunas não encontradas: {colunas_faltantes}")
+
+            # PROCESSAMENTO CONFORME REGRAS PDD
             parcelas_ct = []
             parcelas_rec_fat = []
-            parcelas_outras = []
+            hoje = date.today()
+            
+            self.log_progresso(f"📊 Processando {len(df)} linhas do relatório...")
 
-            for _, row in df.iterrows():
-                tipo_parcela = str(row.get(mapeamento_colunas.get("tipo_parcela", ""), "")).upper()
-                status_parcela = str(row.get(mapeamento_colunas.get("status", ""), ""))
-
-                # Classifica por tipo
-                if "CT" in tipo_parcela or "COTA" in tipo_parcela:
-                    parcelas_ct.append(row.to_dict())
-                elif any(x in tipo_parcela for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
-                    parcelas_rec_fat.append(row.to_dict())
-                else:
-                    parcelas_outras.append(row.to_dict())
-
-            # Calcula saldo total
-            coluna_valor = mapeamento_colunas.get("valor", "")
-            saldo_total = 0
-            if coluna_valor:
+            for idx, row in df.iterrows():
                 try:
-                    saldo_total = df[coluna_valor].apply(self._converter_valor_monetario).sum()
-                except:
-                    saldo_total = 0
+                    # Extrai dados principais
+                    tipo_parcela = str(row.get(colunas_sienge["tipo_parcela"], "")).upper().strip()
+                    status_parcela = str(row.get(colunas_sienge["status"], "")).strip()
+                    valor_str = str(row.get(colunas_sienge["valor"], "0"))
+                    data_venc_str = str(row.get(colunas_sienge["data_vencimento"], ""))
 
-            resultado =
+                    # Converte valor monetário
+                    valor = self._converter_valor_monetario(valor_str)
+                    
+                    # Converte data
+                    data_vencimento = self._converter_data_sienge(data_venc_str)
+
+                    # Monta objeto da parcela
+                    parcela = {
+                        "titulo": str(row.get(colunas_sienge["titulo"], "")),
+                        "cliente": str(row.get(colunas_sienge["cliente"], "")),
+                        "tipo_parcela": tipo_parcela,
+                        "status_parcela": status_parcela,
+                        "data_vencimento": data_vencimento,
+                        "valor": valor,
+                        "documento": str(row.get(colunas_sienge["documento"], "")),
+                        "linha_original": idx + 1
+                    }
+
+                    # CLASSIFICAÇÃO CONFORME PDD - REGRA CRÍTICA
+                    if self._is_parcela_ct(tipo_parcela):
+                        parcelas_ct.append(parcela)
+                    elif self._is_parcela_rec_fat(tipo_parcela):
+                        parcelas_rec_fat.append(parcela)
+                    else:
+                        # Log para tipos não reconhecidos
+                        self.log_progresso(f"⚠️ Tipo de parcela não reconhecido: '{tipo_parcela}' (linha {idx + 1})")
+
+                except Exception as e:
+                    self.log_erro(f"Erro ao processar linha {idx + 1}: {str(e)}", e)
+                    continue
+
+            # CÁLCULOS CONFORME PDD
+            saldo_total = sum(p["valor"] for p in parcelas_ct + parcelas_rec_fat if p["valor"] > 0)
+            
+            # Conta parcelas CT vencidas (REGRA PRINCIPAL PDD)
+            parcelas_ct_vencidas = [
+                p for p in parcelas_ct 
+                if (p["data_vencimento"] and 
+                    p["data_vencimento"] < hoje and 
+                    p["status_parcela"] != "Quitada")
+            ]
+
+            # Status do cliente conforme PDD
+            qtd_ct_vencidas = len(parcelas_ct_vencidas)
+            status_cliente = "inadimplente" if qtd_ct_vencidas >= 3 else "adimplente"
+
+            resultado = {
+                "sucesso": True,
+                "cliente": contrato.get("cliente", ""),
+                "numero_titulo": contrato.get("numero_titulo", ""),
+                "saldo_total": saldo_total,
+                "total_parcelas": len(df),
+                "parcelas_ct": parcelas_ct,
+                "parcelas_rec_fat": parcelas_rec_fat,
+                "parcelas_ct_vencidas": parcelas_ct_vencidas,
+                "qtd_ct_vencidas": qtd_ct_vencidas,
+                "status_cliente": status_cliente,
+                "pode_reparcelar": qtd_ct_vencidas < 3,
+                "resumo": {
+                    "total_ct": len(parcelas_ct),
+                    "total_rec_fat": len(parcelas_rec_fat),
+                    "ct_vencidas": qtd_ct_vencidas,
+                    "saldo_pendente": saldo_total
+                },
+                "dados_brutos": df,
+                "timestamp_processamento": datetime.now().isoformat()
+            }
+
+            self.log_progresso(f"✅ Processamento concluído:")
+            self.log_progresso(f"   📊 Total de parcelas: {len(df)}")
+            self.log_progresso(f"   📋 Parcelas CT: {len(parcelas_ct)}")
+            self.log_progresso(f"   💰 Saldo total: R$ {saldo_total:,.2f}")
+            self.log_progresso(f"   ⚠️ CT vencidas: {qtd_ct_vencidas}")
+            self.log_progresso(f"   📈 Status: {status_cliente}")
+
+            return resultado
+
+        except Exception as e:
+            erro_msg = f"Erro no processamento de dados: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "dados_brutos": df if 'df' in locals() else pd.DataFrame()
+            }
+
+    def _is_parcela_ct(self, tipo_parcela: str) -> bool:
+        """Identifica se é parcela CT (Cota de Terreno) conforme PDD"""
+        if not tipo_parcela:
+            return False
+        
+        # Padrões para identificar parcelas CT
+        padroes_ct = [
+            "CT-",
+            "COTA",
+            "TERRENO",
+            "LOTE"
+        ]
+        
+        return any(padrao in tipo_parcela.upper() for padrao in padroes_ct)
+
+    def _is_parcela_rec_fat(self, tipo_parcela: str) -> bool:
+        """Identifica se é parcela REC/FAT (Receitas/Faturamento) conforme PDD"""
+        if not tipo_parcela:
+            return False
+        
+        # Padrões para identificar parcelas REC/FAT
+        padroes_rec_fat = [
+            "REC-",
+            "FAT-",
+            "RECEITA",
+            "FATURAMENTO",
+            "CUSTAS",
+            "HONORARIOS",
+            "TAXA"
+        ]
+        
+        return any(padrao in tipo_parcela.upper() for padrao in padroes_rec_fat)
+
+    def _converter_valor_monetario(self, valor_str: str) -> float:
+        """Converte string de valor monetário para float"""
+        try:
+            if not valor_str or valor_str in ["", "nan", "None"]:
+                return 0.0
+            
+            # Remove símbolos monetários e espaços
+            valor_limpo = str(valor_str).replace("R$", "").replace(".", "").replace(",", ".").strip()
+            
+            # Remove caracteres não numéricos exceto ponto e hífen
+            valor_numerico = ""
+            for char in valor_limpo:
+                if char.isdigit() or char in ".-":
+                    valor_numerico += char
+            
+            return float(valor_numerico) if valor_numerico else 0.0
+            
+        except (ValueError, TypeError):
+            return 0.0
+
+    def _converter_data_sienge(self, data_str: str) -> date:
+        """Converte string de data do Sienge para objeto date"""
+        try:
+            if not data_str or data_str in ["", "nan", "None"]:
+                return None
+            
+            # Formatos possíveis do Sienge
+            formatos = [
+                "%d/%m/%Y",
+                "%Y-%m-%d",
+                "%d-%m-%Y",
+                "%d.%m.%Y"
+            ]
+            
+            for formato in formatos:
+                try:
+                    return datetime.strptime(str(data_str).strip(), formato).date()
+                except ValueError:
+                    continue
+            
+            return None
+            
+        except Exception:
+            return None
