@@ -1,0 +1,38 @@
+================================================================================
+📘 PLAYBOOK RPA 01 - EXTRAÇÃO DE ÍNDICES ECONÔMICOS (IPCA / IGPM)
+================================================================================
+
+▶ OBJETIVO
+Automatizar a consulta e extração dos índices econômicos IPCA e IGPM, garantindo
+o preenchimento correto na planilha base de cálculo e validação dos limites de
+reajuste para contratos indexados.
+
+▶ EXECUÇÃO
+- Recorrência: Dia 11 de cada mês (1ª etapa do processo)
+- Data base do índice: Mês anterior ao mês da execução (ex: em abril extrai-se março)
+
+▶ IPCA - Fonte: IBGE
+URL: https://www.ibge.gov.br/explica/inflacao.php
+1. Acessar a página.
+2. Verificar se o índice acumulado dos últimos 12 meses está publicado.
+3. Se disponível:
+   - Registrar o valor no log do robô.
+   - Lançar na aba “IPCA” da planilha “BASE DE CÁLCULO REPARCELAMENTO 2025.xlsx”.
+   - Linha de preenchimento: mês corrente (ex: março → abril).
+4. Se não disponível:
+   - Logar “publicação não encontrada”.
+   - Reprogramar tentativa para o dia seguinte (até 3 tentativas).
+
+▶ IGPM - Fonte: FGV
+URL: https://portalibre.fgv.br/taxonomy/term/94
+1. Verificar se foi publicado PDF com título padrão: “IGP-M_FGV_press release_MesAno.pdf”.
+2. Clicar em “Ler mais” → abrir PDF.
+3. Extrair índice acumulado 12 meses.
+4. Lançar valor na aba “IGPM” da planilha base de cálculo, linha do mês vigente.
+5. Aplicar teto de 15% na planilha (ver fórmula integrada).
+6. Logar valor aplicado.
+
+▶ ERROS E EXCEÇÕES
+- Tentativas automáticas (3) para IPCA e IGPM.
+- Em caso de falha após 3 dias: log de falha crítica.
+================================================================================
