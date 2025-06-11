@@ -1,0 +1,76 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🔧 Setup Ambiente",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-m", "venv", ".venv"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📦 Instalar Dependências",
+            "type": "shell",
+            "command": "./.venv/bin/pip",
+            "args": ["install", "-r", "requirements.txt"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [],
+            "dependsOn": "🔧 Setup Ambiente"
+        },
+        {
+            "label": "🧪 Executar Todos os Testes",
+            "type": "shell",
+            "command": "./.venv/bin/python",
+            "args": ["teste_sistema_refatorado.py"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📧 Testar Notificações",
+            "type": "shell",
+            "command": "./.venv/bin/python",
+            "args": ["scripts/testar_notificacoes.py"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🚀 Iniciar Dashboard",
+            "type": "shell",
+            "command": "./.venv/bin/streamlit",
+            "args": ["run", "dashboard_rpa.py", "--server.port=5000", "--server.address=0.0.0.0"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

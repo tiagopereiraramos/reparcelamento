@@ -1,0 +1,558 @@
+{
+  "metadados": {
+    "fonte_dados": "/home/runner/workspace/saldo_devedor_presente-20250610-093716.xlsx",
+    "planilha_id": null,
+    "usar_google_sheets": false,
+    "timestamp_teste": "2025-06-11T00:13:04.371388",
+    "versao_teste": "2.0.0"
+  },
+  "resultado": {
+    "contrato": "TESTE_REPLIT_001",
+    "cliente": "CLIENTE TESTE EXCEL REAL",
+    "status_final": "ADIMPLENTE",
+    "pode_reparcelar": true,
+    "logs_regras": [
+      {
+        "timestamp": "2025-06-11T00:12:33.972035",
+        "etapa": "CARREGAMENTO",
+        "regra": "ARQUIVO_EXCEL_VALIDO",
+        "criterio": "Arquivo deve existir e ser legível",
+        "valor_avaliado": "/home/runner/workspace/saldo_devedor_presente-20250610-093716.xlsx",
+        "resultado": "Carregado com sucesso - 26 registros",
+        "aprovado": true,
+        "detalhes": {
+          "total_registros": 26,
+          "colunas": [
+            "Título",
+            "Parcela/Sequencial",
+            "Parcela/Condição",
+            "Cód. empresa",
+            "Empresa",
+            "Cód. centro de custo",
+            "Centro de custo",
+            "Documento",
+            "Nº documento",
+            "Cód. cliente",
+            "Cliente",
+            "Status da parcela",
+            "Tipo condição",
+            "Data vencimento",
+            "Valor original",
+            "Indexador",
+            "Correção monetária",
+            "Juros contratuais",
+            "Valor atualizado",
+            "Taxa administrativa",
+            "Seguro",
+            "Valor corrigido",
+            "Data base de juros",
+            "Juros %",
+            "Tipo de juros",
+            "Data base correção",
+            "Data correção",
+            "Dias para desconto VP",
+            "Juros VP %",
+            "Valor presente",
+            "Valor desconto comercial",
+            "Dias de atraso",
+            "Multa %",
+            "Juros de mora",
+            "Valor de acréscimo",
+            "Valor a receber",
+            "Data da baixa",
+            "Valor da baixa",
+            "Recebimento líquido"
+          ],
+          "tamanho_arquivo": 10224
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.972997",
+        "etapa": "VALIDACAO_ESTRUTURA",
+        "regra": "COLUNAS_OBRIGATORIAS",
+        "criterio": "Arquivo deve conter colunas essenciais para processamento",
+        "valor_avaliado": [
+          "Parcela/Sequencial",
+          "Cód. centro de custo",
+          "Valor original",
+          "Documento",
+          "Status da parcela"
+        ],
+        "resultado": "Encontradas 5/5 colunas",
+        "aprovado": true,
+        "detalhes": {
+          "colunas_presentes": [
+            "Parcela/Sequencial",
+            "Cód. centro de custo",
+            "Valor original",
+            "Documento",
+            "Status da parcela"
+          ],
+          "colunas_ausentes": [],
+          "todas_colunas_arquivo": [
+            "Título",
+            "Parcela/Sequencial",
+            "Parcela/Condição",
+            "Cód. empresa",
+            "Empresa",
+            "Cód. centro de custo",
+            "Centro de custo",
+            "Documento",
+            "Nº documento",
+            "Cód. cliente",
+            "Cliente",
+            "Status da parcela",
+            "Tipo condição",
+            "Data vencimento",
+            "Valor original",
+            "Indexador",
+            "Correção monetária",
+            "Juros contratuais",
+            "Valor atualizado",
+            "Taxa administrativa",
+            "Seguro",
+            "Valor corrigido",
+            "Data base de juros",
+            "Juros %",
+            "Tipo de juros",
+            "Data base correção",
+            "Data correção",
+            "Dias para desconto VP",
+            "Juros VP %",
+            "Valor presente",
+            "Valor desconto comercial",
+            "Dias de atraso",
+            "Multa %",
+            "Juros de mora",
+            "Valor de acréscimo",
+            "Valor a receber",
+            "Data da baixa",
+            "Valor da baixa",
+            "Recebimento líquido"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.976437",
+        "etapa": "VALIDACAO_ELEGIBILIDADE",
+        "regra": "LIMITE_INADIMPLENCIA_PDD",
+        "criterio": "Cliente com 3 ou mais parcelas CT vencidas = INADIMPLENTE",
+        "valor_avaliado": 0,
+        "resultado": "PODE reparcelar",
+        "aprovado": true,
+        "detalhes": {
+          "qtd_ct_vencidas": 0,
+          "limite_pdd": 3,
+          "status_cliente": "ADIMPLENTE",
+          "parcelas_ct_detalhes": []
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.977104",
+        "etapa": "CALCULO_FINANCEIRO",
+        "regra": "SALDO_TOTAL",
+        "criterio": "Soma de todos os valores pendentes",
+        "valor_avaliado": 0.0,
+        "resultado": "R$ 0.00",
+        "aprovado": false,
+        "detalhes": {
+          "saldo_formatado": "R$ 0.00",
+          "total_parcelas": 26,
+          "valor_medio_parcela": 0.0
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.977813",
+        "etapa": "CALCULO_REPARCELAMENTO",
+        "regra": "INDICE_ECONOMICO_PDD",
+        "criterio": "SEMPRE usar IGP-M conforme especificação PDD",
+        "valor_avaliado": "IGP-M: 3.89%",
+        "resultado": "Índice IGP-M 3.89% será aplicado",
+        "aprovado": true,
+        "detalhes": {
+          "indice_escolhido": "IGP-M",
+          "valor_percentual": 3.89,
+          "periodo_referencia": "Dezembro/2024",
+          "ipca_disponivel": 4.62,
+          "motivo_escolha": "Obrigatório conforme PDD"
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.978403",
+        "etapa": "CALCULO_REPARCELAMENTO",
+        "regra": "CALCULO_NOVO_SALDO",
+        "criterio": "Saldo atual × (1 + IGP-M/100)",
+        "valor_avaliado": "R$ 0.00 × 1.0389",
+        "resultado": "R$ 0.00",
+        "aprovado": false,
+        "detalhes": {
+          "saldo_anterior": 0.0,
+          "fator_correcao": 1.0389,
+          "novo_saldo": 0.0,
+          "diferenca_valor": 0.0,
+          "percentual_aumento": 0
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.978967",
+        "etapa": "CONFIGURACAO_PDD",
+        "regra": "PARAMETRO_TIPO_CONDICAO",
+        "criterio": "Valor tipo_condicao deve ser fixo conforme PDD",
+        "valor_avaliado": "PM",
+        "resultado": "Configurado: PM",
+        "aprovado": true,
+        "detalhes": {
+          "parametro": "tipo_condicao",
+          "valor_configurado": "PM"
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.979427",
+        "etapa": "CONFIGURACAO_PDD",
+        "regra": "PARAMETRO_INDEXADOR",
+        "criterio": "Valor indexador deve ser fixo conforme PDD",
+        "valor_avaliado": "IGP-M",
+        "resultado": "Configurado: IGP-M",
+        "aprovado": true,
+        "detalhes": {
+          "parametro": "indexador",
+          "valor_configurado": "IGP-M"
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.979832",
+        "etapa": "CONFIGURACAO_PDD",
+        "regra": "PARAMETRO_TIPO_JUROS",
+        "criterio": "Valor tipo_juros deve ser fixo conforme PDD",
+        "valor_avaliado": "Fixo",
+        "resultado": "Configurado: Fixo",
+        "aprovado": true,
+        "detalhes": {
+          "parametro": "tipo_juros",
+          "valor_configurado": "Fixo"
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.980342",
+        "etapa": "CONFIGURACAO_PDD",
+        "regra": "PARAMETRO_PERCENTUAL_JUROS",
+        "criterio": "Valor percentual_juros deve ser fixo conforme PDD",
+        "valor_avaliado": 8.0,
+        "resultado": "Configurado: 8.0",
+        "aprovado": true,
+        "detalhes": {
+          "parametro": "percentual_juros",
+          "valor_configurado": 8.0
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.980853",
+        "etapa": "CONFIGURACAO_PDD",
+        "regra": "DATA_PRIMEIRO_VENCIMENTO",
+        "criterio": "Próximo mês, dia 15",
+        "valor_avaliado": "15/07/2025",
+        "resultado": "1º vencimento: 15/07/2025",
+        "aprovado": true,
+        "detalhes": {
+          "data_calculada": "2025-07-15",
+          "data_referencia": "2025-06-11",
+          "regra_aplicada": "Próximo mês dia 15"
+        }
+      },
+      {
+        "timestamp": "2025-06-11T00:12:33.981326",
+        "etapa": "CALCULO_REPARCELAMENTO",
+        "regra": "QUANTIDADE_PARCELAS",
+        "criterio": "Manter número de parcelas pendentes",
+        "valor_avaliado": 26,
+        "resultado": "26 parcelas × R$ 0.00",
+        "aprovado": true,
+        "detalhes": {
+          "quantidade_parcelas": 26,
+          "valor_parcela_estimado": 0.0,
+          "valor_total": 0.0
+        }
+      }
+    ],
+    "dados_calculados": {
+      "tipo_condicao": "PM",
+      "indexador": "IGP-M",
+      "tipo_juros": "Fixo",
+      "percentual_juros": 8.0,
+      "valor_total": 0.0,
+      "quantidade_parcelas": 26,
+      "data_primeiro_vencimento": "15/07/2025",
+      "detalhamento": "CORREÇÃO IGP-M 06/2025",
+      "indice_aplicado": 3.89,
+      "fator_correcao": 1.0389,
+      "saldo_anterior": 0.0,
+      "diferenca_valor": 0.0,
+      "valor_parcela_estimado": 0.0,
+      "data_calculo": "2025-06-11T00:12:33.981776"
+    },
+    "timestamp_processamento": "2025-06-11T00:12:33.981783"
+  },
+  "logs_detalhados": [
+    {
+      "timestamp": "2025-06-11T00:12:33.972035",
+      "etapa": "CARREGAMENTO",
+      "regra": "ARQUIVO_EXCEL_VALIDO",
+      "criterio": "Arquivo deve existir e ser legível",
+      "valor_avaliado": "/home/runner/workspace/saldo_devedor_presente-20250610-093716.xlsx",
+      "resultado": "Carregado com sucesso - 26 registros",
+      "aprovado": true,
+      "detalhes": {
+        "total_registros": 26,
+        "colunas": [
+          "Título",
+          "Parcela/Sequencial",
+          "Parcela/Condição",
+          "Cód. empresa",
+          "Empresa",
+          "Cód. centro de custo",
+          "Centro de custo",
+          "Documento",
+          "Nº documento",
+          "Cód. cliente",
+          "Cliente",
+          "Status da parcela",
+          "Tipo condição",
+          "Data vencimento",
+          "Valor original",
+          "Indexador",
+          "Correção monetária",
+          "Juros contratuais",
+          "Valor atualizado",
+          "Taxa administrativa",
+          "Seguro",
+          "Valor corrigido",
+          "Data base de juros",
+          "Juros %",
+          "Tipo de juros",
+          "Data base correção",
+          "Data correção",
+          "Dias para desconto VP",
+          "Juros VP %",
+          "Valor presente",
+          "Valor desconto comercial",
+          "Dias de atraso",
+          "Multa %",
+          "Juros de mora",
+          "Valor de acréscimo",
+          "Valor a receber",
+          "Data da baixa",
+          "Valor da baixa",
+          "Recebimento líquido"
+        ],
+        "tamanho_arquivo": 10224
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.972997",
+      "etapa": "VALIDACAO_ESTRUTURA",
+      "regra": "COLUNAS_OBRIGATORIAS",
+      "criterio": "Arquivo deve conter colunas essenciais para processamento",
+      "valor_avaliado": [
+        "Parcela/Sequencial",
+        "Cód. centro de custo",
+        "Valor original",
+        "Documento",
+        "Status da parcela"
+      ],
+      "resultado": "Encontradas 5/5 colunas",
+      "aprovado": true,
+      "detalhes": {
+        "colunas_presentes": [
+          "Parcela/Sequencial",
+          "Cód. centro de custo",
+          "Valor original",
+          "Documento",
+          "Status da parcela"
+        ],
+        "colunas_ausentes": [],
+        "todas_colunas_arquivo": [
+          "Título",
+          "Parcela/Sequencial",
+          "Parcela/Condição",
+          "Cód. empresa",
+          "Empresa",
+          "Cód. centro de custo",
+          "Centro de custo",
+          "Documento",
+          "Nº documento",
+          "Cód. cliente",
+          "Cliente",
+          "Status da parcela",
+          "Tipo condição",
+          "Data vencimento",
+          "Valor original",
+          "Indexador",
+          "Correção monetária",
+          "Juros contratuais",
+          "Valor atualizado",
+          "Taxa administrativa",
+          "Seguro",
+          "Valor corrigido",
+          "Data base de juros",
+          "Juros %",
+          "Tipo de juros",
+          "Data base correção",
+          "Data correção",
+          "Dias para desconto VP",
+          "Juros VP %",
+          "Valor presente",
+          "Valor desconto comercial",
+          "Dias de atraso",
+          "Multa %",
+          "Juros de mora",
+          "Valor de acréscimo",
+          "Valor a receber",
+          "Data da baixa",
+          "Valor da baixa",
+          "Recebimento líquido"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.976437",
+      "etapa": "VALIDACAO_ELEGIBILIDADE",
+      "regra": "LIMITE_INADIMPLENCIA_PDD",
+      "criterio": "Cliente com 3 ou mais parcelas CT vencidas = INADIMPLENTE",
+      "valor_avaliado": 0,
+      "resultado": "PODE reparcelar",
+      "aprovado": true,
+      "detalhes": {
+        "qtd_ct_vencidas": 0,
+        "limite_pdd": 3,
+        "status_cliente": "ADIMPLENTE",
+        "parcelas_ct_detalhes": []
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.977104",
+      "etapa": "CALCULO_FINANCEIRO",
+      "regra": "SALDO_TOTAL",
+      "criterio": "Soma de todos os valores pendentes",
+      "valor_avaliado": 0.0,
+      "resultado": "R$ 0.00",
+      "aprovado": false,
+      "detalhes": {
+        "saldo_formatado": "R$ 0.00",
+        "total_parcelas": 26,
+        "valor_medio_parcela": 0.0
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.977813",
+      "etapa": "CALCULO_REPARCELAMENTO",
+      "regra": "INDICE_ECONOMICO_PDD",
+      "criterio": "SEMPRE usar IGP-M conforme especificação PDD",
+      "valor_avaliado": "IGP-M: 3.89%",
+      "resultado": "Índice IGP-M 3.89% será aplicado",
+      "aprovado": true,
+      "detalhes": {
+        "indice_escolhido": "IGP-M",
+        "valor_percentual": 3.89,
+        "periodo_referencia": "Dezembro/2024",
+        "ipca_disponivel": 4.62,
+        "motivo_escolha": "Obrigatório conforme PDD"
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.978403",
+      "etapa": "CALCULO_REPARCELAMENTO",
+      "regra": "CALCULO_NOVO_SALDO",
+      "criterio": "Saldo atual × (1 + IGP-M/100)",
+      "valor_avaliado": "R$ 0.00 × 1.0389",
+      "resultado": "R$ 0.00",
+      "aprovado": false,
+      "detalhes": {
+        "saldo_anterior": 0.0,
+        "fator_correcao": 1.0389,
+        "novo_saldo": 0.0,
+        "diferenca_valor": 0.0,
+        "percentual_aumento": 0
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.978967",
+      "etapa": "CONFIGURACAO_PDD",
+      "regra": "PARAMETRO_TIPO_CONDICAO",
+      "criterio": "Valor tipo_condicao deve ser fixo conforme PDD",
+      "valor_avaliado": "PM",
+      "resultado": "Configurado: PM",
+      "aprovado": true,
+      "detalhes": {
+        "parametro": "tipo_condicao",
+        "valor_configurado": "PM"
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.979427",
+      "etapa": "CONFIGURACAO_PDD",
+      "regra": "PARAMETRO_INDEXADOR",
+      "criterio": "Valor indexador deve ser fixo conforme PDD",
+      "valor_avaliado": "IGP-M",
+      "resultado": "Configurado: IGP-M",
+      "aprovado": true,
+      "detalhes": {
+        "parametro": "indexador",
+        "valor_configurado": "IGP-M"
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.979832",
+      "etapa": "CONFIGURACAO_PDD",
+      "regra": "PARAMETRO_TIPO_JUROS",
+      "criterio": "Valor tipo_juros deve ser fixo conforme PDD",
+      "valor_avaliado": "Fixo",
+      "resultado": "Configurado: Fixo",
+      "aprovado": true,
+      "detalhes": {
+        "parametro": "tipo_juros",
+        "valor_configurado": "Fixo"
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.980342",
+      "etapa": "CONFIGURACAO_PDD",
+      "regra": "PARAMETRO_PERCENTUAL_JUROS",
+      "criterio": "Valor percentual_juros deve ser fixo conforme PDD",
+      "valor_avaliado": 8.0,
+      "resultado": "Configurado: 8.0",
+      "aprovado": true,
+      "detalhes": {
+        "parametro": "percentual_juros",
+        "valor_configurado": 8.0
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.980853",
+      "etapa": "CONFIGURACAO_PDD",
+      "regra": "DATA_PRIMEIRO_VENCIMENTO",
+      "criterio": "Próximo mês, dia 15",
+      "valor_avaliado": "15/07/2025",
+      "resultado": "1º vencimento: 15/07/2025",
+      "aprovado": true,
+      "detalhes": {
+        "data_calculada": "2025-07-15",
+        "data_referencia": "2025-06-11",
+        "regra_aplicada": "Próximo mês dia 15"
+      }
+    },
+    {
+      "timestamp": "2025-06-11T00:12:33.981326",
+      "etapa": "CALCULO_REPARCELAMENTO",
+      "regra": "QUANTIDADE_PARCELAS",
+      "criterio": "Manter número de parcelas pendentes",
+      "valor_avaliado": 26,
+      "resultado": "26 parcelas × R$ 0.00",
+      "aprovado": true,
+      "detalhes": {
+        "quantidade_parcelas": 26,
+        "valor_parcela_estimado": 0.0,
+        "valor_total": 0.0
+      }
+    }
+  ]
+}

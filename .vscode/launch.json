@@ -1,0 +1,172 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🌐 Dashboard Principal",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/.venv/bin/streamlit",
+            "args": [
+                "run",
+                "dashboard_rpa.py",
+                "--server.port=5000",
+                "--server.address=0.0.0.0",
+                "--server.headless=false"
+            ],
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "🔔 Dashboard Notificações",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/.venv/bin/streamlit",
+            "args": [
+                "run",
+                "dashboard_notificacoes.py",
+                "--server.port=8502",
+                "--server.address=0.0.0.0"
+            ],
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "📊 Dashboard Demo",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/.venv/bin/streamlit",
+            "args": [
+                "run",
+                "demo_dashboard.py",
+                "--server.port=8501",
+                "--server.address=0.0.0.0"
+            ],
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "🤖 API REST Principal",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "📊 RPA 1 - Coleta Índices [TESTE]",
+            "type": "python",
+            "request": "launch",
+            "program": "rpa_coleta_indices/teste_coleta_indices.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true",
+                "PLANILHA_ID": "1abc123_sua_planilha_teste"
+            }
+        },
+        {
+            "name": "📋 RPA 2 - Análise Planilhas [TESTE]",
+            "type": "python",
+            "request": "launch",
+            "program": "rpa_analise_planilhas/teste_analise_planilhas.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true",
+                "PLANILHA_CALCULO_ID": "1abc123_planilha_calculo",
+                "PLANILHA_APOIO_ID": "1xyz789_planilha_apoio"
+            }
+        },
+        {
+            "name": "🏢 RPA 3 - Sienge [TESTE]",
+            "type": "python",
+            "request": "launch",
+            "program": "rpa_sienge/teste_sienge.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true",
+                "SIENGE_URL": "https://sua-empresa.sienge.com.br",
+                "SIENGE_USUARIO": "usuario_teste",
+                "SIENGE_SENHA": "senha_teste"
+            }
+        },
+        {
+            "name": "🏦 RPA 4 - Sicredi [TESTE]",
+            "type": "python",
+            "request": "launch",
+            "program": "rpa_sicredi/teste_sicredi.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true",
+                "SICREDI_URL": "https://empresas.sicredi.com.br",
+                "SICREDI_USUARIO": "usuario_teste",
+                "SICREDI_SENHA": "senha_teste"
+            }
+        },
+        {
+            "name": "🧪 Teste Sistema Completo",
+            "type": "python",
+            "request": "launch",
+            "program": "teste_sistema_refatorado.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true"
+            }
+        },
+        {
+            "name": "📧 Teste Notificações",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/testar_notificacoes.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true"
+            }
+        },
+        {
+            "name": "⏰ Agendador Diário",
+            "type": "python",
+            "request": "launch",
+            "program": "agendador_diario.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DEBUG_MODE": "true"
+            }
+        }
+    ]
+}

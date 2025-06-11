@@ -1,0 +1,36 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.12.2",
+    "beautifulsoup4>=4.13.4",
+    "fastapi>=0.115.12",
+    "pydantic-settings>=2.9.1",
+    "pydantic>=2.11.5",
+    "structlog>=25.3.0",
+    "temporalio>=1.11.1",
+    "uvicorn>=0.34.2",
+    "pymongo==4.8.0",
+    "motor==3.5.1",
+    "webdriver-manager>=4.0.2",
+    "chromedriver-autoinstaller>=0.6.4",
+    "selenium>=4.33.0",
+    "xlsxwriter>=3.2.3",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "gspread>=6.2.1",
+    "google-auth>=2.40.2",
+    "google-auth-oauthlib>=1.2.2",
+    "trafilatura>=2.0.0",
+    "requests>=2.32.3",
+    "plotly>=6.1.2",
+    "schedule>=1.2.2",
+    "streamlit>=1.45.1",
+    "twilio>=9.6.1",
+    "sendgrid>=6.12.2",
+    "pypdf2>=3.0.1",
+    "platformdirs>=4.3.8",
+    "google-api-python-client>=2.172.0",
+]

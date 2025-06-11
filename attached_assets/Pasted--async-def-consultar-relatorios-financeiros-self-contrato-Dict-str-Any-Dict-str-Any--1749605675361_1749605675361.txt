@@ -1,0 +1,66 @@
+    async def _consultar_relatorios_financeiros(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Consulta relatórios financeiros no Sienge conforme PDD seção 7.3.1
+
+        Args:
+            contrato: Dados do contrato
+
+        Returns:
+            Dados financeiros do cliente
+        """
+        try:
+            cliente = contrato.get("cliente", "")
+            self.log_progresso(
+                f"Consultando saldo devedor presente para: {cliente}")
+
+            # TODO: Cliente deve implementar navegação específica no Sienge
+            # Conforme PDD seção 7.3.1:
+            # 1. Acessar menu Financeiro > Relatório > Extrato > Saldo devedor Presente
+            # 2. Informar nome do cliente no campo Cliente
+            # 3. Clicar em Consultar
+            # 4. Gerar relatório
+            # 5. Exportar relatório
+            self.browser.get_page(
+                "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor")
+            # Por enquanto, retorna dados simulados (cliente deve implementar)
+            dados_financeiros = {
+                "cliente": cliente,
+                "numero_titulo": contrato.get("numero_titulo", ""),
+                "saldo_devedor": 150000.00,  # Valor simulado
+                "parcelas_pendentes": 48,    # Quantidade simulada
+                "parcelas_vencidas": 0,      # Sem inadimplência
+                "pendencias_ct": [],         # Sem parcelas CT vencidas
+                "pendencias_rec_fat": [],    # Sem custas/honorários
+                "status": "adimplente",
+                "pode_reparcelar": True,
+                "relatorio_exportado": True
+            }
+            combo_pesquisa = self.browser.find_element(
+                xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']")
+            if combo_pesquisa:
+                combo_pesquisa.click()
+                time.sleep(3)
+                self.browser.send_text_human_like(
+                    xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']", text=dados_financeiros["cliente"])
+                combo_pesquisa.click()
+                time.sleep(1)
+                combo_pesquisa.send_keys(Keys.TAB)
+                time.sleep(1)
+                self.browser.click(
+                    xpath="//button[normalize-space()='Consultar']")
+                time.sleep(3)
+                self.browser.click(
+                    xpath="//button[@type='button' and contains(., 'Gerar Relatório')]")
+
+                self.browser.click(
+                    xpath='//div[@id="mui-144"]')
+                self.browser.click(
+                    xpath='//li[@role="option" and @data-value="excel" and text()="EXCEL"]')
+
+                self.browser.click(
+                    xpath="//button[@type='button' and normalize-space()='Exportar']")
+
+            self.log_progresso(
+                f"✅ Relatórios consultados - Saldo: R$ {dados_financeiros['saldo_devedor']:,.2f}")
+
+            return dados_financeiros

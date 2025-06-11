@@ -1,0 +1,156 @@
+modules = ["python-3.11", "bash"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["firefox", "geckodriver", "glibcLocales", "libxcrypt"]
+
+[workflows]
+runButton = "RPA 1 - Coleta Índices"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API RPA Sistema"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Sistema RPA API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Dashboard RPA"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Dashboard Streamlit"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Dashboard RPA Completo"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Dashboard Demo"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Dashboard RPA Demo"
+
+[[workflows.workflow]]
+name = "API RPA Sistema"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python api_rpa.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Sistema RPA API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Dashboard RPA"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run dashboard_rpa.py --server.port=8501 --server.address=0.0.0.0"
+waitForPort = 8501
+
+[[workflows.workflow]]
+name = "Dashboard Streamlit"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run dashboard_rpa.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 8501
+
+[[workflows.workflow]]
+name = "Dashboard RPA Completo"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run dashboard_rpa.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Dashboard Demo"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run dashboard_rpa.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 8501
+
+[[workflows.workflow]]
+name = "Dashboard RPA Demo"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run demo_dashboard.py --server.port=8502 --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 8502
+
+[[workflows.workflow]]
+name = "Teste Replit Detalhado"
+author = 41010346
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python rpa_sienge/executar_teste_replit.py"
+
+[[workflows.workflow]]
+name = "Teste Corrigido Replit"
+author = 41010346
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python rpa_sienge/executar_teste_replit.py"
+
+[[workflows.workflow]]
+name = "RPA 1 - Coleta Índices"
+author = 41010346
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python rpa_coleta_indices/teste_coleta_indices.py"
+
+[[workflows.workflow]]
+name = "RPA 2 - Análise Planilhas"
+author = 41010346
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python rpa_analise_planilhas/teste_analise_planilhas.py"
+
+[deployment]
+run = ["streamlit", "run", "app.py", "--server.port", "5000"]
+deploymentTarget = "autoscale"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8501
+externalPort = 3000
+
+[[ports]]
+localPort = 8502
+externalPort = 3001

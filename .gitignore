@@ -1,0 +1,3 @@
+Ignora arquivos de credenciais
+credentials/*.json
+.env
