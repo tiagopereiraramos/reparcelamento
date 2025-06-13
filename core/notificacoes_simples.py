@@ -495,3 +495,4 @@ def notificar_workflow(rpas: List[str], contratos: int, tempo: str) -> bool:
 def testar_notificacoes() -> bool:
     """Testa sistema de notificações"""
     return notificacoes.testar_configuracao()
+```
