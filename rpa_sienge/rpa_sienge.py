@@ -1270,211 +1270,215 @@ class RPASienge(BaseRPA):
             self, df: pd.DataFrame, cliente: str,
             numero_titulo: str) -> Dict[str, Any]:
         """
-        Aplica regras do PDD para processar dados da planilha
+        Aplica regras do PDD conforme documentação oficial (Seção 9.1.1)
 
-        Regras principais:
-        1. Classificar parcelas CT vs REC/FAT
-        2. Identificar parcelas vencidas
-        3. Calcular inadimplência (≥3 CT vencidas)
-        4. Calcular saldos totais
+        REGRAS ESPECÍFICAS PDD:
+        1. Filtrar por Status da parcela: "A vencer" para parcelas pendentes
+        2. Classificar por coluna "Documento": CT vs REC/FAT
+        3. Inadimplência: CT vencidas há 60 dias antes do 1º vencimento
+        4. Valor da parcela: usar "Valor original" ou "Valor corrigido" conforme planilha base
+        5. Quantidade de parcelas: apenas CT "A vencer"
         """
         try:
-            # ANÁLISE DE PADRÕES - Debug para entender o arquivo real
-            self.log_progresso(f"   🔍 ANÁLISE DE PADRÕES DO ARQUIVO:")
+            self.log_progresso(f"   🔍 APLICANDO REGRAS PDD OFICIAIS (Seção 9.1.1):")
             self.log_progresso(f"      📋 Total de registros: {len(df)}")
             self.log_progresso(f"      📊 Colunas disponíveis: {list(df.columns)}")
+
+            # Verificar colunas obrigatórias conforme PDD
+            colunas_obrigatorias_pdd = [
+                "Status da parcela", "Documento", "Data vencimento", 
+                "Valor original", "Valor a receber"
+            ]
             
-            # Mostrar alguns exemplos de "Parcela/Sequencial" para entender o padrão
-            if "Parcela/Sequencial" in df.columns:
-                exemplos_parcelas = df["Parcela/Sequencial"].dropna().unique()[:10]
-                self.log_progresso(f"      📋 Exemplos de parcelas encontradas:")
-                for i, exemplo in enumerate(exemplos_parcelas):
-                    self.log_progresso(f"         {i+1}. '{exemplo}'")
-            
-            # Verificar status das parcelas
+            colunas_faltantes = [col for col in colunas_obrigatorias_pdd if col not in df.columns]
+            if colunas_faltantes:
+                raise Exception(f"Colunas obrigatórias PDD ausentes: {colunas_faltantes}")
+
+            # Debug dos valores únicos para validação
             if "Status da parcela" in df.columns:
                 status_unicos = df["Status da parcela"].dropna().unique()
                 self.log_progresso(f"      📊 Status encontrados: {list(status_unicos)}")
-                
-            self.log_progresso(f"   🔄 INICIANDO CLASSIFICAÇÃO PDD...")
-            parcelas_ct = []
-            parcelas_rec_fat = []
-            parcelas_outras = []
+            
+            if "Documento" in df.columns:
+                documentos_unicos = df["Documento"].dropna().unique()
+                self.log_progresso(f"      📋 Tipos de documento: {list(documentos_unicos)}")
 
             hoje = date.today()
+            
+            # ===== REGRA 1 PDD: FILTRAR STATUS "A VENCER" =====
+            self.log_progresso(f"   📋 REGRA 1 PDD: Filtrando Status 'A vencer'...")
+            
+            # Normalizar variações de "A vencer" encontradas no Sienge
+            parcelas_a_vencer = df[
+                df["Status da parcela"].str.upper().str.strip().isin([
+                    "A VENCER", "AVENCER", "PENDENTE", "EM ABERTO", "ABERTO"
+                ])
+            ].copy()
+            
+            self.log_progresso(f"      ✅ Parcelas 'A vencer': {len(parcelas_a_vencer)} de {len(df)}")
 
-            for _, row in df.iterrows():
-                # Extrair dados da linha
-                parcela_sequencial = str(row.get("Parcela/Sequencial",
-                                                 "")).upper()
-                status_parcela = str(row.get("Status da parcela", ""))
-                data_vencimento_str = row.get("Data vencimento", "")
-                valor_str = row.get("Valor a receber", 0)
-                documento = str(row.get("Documento", ""))
+            # ===== REGRA 2 PDD: CLASSIFICAR POR DOCUMENTO CT vs REC/FAT =====
+            self.log_progresso(f"   📋 REGRA 2 PDD: Classificando por coluna 'Documento'...")
+            
+            # CT = Cota de Terreno (conforme PDD)
+            parcelas_ct = parcelas_a_vencer[
+                parcelas_a_vencer["Documento"].str.contains("CT", case=False, na=False)
+            ].copy()
+            
+            # REC/FAT = Receitas e Faturamento (conforme PDD)
+            parcelas_rec_fat = parcelas_a_vencer[
+                parcelas_a_vencer["Documento"].str.contains("REC|FAT", case=False, na=False)
+            ].copy()
+            
+            # Outras (não CT nem REC/FAT)
+            parcelas_outras = parcelas_a_vencer[
+                ~parcelas_a_vencer["Documento"].str.contains("CT|REC|FAT", case=False, na=False)
+            ].copy()
 
-                # CONVERSÃO ROBUSTA DE DATA (formatos Sienge/Excel)
-                data_vencimento = None
-                if data_vencimento_str and str(data_vencimento_str).strip() != "":
-                    try:
-                        if isinstance(data_vencimento_str, str):
-                            # Tenta formato brasileiro primeiro: dd/mm/yyyy
+            self.log_progresso(f"      🔶 Parcelas CT identificadas: {len(parcelas_ct)}")
+            self.log_progresso(f"      🔷 Parcelas REC/FAT identificadas: {len(parcelas_rec_fat)}")
+            self.log_progresso(f"      ⚪ Outras parcelas: {len(parcelas_outras)}")
+
+            # ===== REGRA 3 PDD: VERIFICAR INADIMPLÊNCIA CT =====
+            self.log_progresso(f"   🚨 REGRA 3 PDD: Verificando inadimplência CT...")
+            
+            # Converter datas e identificar vencidas
+            def converter_data_segura(data_str):
+                if pd.isna(data_str) or str(data_str).strip() == "":
+                    return None
+                try:
+                    if isinstance(data_str, str):
+                        # Tentar formatos comuns
+                        for fmt in ["%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y"]:
                             try:
-                                data_vencimento = datetime.strptime(data_vencimento_str.strip(), "%d/%m/%Y").date()
+                                return datetime.strptime(data_str.strip(), fmt).date()
                             except:
-                                # Tenta formato ISO: yyyy-mm-dd
-                                try:
-                                    data_vencimento = datetime.strptime(data_vencimento_str.strip(), "%Y-%m-%d").date()
-                                except:
-                                    # Tenta formato americano: mm/dd/yyyy
-                                    try:
-                                        data_vencimento = datetime.strptime(data_vencimento_str.strip(), "%m/%d/%Y").date()
-                                    except:
-                                        self.log_progresso(f"      ⚠️ Formato de data não reconhecido: {data_vencimento_str}")
-                        elif hasattr(data_vencimento_str, 'date'):
-                            # Se é objeto datetime
-                            data_vencimento = data_vencimento_str.date()
-                        elif hasattr(data_vencimento_str, 'strftime'):
-                            # Se é objeto date
-                            data_vencimento = data_vencimento_str
-                    except Exception as e:
-                        self.log_progresso(f"      ❌ Erro ao converter data {data_vencimento_str}: {e}")
+                                continue
+                    elif hasattr(data_str, 'date'):
+                        return data_str.date()
+                    elif hasattr(data_str, 'strftime'):
+                        return data_str
+                except:
+                    pass
+                return None
 
-                # Converter valor
-                valor = self._converter_valor_monetario(valor_str)
+            # Aplicar conversão de data
+            parcelas_ct["data_vencimento_convertida"] = parcelas_ct["Data vencimento"].apply(converter_data_segura)
+            
+            # Filtrar CT vencidas (conforme PDD: considerar apenas CT com data válida)
+            parcelas_ct_vencidas = parcelas_ct[
+                (parcelas_ct["data_vencimento_convertida"].notna()) &
+                (parcelas_ct["data_vencimento_convertida"] < hoje)
+            ].copy()
 
-                # Verificar se está vencida
-                vencida = data_vencimento and data_vencimento < hoje if data_vencimento else False
-
-                # Dados da parcela
-                dados_parcela = {
-                    "tipo_parcela":
-                    parcela_sequencial,
-                    "status_parcela":
-                    status_parcela,
-                    "data_vencimento":
-                    data_vencimento.isoformat() if data_vencimento else None,
-                    "valor":
-                    valor,
-                    "documento":
-                    documento,
-                    "vencida":
-                    vencida,
-                    "quitada":
-                    status_parcela.upper() == "QUITADA"
-                }
-
-                # DEBUG: Log da parcela para análise
-                self.log_progresso(f"      🔍 Analisando parcela: '{parcela_sequencial}' | Status: '{status_parcela}' | Valor: R$ {valor:.2f}")
-
-                # CLASSIFICAÇÃO RIGOROSA POR TIPO (REGRA PDD CRÍTICA)
-                # Normaliza string para análise (maiúscula, sem espaços extras)
-                parcela_normalizada = parcela_sequencial.strip().upper()
-                
-                # CT = Cota de Terreno (TODAS as variações possíveis no Sienge)
-                eh_ct = any([
-                    "CT-" in parcela_normalizada,        # CT-001, CT-002, etc.
-                    "CT " in parcela_normalizada,        # CT 001, CT 002
-                    parcela_normalizada.startswith("CT"), # CT001, CT002
-                    "COTA" in parcela_normalizada,       # COTA, COTAS, COTA-001
-                    "CTA-" in parcela_normalizada,       # CTA-001
-                    # Novos padrões encontrados no Sienge:
-                    parcela_normalizada.endswith("-CT"),  # 001-CT
-                    "/CT" in parcela_normalizada,        # 001/CT
-                    "TERRENO" in parcela_normalizada,    # TERRENO
-                    "LOTE" in parcela_normalizada,       # LOTE (se aplicável)
-                    # Padrões numéricos simples que podem ser CT:
-                    (parcela_normalizada.isdigit() and len(parcela_normalizada) <= 3),  # 001, 002, etc.
-                    # Padrões com hífen e números:
-                    (len(parcela_normalizada.split('-')) == 2 and 
-                     all(part.isdigit() for part in parcela_normalizada.split('-'))),  # 001-002
-                ])
-                
-                # REC/FAT = Receitas e Faturamentos
-                eh_rec_fat = any([
-                    "REC-" in parcela_normalizada,
-                    "FAT-" in parcela_normalizada,
-                    "RECEITA" in parcela_normalizada,
-                    "FATURAMENTO" in parcela_normalizada,
-                    "TAXA" in parcela_normalizada,
-                    "CUSTO" in parcela_normalizada,
-                    "HONORARIOS" in parcela_normalizada,
-                    "HONORÁRIO" in parcela_normalizada,
-                    "CUSTAS" in parcela_normalizada,
-                    "DESPESAS" in parcela_normalizada
-                ])
-
-                if eh_ct:
-                    parcelas_ct.append(dados_parcela)
-                    self.log_progresso(f"      🔶 CT DETECTADA: '{parcela_sequencial}' | Vencida: {vencida} | Quitada: {dados_parcela['quitada']}")
-                elif eh_rec_fat:
-                    parcelas_rec_fat.append(dados_parcela)
-                    self.log_progresso(f"      🔷 REC/FAT DETECTADA: '{parcela_sequencial}'")
-                else:
-                    parcelas_outras.append(dados_parcela)
-                    self.log_progresso(f"      ⚪ OUTRAS: '{parcela_sequencial}' (não CT nem REC/FAT)")
-
-            # Calcular parcelas CT vencidas (REGRA CRÍTICA PDD)
-            parcelas_ct_vencidas = [
-                p for p in parcelas_ct if p["vencida"] and not p["quitada"]
-            ]
-
-            # Determinar status do cliente
             qtd_ct_vencidas = len(parcelas_ct_vencidas)
-            status_cliente = "inadimplente" if qtd_ct_vencidas >= 3 else "adimplente"
+            self.log_progresso(f"      🚨 CT vencidas encontradas: {qtd_ct_vencidas}")
 
-            # Calcular saldo total
-            saldo_total = sum(p["valor"] for p in parcelas_ct +
-                              parcelas_rec_fat + parcelas_outras)
+            # ===== REGRA 4 PDD: CALCULAR VALOR DA PARCELA =====
+            self.log_progresso(f"   💰 REGRA 4 PDD: Calculando valores conforme PDD...")
+            
+            # Por padrão usar "Valor a receber" (campo mais confiável)
+            # Futuramente implementar verificação da planilha base para escolher "Valor original" ou "Valor corrigido"
+            valor_total_ct_a_vencer = parcelas_ct["Valor a receber"].apply(self._converter_valor_monetario).sum()
+            valor_total_rec_fat = parcelas_rec_fat["Valor a receber"].apply(self._converter_valor_monetario).sum()
+            saldo_total = valor_total_ct_a_vencer + valor_total_rec_fat
 
+            # ===== REGRA 5 PDD: QUANTIDADE DE PARCELAS =====
+            self.log_progresso(f"   📊 REGRA 5 PDD: Contando parcelas conforme PDD...")
+            
+            qtd_parcelas_ct_a_vencer = len(parcelas_ct)
+            qtd_parcelas_rec_fat = len(parcelas_rec_fat)
+
+            # ===== CLASSIFICAÇÃO FINAL CONFORME PDD =====
+            # Por enquanto mantemos regra simples: se tem CT vencida = pode ter problema
+            # Implementar regra dos 60 dias quando tivermos data do 1º vencimento
+            
+            if qtd_ct_vencidas == 0:
+                status_cliente = "adimplente"  
+                pode_reparcelar = True
+                motivo_status = "Cliente adimplente - nenhuma CT vencida"
+            else:
+                # Por enquanto, qualquer CT vencida indica problema potencial
+                # Implementar regra dos 60 dias posteriormente
+                status_cliente = "verificar_inadimplencia"
+                pode_reparcelar = False  # Conservador até implementar regra completa
+                motivo_status = f"CT vencidas detectadas: {qtd_ct_vencidas} parcelas - necessária verificação de inadimplência"
+
+            # ===== EXTRAIR INFORMAÇÕES ADICIONAIS PDD =====
+            
+            # Dia de vencimento (para cálculo do 1º vencimento)
+            dias_vencimento = []
+            if len(parcelas_ct) > 0:
+                for _, row in parcelas_ct.iterrows():
+                    data_conv = converter_data_segura(row["Data vencimento"])
+                    if data_conv:
+                        dias_vencimento.append(data_conv.day)
+            
+            dia_vencimento_comum = max(set(dias_vencimento), key=dias_vencimento.count) if dias_vencimento else None
+
+            # Verificar parcelas com valores diferentes (conforme PDD)
+            parcelas_valor_diferente = []
+            if len(parcelas_ct) > 0:
+                valor_parcela_base = parcelas_ct["Valor a receber"].apply(self._converter_valor_monetario).mode()
+                if len(valor_parcela_base) > 0:
+                    valor_base = valor_parcela_base.iloc[0]
+                    parcelas_diferentes = parcelas_ct[
+                        parcelas_ct["Valor a receber"].apply(self._converter_valor_monetario) != valor_base
+                    ]
+                    if len(parcelas_diferentes) > 0:
+                        parcelas_valor_diferente = parcelas_diferentes.to_dict('records')
+
+            # ===== RESULTADO FINAL CONFORME PDD =====
             resultado = {
-                "cliente":
-                cliente,
-                "numero_titulo":
-                numero_titulo,
-                "saldo_total":
-                saldo_total,
-                "parcelas_pendentes":
-                len([p for p in parcelas_ct if not p["quitada"]]),
-                "parcelas_ct":
-                parcelas_ct,
-                "parcelas_rec_fat":
-                parcelas_rec_fat,
-                "parcelas_outras":
-                parcelas_outras,
-                "parcelas_ct_vencidas":
-                parcelas_ct_vencidas,
-                "qtd_ct_vencidas":
-                qtd_ct_vencidas,
-                "status_cliente":
-                status_cliente,
-                "relatorio_exportado":
-                True,
-                "dados_brutos":
-                df,
-                "total_registros":
-                len(df),
-                "resumo": {
-                    "total_ct": len(parcelas_ct),
-                    "total_rec_fat": len(parcelas_rec_fat),
-                    "total_outras": len(parcelas_outras),
-                    "ct_vencidas": qtd_ct_vencidas,
-                    "pode_reparcelar": status_cliente == "adimplente"
-                }
+                "cliente": cliente,
+                "numero_titulo": numero_titulo,
+                "sucesso": True,
+                
+                # Dados financeiros
+                "saldo_total": saldo_total,
+                "valor_parcela_ct": valor_total_ct_a_vencer / qtd_parcelas_ct_a_vencer if qtd_parcelas_ct_a_vencer > 0 else 0,
+                
+                # Contadores conforme PDD
+                "qtd_parcelas_ct_a_vencer": qtd_parcelas_ct_a_vencer,
+                "qtd_parcelas_rec_fat": qtd_parcelas_rec_fat,
+                "qtd_ct_vencidas": qtd_ct_vencidas,
+                
+                # Classificação
+                "status_cliente": status_cliente,
+                "pode_reparcelar": pode_reparcelar,
+                "motivo_status": motivo_status,
+                
+                # Informações para planilha base (conforme PDD 9.1.2)
+                "dia_vencimento_parcelas": dia_vencimento_comum,
+                "pendencias_sienge_inad": qtd_ct_vencidas if qtd_ct_vencidas > 0 else None,
+                "pendencias_sienge": qtd_parcelas_rec_fat if qtd_parcelas_rec_fat > 0 else None,
+                "parcelas_valor_diferente": parcelas_valor_diferente,
+                
+                # Dados brutos para auditoria
+                "parcelas_ct": parcelas_ct.to_dict('records'),
+                "parcelas_rec_fat": parcelas_rec_fat.to_dict('records'),
+                "parcelas_outras": parcelas_outras.to_dict('records'),
+                "parcelas_ct_vencidas": parcelas_ct_vencidas.to_dict('records'),
+                "dados_brutos": df,
+                "total_registros": len(df),
+                
+                # Metadados
+                "regras_pdd_aplicadas": "9.1.1",
+                "processado_em": datetime.now().isoformat()
             }
 
+            # ===== LOG FINAL DETALHADO =====
             self.log_progresso(f"   📊 PROCESSAMENTO PDD CONCLUÍDO:")
             self.log_progresso(f"      💰 Saldo total: R$ {saldo_total:,.2f}")
-            self.log_progresso(f"      📋 Total parcelas CT: {len(parcelas_ct)}")
-            self.log_progresso(f"      📋 Total parcelas REC/FAT: {len(parcelas_rec_fat)}")
+            self.log_progresso(f"      📋 Total parcelas CT: {qtd_parcelas_ct_a_vencer}")
+            self.log_progresso(f"      📋 Total parcelas REC/FAT: {qtd_parcelas_rec_fat}")
             self.log_progresso(f"      📋 Outras parcelas: {len(parcelas_outras)}")
             self.log_progresso(f"      🚨 CT vencidas NÃO quitadas: {qtd_ct_vencidas}")
             self.log_progresso(f"      🎯 STATUS FINAL: {status_cliente.upper()}")
+            self.log_progresso(f"      📅 Dia comum de vencimento: {dia_vencimento_comum or 'N/A'}")
             
-            # Log detalhado das CT vencidas para auditoria
-            if qtd_ct_vencidas > 0:
-                self.log_progresso(f"   📋 DETALHES DAS CT INADIMPLENTES:")
-                for i, ct in enumerate(parcelas_ct_vencidas):
-                    self.log_progresso(f"      {i+1}. {ct['tipo_parcela']} - Venc: {ct['data_vencimento']} - Status: {ct['status_parcela']} - Valor: R$ {ct['valor']:,.2f}")
+            if len(parcelas_valor_diferente) > 0:
+                self.log_progresso(f"      ⚠️ Parcelas com valor diferente detectadas: {len(parcelas_valor_diferente)} (para análise)")
 
             return resultado
 
