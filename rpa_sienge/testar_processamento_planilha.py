@@ -15,7 +15,7 @@ import shutil
 # Adiciona diretório raiz ao path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rpa_sienge.rpa_sienge import RPASienge
+from rpa_sienge import RPASienge
 
 
 async def testar_com_planilha_exemplo():
