@@ -28,6 +28,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class RPASienge(BaseRPA):
@@ -771,8 +774,8 @@ class RPASienge(BaseRPA):
                 "parcelas_rec_fat": parcelas_rec_fat,
                 "parcelas_outras": parcelas_outras,
                 "dados_brutos": df,
-                "mapeamento_colunas": mapeamento_col```python
-unas,
+                "```python
+mapeamento_colunas": mapeamento_colunas,
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
@@ -792,12 +795,37 @@ unas,
                 "numero_titulo": contrato.get("numero_titulo", "")
             }
 
+    def _obter_pasta_downloads(self) -> str:
+        """
+        Obtém a pasta de downloads do sistema, considerando a variável de ambiente RPA_DOWNLOADS_PATH.
+        Se a variável não estiver definida, usa a pasta de downloads padrão do usuário.
+        Se a subpasta RPA_DOWNLOADS não existir, ela é criada.
+        """
+        pasta_downloads_rpa = os.getenv("RPA_DOWNLOADS_PATH")
+
+        if not pasta_downloads_rpa:
+            pasta_downloads_rpa = user_downloads_dir()
+            self.log_progresso(f"Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: {pasta_downloads_rpa}")
+
+        pasta_downloads_rpa = Path(pasta_downloads_rpa)
+        pasta_downloads = pasta_downloads_rpa / "RPA_DOWNLOADS"
+
+        if not pasta_downloads.exists():
+            try:
+                pasta_downloads.mkdir(parents=True, exist_ok=True)
+                self.log_progresso(f"Subpasta RPA_DOWNLOADS criada em: {pasta_downloads}")
+            except Exception as e:
+                self.log_erro(f"Erro ao criar subpasta RPA_DOWNLOADS: {e}", e)
+                raise
+
+        return str(pasta_downloads)
+
     async def _processar_planilha_baixada(self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """
         Processa planilha baixada do Sienge conforme regras PDD
 
         Etapas:
-        1. Localizar arquivo mais recente na pasta Downloads
+        1. Localizar arquivo mais recente na pasta Downloads/RPA_DOWNLOADS
         2. Ler Excel com pandas
         3. Processar dados conforme regras PDD
         4. Classificar parcelas CT vs REC/FAT
@@ -805,10 +833,13 @@ unas,
         6. Salvar cópia para auditoria
         """
         try:
-            self.log_info("📁 Etapa 1: Localizando arquivo baixado mais recente...")
-            self.log_info(f"   📂 Pasta Downloads: {pasta_downloads}")
+            # Obter pasta Downloads do usuário + subpasta RPA
+            pasta_downloads_base = self._obter_pasta_downloads()
 
-            arquivo_encontrado = self._localizar_arquivo_recente(pasta_downloads)
+            self.log_info("📁 Etapa 1: Localizando arquivo baixado mais recente...")
+            self.log_info(f"   📂 Pasta Downloads RPA: {pasta_downloads_base}")
+
+            arquivo_encontrado = self._localizar_arquivo_recente(pasta_downloads_base)
             self.log_info(f"   ✅ Arquivo encontrado: {arquivo_encontrado}")
 
             # Etapa 2: Ler planilha Excel  
@@ -1167,20 +1198,20 @@ async def executar_processamento_sienge(
         ResultadoRPA com resultado do processamento
     """
     rpa = RPASienge()
-    
+
     try:
         # Inicializa RPA
         await rpa.inicializar()
-        
+
         # Executa processamento
         resultado = await rpa.executar(
             contrato=contrato,
             credenciais_sienge=credenciais_sienge,
             indices=indices_economicos
         )
-        
+
         return resultado
-        
+
     except Exception as e:
         return ResultadoRPA(
             sucesso=False,

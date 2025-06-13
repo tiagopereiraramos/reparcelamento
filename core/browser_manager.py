@@ -82,8 +82,10 @@ class RPABrowser:
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--no-sandbox")
 
-        # Configurações de download
-        downloads_dir = os.path.expanduser("~/Downloads/RPA_DOWNLOADS")
+        # Configurações de download - usar pasta RPA parametrizada
+        downloads_base = os.path.expanduser("~/Downloads")
+        rpa_downloads_folder = os.getenv('RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+        downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
         os.makedirs(downloads_dir, exist_ok=True)
 
         self.options.set_preference("browser.download.folderList", 2)
