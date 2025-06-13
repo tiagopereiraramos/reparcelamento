@@ -1,0 +1,82 @@
+9.1.1 Leitura e extração de dados do relatório
+Para cada cliente listado no log “clientes/ títulos a reparcelar” identifica as seguintes informações
+Dentro do relatório :
+★ Dia de vencimento das parcelas
+(Filtrando por - Coluna “Status da parcela” (Apenas a vencer) - Identificar na Coluna “Data
+vencimento” o dia no mês em que a parcela vence (EX: DIA 10)
+(validar informação em parcelas a partir do mês base do reparcelamento).
+17
+Calcular o 1º vencimento do novo carnê considerando o dia informado e a regra de Tipo de
+reparcelamento.
+➔
+Para Tipo Reajuste Anual (a data base de correção é 12 meses após o primeiro vencimento de
+parcela, não considerando data de assinatura de contrato ou pagamento de entrada)
+Preencher "1 º vencimento carnê" para o mesmo mês de base do reparcelamento realizado
+Ex: reparcelamento será para parcelas a partir de maio e o vencimento da primeira parcela cairá em
+maio preencher => xx/maio/2025
+➔
+assinado)
+Para Tipo Reajuste Aniversário (a data base da correção é o dia do mês em que contrato foi
+Preenchimento do campo "1 º vencimento carnê":
+●
+Caso o vencimento caia antes do aniversário ( dia do mês em que o contrato foi assinado)
+preencher o vencimento inicial com a data do mês seguinte.
+Ex: reparcelamento será para parcelas a partir de maio e o vencimento da primeira parcela será
+preenchido com xx/junho/2025
+●
+Caso o vencimento caia após o aniversário manter a data do primeiro vencimento para o mesmo
+mês de base do reparcelamento
+Ex: reparcelamento será para parcelas a partir de maio e o vencimento da primeira parcela cairá em
+maio preencher => xx/maio/2025
+Registrar no log a data que será aplicada no campo 1º vencimento carnê, ela será utilizada
+ainda na consulta parado relatório e após consulta será informada na planilha base de cálculo .
+★ Valor da parcela atual
+Para saber por qual coluna filtrar “Valor original” ou “Valor Corrigido”, conferir a coluna
+"original ou corrigido" da planilha de base de cálculo.
+(Filtrando por - Coluna “Status da parcela” (a vencer) - Identificar na Coluna “Valor original”
+o valor da parcela atual do cliente).
+(Filtrando por - Coluna “Status da parcela” (a vencer) - Identificar na Coluna “Valor
+Corrigido” o valor da parcela atual do cliente).
+(validar informação de parcelas a partir do mês base do reparcelamento).
+★ Verificar existência de parcelas abertas com colunas “Valor original” diferente do valor de
+parcela atual e “Tipo condição” diferentes de “Parcela Mensal”
+18
+(Filtrando por - Coluna “Status da parcela” (a vencer) -
+“Documento” (CT) -
+Havendo estas parcelas registrar no log para envio de relatório para verificação do analista
+financeiro ao final do processo.
+★ Quantidade de parcelas a vencer
+(Filtrado por - Coluna “Status da parcela” - (Apenas a vencer) e “Documento” (CT) - contar o
+número de parcelas que estão em aberto
+Ex: 150 parcelas
+(validar informação de parcelas a partir do mês base do reparcelamento). Levar em consideração se
+a data de vencimento é após a data do aniversário do mês base, caso seja, será a parcela do mês
+seguinte ao mês da base do reparcelamento.
+*Essa condição será usada somente para os contratos mês de Aniversário.* Para anual será
+considerada a parcela com vencimento dentro do mês base da correção.
+★ Quantidade de parcelas vencidas
+( Filtrado por Colunas “Documento” (CT) / “Status da parcela” - (vencida) - contar as parcelas
+que estão vencidas
+➢
+Considerar aqui o valor obtido no cálculo do 1º vencimento da nova parcela.
+➢
+Caso sejam identificadas parcelas em aberto com vencimento 60 dias antes da data 1º
+vencimento do novo carnê referentes a documento tipo CT será informada Inadimplência - na
+planilha de cálculo de reparcelamento na coluna PENDÊNCIAS SIENGE INAD
+Identificar a existência de outras pendências ( Filtrado por Colunas “Documento” (REC ou FAT)
+/ “Status da parcela” - (vencida) .
+➢
+Caso seja identificada pendência em parcelas do tipo REC ou FAT - serão referentes a custas e
+honorários e serão informadas na planilha de cálculo de reparcelamento como Pendências Sienge na
+coluna PENDÊNCIAS SIENGE
+9.1.2 Atualização dos dados captados em planilha base de cálculo
+Após verificação completa de relatórios compilados o robô irá atualizar as informações
+conforme indicado acima nas colunas correspondentes na aba Base de cálculo da planilha
+19
+BASE DE CÁLCULO REPARCELAMENTO 2025.xlsx
+PENDÊNCIAS SIENGE INAD
+PENDÊNCIAS SIENGE
+Parcelas a vencer
+Valor da Parcela Base
+Dia de vencimento de parcelas
+1º vencimento carnê
