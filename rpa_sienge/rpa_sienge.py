@@ -150,7 +150,7 @@ class RPASienge(BaseRPA):
         """Finaliza RPA e limpa recursos"""
         try:
             if hasattr(self, 'browser') and self.browser:
-                await self.browser.quit()
+                self.browser.close()  # Usar close() ao invés de quit()
             self.log_progresso("🏁 RPA Sienge finalizado")
         except Exception as e:
             self.log_erro("Erro ao finalizar RPA", e)
@@ -556,6 +556,156 @@ class RPASienge(BaseRPA):
     # ========================
     # MÉTODOS AUXILIARES SIENGE
     # ========================
+
+    async def _navegar_reparcelamento_inclusao(self):
+        """
+        WEBSCRAPING - Navega para Reparcelamento > Inclusão
+        
+        TODO: Implementar navegação real conforme PDD seção 7.3.3
+        """
+        try:
+            self.log_progresso("🧭 TODO: Navegando para Reparcelamento > Inclusão...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            # 1. Navegar: Financeiro > Contas a receber > Reparcelamento > Inclusão
+            # 2. Aguardar página carregar
+            # 3. Validar que chegou na tela correta
+            pass
+            
+        except Exception as e:
+            self.log_erro("Erro ao navegar para reparcelamento", e)
+            raise
+
+    async def _consultar_titulo_reparcelamento(self, numero_titulo: str):
+        """
+        WEBSCRAPING - Consulta título no formulário de reparcelamento
+        
+        TODO: Implementar consulta real conforme PDD
+        """
+        try:
+            self.log_progresso(f"🔍 TODO: Consultando título {numero_titulo}...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            # 1. Localizar campo número do título
+            # 2. Preencher com numero_titulo
+            # 3. Clicar consultar
+            # 4. Aguardar resultados
+            pass
+            
+        except Exception as e:
+            self.log_erro("Erro ao consultar título", e)
+            raise
+
+    async def _selecionar_documentos_reparcelamento(self, dados_financeiros: Dict[str, Any]):
+        """
+        WEBSCRAPING - Seleciona documentos para reparcelamento
+        
+        TODO: Implementar seleção conforme regras PDD
+        """
+        try:
+            self.log_progresso("📋 TODO: Selecionando documentos...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            # 1. Selecionar TODOS os documentos
+            # 2. DESMARCAR parcelas vencidas até mês atual (conforme PDD)
+            # 3. Validar seleção
+            pass
+            
+        except Exception as e:
+            self.log_erro("Erro ao selecionar documentos", e)
+            raise
+
+    async def _configurar_detalhes_reparcelamento(self, contrato: Dict[str, Any], 
+                                                 indices: Dict[str, Any], 
+                                                 dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        WEBSCRAPING - Configura detalhes do reparcelamento
+        
+        TODO: Implementar configuração conforme PDD
+        """
+        try:
+            self.log_progresso("⚙️ TODO: Configurando detalhes...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            # 1. Configurar PM (prazo)
+            # 2. Configurar IGP-M como indexador
+            # 3. Configurar taxa fixa 8%
+            # 4. Outros parâmetros conforme PDD
+            
+            return {
+                "indexador": "IGP-M",
+                "taxa_fixa": 0.08,
+                "prazo_meses": 60,
+                "configurado": True
+            }
+            
+        except Exception as e:
+            self.log_erro("Erro ao configurar detalhes", e)
+            raise
+
+    async def _confirmar_salvar_reparcelamento(self) -> str:
+        """
+        WEBSCRAPING - Confirma e salva reparcelamento
+        
+        TODO: Implementar confirmação conforme PDD
+        """
+        try:
+            self.log_progresso("💾 TODO: Confirmando e salvando...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            # 1. Clicar confirmar
+            # 2. Aguardar processamento
+            # 3. Capturar número do novo título gerado
+            # 4. Validar sucesso
+            
+            # Por enquanto retorna título fictício
+            return f"REPAC_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+        except Exception as e:
+            self.log_erro("Erro ao confirmar reparcelamento", e)
+            raise
+
+    async def _navegar_geracao_carne(self):
+        """
+        WEBSCRAPING - Navega para geração de carnê
+        
+        TODO: Implementar navegação conforme PDD seção 7.3.4
+        """
+        try:
+            self.log_progresso("🧭 TODO: Navegando para geração de carnê...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            pass
+            
+        except Exception as e:
+            self.log_erro("Erro ao navegar para geração de carnê", e)
+            raise
+
+    async def _configurar_parametros_carne(self, contrato: Dict[str, Any]):
+        """
+        WEBSCRAPING - Configura parâmetros do carnê
+        
+        TODO: Implementar configuração conforme PDD
+        """
+        try:
+            self.log_progresso("⚙️ TODO: Configurando parâmetros do carnê...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            pass
+            
+        except Exception as e:
+            self.log_erro("Erro ao configurar parâmetros do carnê", e)
+            raise
+
+    async def _executar_geracao_carne(self, contrato: Dict[str, Any]) -> str:
+        """
+        WEBSCRAPING - Executa geração do carnê
+        
+        TODO: Implementar geração conforme PDD
+        """
+        try:
+            self.log_progresso("📄 TODO: Executando geração do carnê...")
+            # TODO: IMPLEMENTAR WEBSCRAPING REAL
+            
+            # Por enquanto retorna nome fictício
+            return f"carne_{contrato.get('numero_titulo', 'sem_titulo')}_{datetime.now().strftime('%Y%m%d')}.txt"
+            
+        except Exception as e:
+            self.log_erro("Erro ao executar geração do carnê", e)
+            raise
 
     async def _navegar_menu_financeiro(self):
         """
@@ -1049,9 +1199,13 @@ class RPASienge(BaseRPA):
                 agora.year) / f"{agora.month:02d}"
             pasta_auditoria.mkdir(parents=True, exist_ok=True)
 
-            # Nome do arquivo de auditoria
+            # Nome do arquivo de auditoria - limpar caracteres inválidos
             timestamp = agora.strftime("%Y%m%d_%H%M%S")
-            nome_arquivo = f"sienge_{numero_titulo}_{timestamp}.xlsx"
+            # Limpar caracteres inválidos do número do título
+            titulo_limpo = str(numero_titulo).replace("/", "_").replace("\\", "_").replace(":", "_").replace("*", "_").replace("?", "_").replace('"', "_").replace("<", "_").replace(">", "_").replace("|", "_")
+            if titulo_limpo == "N/A" or not titulo_limpo:
+                titulo_limpo = "sem_titulo"
+            nome_arquivo = f"sienge_{titulo_limpo}_{timestamp}.xlsx"
             caminho_auditoria = pasta_auditoria / nome_arquivo
 
             # Copiar arquivo
@@ -1277,7 +1431,11 @@ class RPASienge(BaseRPA):
                 "dados_processamento/auditoria_planilhas")
             pasta_auditoria_json.mkdir(parents=True, exist_ok=True)
 
-            arquivo_json = pasta_auditoria_json / f"auditoria_{dados_processados.get('numero_titulo')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            # Limpar caracteres inválidos do número do título para o JSON
+            titulo_limpo = str(dados_processados.get('numero_titulo', 'sem_titulo')).replace("/", "_").replace("\\", "_").replace(":", "_").replace("*", "_").replace("?", "_").replace('"', "_").replace("<", "_").replace(">", "_").replace("|", "_")
+            if titulo_limpo == "N/A" or not titulo_limpo:
+                titulo_limpo = "sem_titulo"
+            arquivo_json = pasta_auditoria_json / f"auditoria_{titulo_limpo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
             with open(arquivo_json, 'w', encoding='utf-8') as f:
                 json.dump(registro_auditoria,
