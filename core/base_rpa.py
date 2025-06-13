@@ -15,6 +15,13 @@ import logging
 if TYPE_CHECKING:
     from core.browser_manager import RPABrowser
 
+# Import opcional do logger avançado
+try:
+    from core.logger_avancado import LoggerAvancado
+    LOGGER_AVANCADO_DISPONIVEL = True
+except ImportError:
+    LOGGER_AVANCADO_DISPONIVEL = False
+
 
 def get_logger(nome: str) -> logging.Logger:
     """Cria logger simples para RPA sem duplicação"""
@@ -94,22 +101,36 @@ class BaseRPA(ABC):
     - Persistência de resultados
     """
 
-    def __init__(self, nome_rpa: str, usar_browser: bool = True):
+    def __init__(self, nome_rpa: str, usar_browser: bool = True, 
+                 usar_logger_avancado: bool = False, empresa: str = "Empresa"):
         """
         Inicializa RPA base
 
         Args:
             nome_rpa: Nome identificador do RPA
             usar_browser: Se deve inicializar o browser Selenium
+            usar_logger_avancado: Se deve usar o logger avançado com webhook
+            empresa: Nome da empresa (para logger avançado)
         """
         self.nome_rpa = nome_rpa
         self.usar_browser = usar_browser
+        self.usar_logger_avancado = usar_logger_avancado
+        self.empresa = empresa
         self.browser: Optional['RPABrowser'] = None
         self.mongo_manager: Optional[Any] = None
         self.inicio_execucao = None
         self.logger = get_logger(f"RPA.{nome_rpa}")
-
-        self.logger.info(f"🤖 Inicializando RPA: {nome_rpa}")
+        
+        # Inicializar logger avançado se solicitado
+        self.logger_avancado = None
+        if usar_logger_avancado and LOGGER_AVANCADO_DISPONIVEL:
+            self.logger_avancado = LoggerAvancado(
+                nome_rpa=nome_rpa,
+                empresa=empresa
+            )
+            self.logger_avancado.info(f"🤖 Inicializando RPA: {nome_rpa}")
+        else:
+            self.logger.info(f"🤖 Inicializando RPA: {nome_rpa}")
 
     async def inicializar(self) -> bool:
         """
@@ -293,10 +314,13 @@ class BaseRPA(ABC):
             mensagem: Mensagem de progresso
             dados: Dados adicionais para log
         """
-        if dados:
-            self.logger.info(f"📈 {mensagem}", extra=dados)
+        if self.logger_avancado:
+            self.logger_avancado.info(f"📈 {mensagem}", dados)
         else:
-            self.logger.info(f"📈 {mensagem}")
+            if dados:
+                self.logger.info(f"📈 {mensagem}", extra=dados)
+            else:
+                self.logger.info(f"📈 {mensagem}")
 
     def log_erro(self, mensagem: str, erro: Exception):
         """
@@ -306,8 +330,44 @@ class BaseRPA(ABC):
             mensagem: Mensagem de contexto
             erro: Exception ocorrida
         """
-        self.logger.error(f"❌ {mensagem}: {str(erro)}")
-        self.logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+        erro_detalhes = {
+            "erro": str(erro),
+            "traceback": traceback.format_exc()
+        }
+        
+        if self.logger_avancado:
+            self.logger_avancado.error(f"❌ {mensagem}: {str(erro)}", erro_detalhes)
+        else:
+            self.logger.error(f"❌ {mensagem}: {str(erro)}")
+            self.logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+    
+    def log_avancado(self, 
+                    mensagem: str, 
+                    nivel: str = "info", 
+                    dados_extras: Optional[Dict[str, Any]] = None):
+        """
+        Log avançado com webhook (se habilitado)
+        
+        Args:
+            mensagem: Mensagem do log
+            nivel: Nível do log (info, error, critical, debug, warning)
+            dados_extras: Dados adicionais
+        """
+        if self.logger_avancado:
+            return self.logger_avancado.register_log(mensagem, nivel, dados_extras)
+        else:
+            # Fallback para logger padrão
+            if nivel == "error":
+                self.logger.error(mensagem)
+            elif nivel == "critical":
+                self.logger.critical(mensagem)
+            elif nivel == "debug":
+                self.logger.debug(mensagem)
+            elif nivel == "warning":
+                self.logger.warning(mensagem)
+            else:
+                self.logger.info(mensagem)
+            return True
 
     # ========== MÉTODOS DO BROWSER (DELEGATE) ==========
     # Estes métodos delegam para self.browser e aparecem no IntelliSense

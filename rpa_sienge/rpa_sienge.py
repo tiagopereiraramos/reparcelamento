@@ -38,8 +38,20 @@ class RPASienge(BaseRPA):
     VERSÃO PRODUÇÃO - Apenas código real do Sienge
     """
 
-    def __init__(self):
-        super().__init__(nome_rpa="Sienge", usar_browser=True)
+    def __init__(self, usar_logger_avancado: bool = False, empresa: str = "Empresa"):
+        """
+        Inicializa o RPA Sienge
+
+        Args:
+            usar_logger_avancado: Se deve usar logger avançado com webhook
+            empresa: Nome da empresa (para logger avançado)
+        """
+        super().__init__(
+            nome_rpa="Sienge", 
+            usar_browser=True,
+            usar_logger_avancado=usar_logger_avancado,
+            empresa=empresa
+        )
         self.logado_sienge = False
         self.credenciais_sienge = {}
         self.pasta_planilhas = Path("dados_extraidos/planilhas_sienge")
