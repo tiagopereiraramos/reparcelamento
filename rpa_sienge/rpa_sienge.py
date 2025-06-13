@@ -57,12 +57,10 @@ class RPASienge(BaseRPA):
             "empresa": credenciais.get("empresa", "")
         }
 
-    async def executar(
-        self,
-        contrato: Dict[str, Any],
-        credenciais_sienge: Dict[str, str],
-        indices: Dict[str, Any] = None
-    ) -> ResultadoRPA:
+    async def executar(self,
+                       contrato: Dict[str, Any],
+                       credenciais_sienge: Dict[str, str],
+                       indices: Dict[str, Any] = None) -> ResultadoRPA:
         """
         Executa processamento completo do RPA Sienge
 
@@ -73,14 +71,17 @@ class RPASienge(BaseRPA):
         """
         try:
             self.log_progresso("🚀 INICIANDO RPA SIENGE")
-            self.log_progresso(f"   📋 Contrato: {contrato.get('numero_titulo', '')}")
+            self.log_progresso(
+                f"   📋 Contrato: {contrato.get('numero_titulo', '')}")
             self.log_progresso(f"   👤 Cliente: {contrato.get('cliente', '')}")
 
             if not contrato or not credenciais_sienge:
                 return ResultadoRPA(
                     sucesso=False,
-                    mensagem="Dados do contrato ou credenciais Sienge não fornecidos",
-                    erro="Parâmetros 'contrato' e 'credenciais_sienge' são obrigatórios"
+                    mensagem=
+                    "Dados do contrato ou credenciais Sienge não fornecidos",
+                    erro=
+                    "Parâmetros 'contrato' e 'credenciais_sienge' são obrigatórios"
                 )
 
             # Configura credenciais
@@ -90,27 +91,32 @@ class RPASienge(BaseRPA):
             await self._fazer_login_sienge()
 
             # Consulta relatórios financeiros do cliente
-            self.log_progresso(f"Consultando relatórios do cliente: {contrato.get('cliente', '')}")
-            dados_financeiros = await self._consultar_relatorios_financeiros(contrato)
+            self.log_progresso(
+                f"Consultando relatórios do cliente: {contrato.get('cliente', '')}"
+            )
+            dados_financeiros = await self._consultar_relatorios_financeiros(
+                contrato)
 
             # Valida se contrato pode ser reparcelado
-            pode_reparcelar = await self._validar_contrato_reparcelamento(dados_financeiros)
+            pode_reparcelar = await self._validar_contrato_reparcelamento(
+                dados_financeiros)
 
             if not pode_reparcelar["pode_reparcelar"]:
                 return ResultadoRPA(
                     sucesso=False,
-                    mensagem=f"Contrato não pode ser reparcelado: {pode_reparcelar['motivo']}",
+                    mensagem=
+                    f"Contrato não pode ser reparcelado: {pode_reparcelar['motivo']}",
                     dados={
                         "contrato": contrato,
                         "validacao": pode_reparcelar,
                         "dados_financeiros": dados_financeiros
-                    }
-                )
+                    })
 
             # Processa reparcelamento
             self.log_progresso("Processando reparcelamento no Sienge")
             indices = indices or {}
-            resultado_reparcelamento = await self._processar_reparcelamento(contrato, indices, dados_financeiros)
+            resultado_reparcelamento = await self._processar_reparcelamento(
+                contrato, indices, dados_financeiros)
 
             # Gera carnê se processamento foi bem-sucedido
             carne_gerado = None
@@ -129,18 +135,16 @@ class RPASienge(BaseRPA):
 
             return ResultadoRPA(
                 sucesso=resultado_reparcelamento["sucesso"],
-                mensagem=f"Reparcelamento processado - Cliente: {contrato.get('cliente', '')}",
-                dados=resultado_dados
-            )
+                mensagem=
+                f"Reparcelamento processado - Cliente: {contrato.get('cliente', '')}",
+                dados=resultado_dados)
 
         except Exception as e:
             erro_msg = f"Erro na execução do RPA Sienge: {str(e)}"
             self.log_erro(erro_msg, e)
-            return ResultadoRPA(
-                sucesso=False,
-                mensagem="Falha na execução do RPA Sienge",
-                erro=erro_msg
-            )
+            return ResultadoRPA(sucesso=False,
+                                mensagem="Falha na execução do RPA Sienge",
+                                erro=erro_msg)
 
     async def finalizar(self):
         """Finaliza RPA e limpa recursos"""
@@ -171,14 +175,15 @@ class RPASienge(BaseRPA):
 
             # Acessa página de login
             if not url_sienge:
-                raise ValueError("URL do Sienge não foi configurada corretamente.")
+                raise ValueError(
+                    "URL do Sienge não foi configurada corretamente.")
 
             self.browser.get_page(url_sienge)
             time.sleep(3)
 
             # WEBSCRAPING REAL - Sequência de login conforme PDD:
             # 1. Informar usuário (tc@trajetoriaconsultoria.com.br)
-            # 2. Clicar em Continuar  
+            # 2. Clicar em Continuar
             # 3. Informar senha
             # 4. Clicar em Entrar
             # 5. Fechar caixas de mensagem
@@ -187,7 +192,7 @@ class RPASienge(BaseRPA):
             self.browser.find_element(
                 xpath='(//input[@id="username"])[1]').send_keys(usuario_sienge)
 
-            # Preenche senha inicial  
+            # Preenche senha inicial
             self.browser.find_element(
                 xpath='//input[@id="password"]').send_keys(senha_sienge)
 
@@ -198,7 +203,9 @@ class RPASienge(BaseRPA):
 
             # Segunda etapa - email
             self.browser.find_element(
-                xpath='//label[text()="Seu e-mail"]/following-sibling::div//input').send_keys(usuario_sienge)
+                xpath=
+                '//label[text()="Seu e-mail"]/following-sibling::div//input'
+            ).send_keys(usuario_sienge)
 
             # Clica continuar
             self.browser.find_element(
@@ -219,7 +226,8 @@ class RPASienge(BaseRPA):
         except Exception as e:
             raise Exception(f"Falha no login Sienge: {str(e)}")
 
-    async def _consultar_relatorios_financeiros(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+    async def _consultar_relatorios_financeiros(
+            self, contrato: Dict[str, Any]) -> Dict[str, Any]:
         """
         Consulta relatórios financeiros no Sienge conforme PDD seção 7.3.1
 
@@ -240,7 +248,8 @@ class RPASienge(BaseRPA):
             cliente = contrato.get("cliente", "")
             numero_titulo = contrato.get("numero_titulo", "")
 
-            self.log_progresso(f"📊 Consultando saldo devedor presente para: {cliente}")
+            self.log_progresso(
+                f"📊 Consultando saldo devedor presente para: {cliente}")
             self.log_progresso(f"   📋 Título: {numero_titulo}")
 
             # WEBSCRAPING REAL - Navegação conforme PDD seção 7.3.1
@@ -252,7 +261,9 @@ class RPASienge(BaseRPA):
             # WEBSCRAPING REAL - Busca e preenche campo de pesquisa do cliente
             self.log_progresso("🔍 Pesquisando cliente...")
             combo_pesquisa = self.browser.find_element(
-                xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']")
+                xpath=
+                "//input[@placeholder='Pesquisar cliente' and @role='combobox']"
+            )
 
             if combo_pesquisa:
                 combo_pesquisa.click()
@@ -260,9 +271,9 @@ class RPASienge(BaseRPA):
 
                 # Preenche nome do cliente
                 self.browser.send_text_human_like(
-                    xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']", 
-                    text=cliente
-                )
+                    xpath=
+                    "//input[@placeholder='Pesquisar cliente' and @role='combobox']",
+                    text=cliente)
 
                 combo_pesquisa.click()
                 time.sleep(1)
@@ -271,33 +282,44 @@ class RPASienge(BaseRPA):
 
                 # WEBSCRAPING REAL - Clica em Consultar
                 self.log_progresso("📋 Executando consulta...")
-                self.browser.click(xpath="//button[normalize-space()='Consultar']")
+                self.browser.click(
+                    xpath="//button[normalize-space()='Consultar']")
                 time.sleep(3)
 
                 # WEBSCRAPING REAL - Gera relatório
                 self.log_progresso("📊 Gerando relatório...")
                 self.browser.click(
-                    xpath="//button[@type='button' and contains(., 'Gerar Relatório')]")
+                    xpath=
+                    "//button[@type='button' and contains(., 'Gerar Relatório')]"
+                )
                 time.sleep(2)
 
                 # WEBSCRAPING REAL - Seleciona formato Excel
                 self.log_progresso("📁 Selecionando formato Excel...")
-                self.browser.click(xpath='//div[@id="mui-144"]')
+                self.browser.click(
+                    xpath=
+                    "//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]"
+                )
                 time.sleep(1)
 
                 self.browser.click(
-                    xpath='//li[@role="option" and @data-value="excel" and text()="EXCEL"]')
+                    xpath=
+                    '//li[@role="option" and @data-value="excel" and text()="EXCEL"]'
+                )
                 time.sleep(1)
 
                 # WEBSCRAPING REAL - Exporta relatório
                 self.log_progresso("💾 Exportando relatório...")
                 self.browser.click(
-                    xpath="//button[@type='button' and normalize-space()='Exportar']")
+                    xpath=
+                    "//button[@type='button' and normalize-space()='Exportar']"
+                )
                 time.sleep(5)
 
                 # PROCESSAMENTO DA PLANILHA BAIXADA
                 self.log_progresso("📋 Processando planilha baixada...")
-                dados_planilha = await self._processar_planilha_baixada(cliente, numero_titulo)
+                dados_planilha = await self._processar_planilha_baixada(
+                    cliente, numero_titulo)
 
             # DADOS PROCESSADOS DA PLANILHA REAL
             if dados_planilha and dados_planilha.get("sucesso"):
@@ -305,20 +327,32 @@ class RPASienge(BaseRPA):
             else:
                 # Fallback com dados vazios se planilha não processada
                 dados_financeiros = {
-                    "cliente": cliente,
-                    "numero_titulo": numero_titulo,
-                    "saldo_total": 0.0,
-                    "parcelas_pendentes": 0,
+                    "cliente":
+                    cliente,
+                    "numero_titulo":
+                    numero_titulo,
+                    "saldo_total":
+                    0.0,
+                    "parcelas_pendentes":
+                    0,
                     "parcelas_ct": [],
                     "parcelas_rec_fat": [],
-                    "status_cliente": "erro_processamento",
-                    "relatorio_exportado": False,
-                    "dados_brutos": None,
-                    "sucesso": False,
-                    "erro": dados_planilha.get("erro", "Falha no processamento da planilha")
+                    "status_cliente":
+                    "erro_processamento",
+                    "relatorio_exportado":
+                    False,
+                    "dados_brutos":
+                    None,
+                    "sucesso":
+                    False,
+                    "erro":
+                    dados_planilha.get("erro",
+                                       "Falha no processamento da planilha")
                 }
 
-            self.log_progresso("✅ Webscraping concluído - Aguardando processamento da planilha")
+            self.log_progresso(
+                "✅ Webscraping concluído - Aguardando processamento da planilha"
+            )
             return dados_financeiros
 
         except Exception as e:
@@ -326,7 +360,8 @@ class RPASienge(BaseRPA):
             self.log_erro(erro_msg, e)
             return {"erro": erro_msg, "sucesso": False}
 
-    async def _validar_contrato_reparcelamento(self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
+    async def _validar_contrato_reparcelamento(
+            self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Valida se contrato pode ser reparcelado conforme regras do PDD seção 7.3.2
 
@@ -356,13 +391,14 @@ class RPASienge(BaseRPA):
                 # Converte data se necessário
                 if isinstance(data_vencimento, str):
                     try:
-                        data_vencimento = datetime.strptime(data_vencimento, "%Y-%m-%d").date()
+                        data_vencimento = datetime.strptime(
+                            data_vencimento, "%Y-%m-%d").date()
                     except:
                         continue
 
                 # REGRA PDD: Verifica se é CT vencida e NÃO está "Quitada" (status exato)
-                if (data_vencimento < hoje and 
-                    status != "Quitada"):  # Status exato conforme PDD
+                if (data_vencimento < hoje
+                        and status != "Quitada"):  # Status exato conforme PDD
                     parcelas_ct_vencidas.append(parcela)
 
             qtd_ct_vencidas = len(parcelas_ct_vencidas)
@@ -409,15 +445,14 @@ class RPASienge(BaseRPA):
                 "pode_reparcelar": False,
                 "motivo": erro_msg,
                 "status": "erro",
-                "detalhes": {"erro_validacao": erro_msg}
+                "detalhes": {
+                    "erro_validacao": erro_msg
+                }
             }
 
     async def _processar_reparcelamento(
-        self,
-        contrato: Dict[str, Any],
-        indices: Dict[str, Any],
-        dados_financeiros: Dict[str, Any]
-    ) -> Dict[str, Any]:
+            self, contrato: Dict[str, Any], indices: Dict[str, Any],
+            dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Processa reparcelamento no Sienge conforme PDD seção 7.3.3
 
@@ -436,26 +471,34 @@ class RPASienge(BaseRPA):
             self.log_progresso(f"🔄 PROCESSANDO REPARCELAMENTO SIENGE")
             self.log_progresso(f"   📋 Título: {numero_titulo}")
             self.log_progresso(f"   👤 Cliente: {cliente}")
-            self.log_progresso(f"   💰 Saldo atual: R$ {dados_financeiros.get('saldo_total', 0):,.2f}")
+            self.log_progresso(
+                f"   💰 Saldo atual: R$ {dados_financeiros.get('saldo_total', 0):,.2f}"
+            )
 
             # Etapa 1: Navegar para Reparcelamento > Inclusão
-            self.log_progresso("🧭 Etapa 1: Navegando para Reparcelamento > Inclusão")
+            self.log_progresso(
+                "🧭 Etapa 1: Navegando para Reparcelamento > Inclusão")
             await self._navegar_reparcelamento_inclusao()
 
             # Etapa 2: Consultar título
-            self.log_progresso(f"🔍 Etapa 2: Consultando título {numero_titulo}")
+            self.log_progresso(
+                f"🔍 Etapa 2: Consultando título {numero_titulo}")
             await self._consultar_titulo_reparcelamento(numero_titulo)
 
             # Etapa 3: Selecionar documentos
-            self.log_progresso("📋 Etapa 3: Selecionando documentos para reparcelamento")
+            self.log_progresso(
+                "📋 Etapa 3: Selecionando documentos para reparcelamento")
             await self._selecionar_documentos_reparcelamento(dados_financeiros)
 
             # Etapa 4: Configurar detalhes
-            self.log_progresso("⚙️ Etapa 4: Configurando detalhes do reparcelamento")
-            detalhes = await self._configurar_detalhes_reparcelamento(contrato, indices, dados_financeiros)
+            self.log_progresso(
+                "⚙️ Etapa 4: Configurando detalhes do reparcelamento")
+            detalhes = await self._configurar_detalhes_reparcelamento(
+                contrato, indices, dados_financeiros)
 
             # Etapa 5: Confirmar e salvar
-            self.log_progresso("💾 Etapa 5: Confirmando e salvando reparcelamento")
+            self.log_progresso(
+                "💾 Etapa 5: Confirmando e salvando reparcelamento")
             novo_titulo = await self._confirmar_salvar_reparcelamento()
 
             # Resultado final
@@ -481,7 +524,8 @@ class RPASienge(BaseRPA):
                 "tipo_processamento": "erro"
             }
 
-    async def _gerar_carne_sienge(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+    async def _gerar_carne_sienge(self, contrato: Dict[str,
+                                                       Any]) -> Dict[str, Any]:
         """
         Gera carnê no Sienge conforme PDD seção 7.3.4
         Financeiro > Contas a Receber > Cobrança Escritural > Geração de Arquivos de remessa
@@ -528,7 +572,7 @@ class RPASienge(BaseRPA):
         - Submenu: //span[contains(text(), 'Financeiro')]
         """
         # TODO: IMPLEMENTAR NAVEGAÇÃO REAL
-        # 1. Localizar menu "Financeiro" 
+        # 1. Localizar menu "Financeiro"
         # 2. Clicar no menu
         # 3. Aguardar carregamento da página
         # 4. Validar que está na página correta
@@ -561,7 +605,7 @@ class RPASienge(BaseRPA):
         """
         # TODO: IMPLEMENTAR NAVEGAÇÃO REAL
         # 1. Clicar "Contas a Receber"
-        # 2. Clicar "Relatórios" 
+        # 2. Clicar "Relatórios"
         # 3. Clicar "Saldo Devedor Presente"
         # 4. Validar que chegou na tela correta
         try:
@@ -596,7 +640,8 @@ class RPASienge(BaseRPA):
         # 3. Inserir numero_titulo recebido
         # 4. Validar que valor foi inserido
         try:
-            self.log_progresso(f"🔍 TODO: Filtrando por título: {numero_titulo}")
+            self.log_progresso(
+                f"🔍 TODO: Filtrando por título: {numero_titulo}")
             # IMPLEMENTAR WEBSCRAPING AQUI
             pass
 
@@ -715,7 +760,9 @@ class RPASienge(BaseRPA):
                 "total_linhas": 0
             }
 
-    def _processar_dados_relatorio_sienge(self, dados_relatorio: Dict[str, Any], contrato: Dict[str, Any]) -> Dict[str, Any]:
+    def _processar_dados_relatorio_sienge(
+            self, dados_relatorio: Dict[str, Any],
+            contrato: Dict[str, Any]) -> Dict[str, Any]:
         """Processa dados do relatório do Sienge conforme regras do PDD"""
         try:
             if not dados_relatorio.get("sucesso", False):
@@ -734,7 +781,8 @@ class RPASienge(BaseRPA):
             self.log_progresso("🔄 Processando dados conforme regras PDD...")
 
             # Identifica colunas importantes (mapping flexível)
-            mapeamento_colunas = self._mapear_colunas_sienge(df.columns.tolist())
+            mapeamento_colunas = self._mapear_colunas_sienge(
+                df.columns.tolist())
 
             # Filtra parcelas CT (Cota de Terreno) - REGRA PRINCIPAL PDD
             parcelas_ct = []
@@ -742,13 +790,17 @@ class RPASienge(BaseRPA):
             parcelas_outras = []
 
             for _, row in df.iterrows():
-                tipo_parcela = str(row.get(mapeamento_colunas.get("tipo_parcela", ""), "")).upper()
-                status_parcela = str(row.get(mapeamento_colunas.get("status", ""), ""))
+                tipo_parcela = str(
+                    row.get(mapeamento_colunas.get("tipo_parcela", ""),
+                            "")).upper()
+                status_parcela = str(
+                    row.get(mapeamento_colunas.get("status", ""), ""))
 
                 # Classifica por tipo
                 if "CT" in tipo_parcela or "COTA" in tipo_parcela:
                     parcelas_ct.append(row.to_dict())
-                elif any(x in tipo_parcela for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
+                elif any(x in tipo_parcela
+                         for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
                     parcelas_rec_fat.append(row.to_dict())
                 else:
                     parcelas_outras.append(row.to_dict())
@@ -758,7 +810,8 @@ class RPASienge(BaseRPA):
             saldo_total = 0
             if coluna_valor:
                 try:
-                    saldo_total = df[coluna_valor].apply(self._converter_valor_monetario).sum()
+                    saldo_total = df[coluna_valor].apply(
+                        self._converter_valor_monetario).sum()
                 except:
                     saldo_total = 0
 
@@ -774,14 +827,14 @@ class RPASienge(BaseRPA):
                 "parcelas_rec_fat": parcelas_rec_fat,
                 "parcelas_outras": parcelas_outras,
                 "dados_brutos": df,
-                "```python
-mapeamento_colunas": mapeamento_colunas,
+                "mapeamento_colunas": mapeamento_colunas,
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
             self.log_progresso(f"✅ Processamento concluído:")
             self.log_progresso(f"   📊 Total parcelas CT: {len(parcelas_ct)}")
-            self.log_progresso(f"   📊 Total parcelas REC/FAT: {len(parcelas_rec_fat)}")
+            self.log_progresso(
+                f"   📊 Total parcelas REC/FAT: {len(parcelas_rec_fat)}")
             self.log_progresso(f"   💰 Saldo total: R$ {saldo_total:,.2f}")
 
             return resultado
@@ -805,7 +858,9 @@ mapeamento_colunas": mapeamento_colunas,
 
         if not pasta_downloads_rpa:
             pasta_downloads_rpa = user_downloads_dir()
-            self.log_progresso(f"Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: {pasta_downloads_rpa}")
+            self.log_progresso(
+                f"Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: {pasta_downloads_rpa}"
+            )
 
         pasta_downloads_rpa = Path(pasta_downloads_rpa)
         pasta_downloads = pasta_downloads_rpa / "RPA_DOWNLOADS"
@@ -813,14 +868,16 @@ mapeamento_colunas": mapeamento_colunas,
         if not pasta_downloads.exists():
             try:
                 pasta_downloads.mkdir(parents=True, exist_ok=True)
-                self.log_progresso(f"Subpasta RPA_DOWNLOADS criada em: {pasta_downloads}")
+                self.log_progresso(
+                    f"Subpasta RPA_DOWNLOADS criada em: {pasta_downloads}")
             except Exception as e:
                 self.log_erro(f"Erro ao criar subpasta RPA_DOWNLOADS: {e}", e)
                 raise
 
         return str(pasta_downloads)
 
-    async def _processar_planilha_baixada(self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+    async def _processar_planilha_baixada(
+            self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """
         Processa planilha baixada do Sienge conforme regras PDD
 
@@ -836,33 +893,44 @@ mapeamento_colunas": mapeamento_colunas,
             # Obter pasta Downloads do usuário + subpasta RPA
             pasta_downloads_base = self._obter_pasta_downloads()
 
-            self.log_info("📁 Etapa 1: Localizando arquivo baixado mais recente...")
+            self.log_info(
+                "📁 Etapa 1: Localizando arquivo baixado mais recente...")
             self.log_info(f"   📂 Pasta Downloads RPA: {pasta_downloads_base}")
 
-            arquivo_encontrado = self._localizar_arquivo_recente(pasta_downloads_base)
+            arquivo_encontrado = self._localizar_arquivo_recente(
+                pasta_downloads_base)
             self.log_info(f"   ✅ Arquivo encontrado: {arquivo_encontrado}")
 
-            # Etapa 2: Ler planilha Excel  
+            # Etapa 2: Ler planilha Excel
             self.log_info("📊 Etapa 2: Lendo planilha Excel...")
             df = await self._ler_planilha_excel(arquivo_encontrado)
 
             # Etapa 3: Salvar cópia para auditoria
             self.log_info("💾 Etapa 3: Salvando cópia para auditoria...")
-            caminho_auditoria = await self._salvar_planilha_auditoria(arquivo_encontrado, cliente, numero_titulo)
+            caminho_auditoria = await self._salvar_planilha_auditoria(
+                arquivo_encontrado, cliente, numero_titulo)
 
             # Etapa 4: Processar dados conforme regras PDD
             self.log_info("🔄 Etapa 4: Processando dados conforme PDD...")
-            dados_processados = await self._aplicar_regras_pdd_planilha(df, cliente, numero_titulo)
+            dados_processados = await self._aplicar_regras_pdd_planilha(
+                df, cliente, numero_titulo)
 
             # Etapa 5: Adicionar metadados de auditoria
             dados_processados.update({
-                "arquivo_original": arquivo_encontrado,
-                "arquivo_auditoria": caminho_auditoria,
-                "hash_arquivo": self._calcular_hash_arquivo(arquivo_encontrado),
-                "processado_em": datetime.now().isoformat(),
-                "processado_por": "RPA_Sienge",
-                "versao_rpa": "2.0",
-                "sucesso": True
+                "arquivo_original":
+                arquivo_encontrado,
+                "arquivo_auditoria":
+                caminho_auditoria,
+                "hash_arquivo":
+                self._calcular_hash_arquivo(arquivo_encontrado),
+                "processado_em":
+                datetime.now().isoformat(),
+                "processado_por":
+                "RPA_Sienge",
+                "versao_rpa":
+                "2.0",
+                "sucesso":
+                True
             })
 
             # Etapa 6: Registrar no sistema de auditoria
@@ -891,30 +959,40 @@ mapeamento_colunas": mapeamento_colunas,
         try:
             pasta_path = Path(pasta_downloads)
             if not pasta_path.exists():
-                raise Exception(f"Pasta Downloads não existe: {pasta_downloads}")
+                raise Exception(
+                    f"Pasta Downloads não existe: {pasta_downloads}")
 
             # Buscar arquivos com padrão específico
             padrao = "saldo_devedor_presente-*.xlsx"
             arquivos_encontrados = list(pasta_path.glob(padrao))
 
             if not arquivos_encontrados:
-                raise Exception(f"Nenhum arquivo encontrado com padrão '{padrao}' em {pasta_downloads}")
+                raise Exception(
+                    f"Nenhum arquivo encontrado com padrão '{padrao}' em {pasta_downloads}"
+                )
 
             # Ordenar por data de modificação (mais recente primeiro)
-            arquivos_ordenados = sorted(arquivos_encontrados, key=lambda x: x.stat().st_mtime, reverse=True)
+            arquivos_ordenados = sorted(arquivos_encontrados,
+                                        key=lambda x: x.stat().st_mtime,
+                                        reverse=True)
 
             arquivo_mais_recente = str(arquivos_ordenados[0])
 
             # Validar se arquivo foi modificado recentemente (últimos 10 minutos)
-            tempo_arquivo = datetime.fromtimestamp(arquivos_ordenados[0].stat().st_mtime)
+            tempo_arquivo = datetime.fromtimestamp(
+                arquivos_ordenados[0].stat().st_mtime)
             tempo_atual = datetime.now()
             diferenca = (tempo_atual - tempo_arquivo).total_seconds() / 60
 
             if diferenca > 10:
-                self.log_progresso(f"⚠️ Arquivo encontrado há {diferenca:.1f} minutos (pode não ser o download atual)")
+                self.log_progresso(
+                    f"⚠️ Arquivo encontrado há {diferenca:.1f} minutos (pode não ser o download atual)"
+                )
 
             self.log_progresso(f"   📄 Arquivo: {arquivo_mais_recente}")
-            self.log_progresso(f"   🕐 Modificado: {tempo_arquivo.strftime('%d/%m/%Y %H:%M:%S')}")
+            self.log_progresso(
+                f"   🕐 Modificado: {tempo_arquivo.strftime('%d/%m/%Y %H:%M:%S')}"
+            )
 
             return arquivo_mais_recente
 
@@ -932,18 +1010,24 @@ mapeamento_colunas": mapeamento_colunas,
             if df.empty:
                 raise Exception("Planilha está vazia")
 
-            self.log_progresso(f"   📊 Planilha carregada: {len(df)} registros, {len(df.columns)} colunas")
+            self.log_progresso(
+                f"   📊 Planilha carregada: {len(df)} registros, {len(df.columns)} colunas"
+            )
 
             # Validar colunas obrigatórias
             colunas_obrigatorias = [
-                "Parcela/Sequencial", "Status da parcela", "Data vencimento", 
+                "Parcela/Sequencial", "Status da parcela", "Data vencimento",
                 "Valor a receber", "Documento"
             ]
 
-            colunas_faltantes = [col for col in colunas_obrigatorias if col not in df.columns]
+            colunas_faltantes = [
+                col for col in colunas_obrigatorias if col not in df.columns
+            ]
 
             if colunas_faltantes:
-                raise Exception(f"Colunas obrigatórias não encontradas: {colunas_faltantes}")
+                raise Exception(
+                    f"Colunas obrigatórias não encontradas: {colunas_faltantes}"
+                )
 
             self.log_progresso("   ✅ Estrutura da planilha validada")
 
@@ -952,14 +1036,17 @@ mapeamento_colunas": mapeamento_colunas,
         except Exception as e:
             raise Exception(f"Erro ao ler planilha Excel: {str(e)}")
 
-    async def _salvar_planilha_auditoria(self, arquivo_original: str, cliente: str, numero_titulo: str) -> str:
+    async def _salvar_planilha_auditoria(self, arquivo_original: str,
+                                         cliente: str,
+                                         numero_titulo: str) -> str:
         """
         Salva cópia da planilha para auditoria com nomenclatura padronizada
         """
         try:
             # Criar estrutura de pastas por ano/mês
             agora = datetime.now()
-            pasta_auditoria = self.pasta_planilhas / str(agora.year) / f"{agora.month:02d}"
+            pasta_auditoria = self.pasta_planilhas / str(
+                agora.year) / f"{agora.month:02d}"
             pasta_auditoria.mkdir(parents=True, exist_ok=True)
 
             # Nome do arquivo de auditoria
@@ -978,7 +1065,9 @@ mapeamento_colunas": mapeamento_colunas,
             self.log_erro("Erro ao salvar planilha para auditoria", e)
             return ""
 
-    async def _aplicar_regras_pdd_planilha(self, df: pd.DataFrame, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+    async def _aplicar_regras_pdd_planilha(
+            self, df: pd.DataFrame, cliente: str,
+            numero_titulo: str) -> Dict[str, Any]:
         """
         Aplica regras do PDD para processar dados da planilha
 
@@ -997,7 +1086,8 @@ mapeamento_colunas": mapeamento_colunas,
 
             for _, row in df.iterrows():
                 # Extrair dados da linha
-                parcela_sequencial = str(row.get("Parcela/Sequencial", "")).upper()
+                parcela_sequencial = str(row.get("Parcela/Sequencial",
+                                                 "")).upper()
                 status_parcela = str(row.get("Status da parcela", ""))
                 data_vencimento_str = row.get("Data vencimento", "")
                 valor_str = row.get("Valor a receber", 0)
@@ -1008,7 +1098,8 @@ mapeamento_colunas": mapeamento_colunas,
                 if data_vencimento_str:
                     try:
                         if isinstance(data_vencimento_str, str):
-                            data_vencimento = datetime.strptime(data_vencimento_str, "%d/%m/%Y").date()
+                            data_vencimento = datetime.strptime(
+                                data_vencimento_str, "%d/%m/%Y").date()
                         else:
                             data_vencimento = data_vencimento_str.date()
                     except:
@@ -1022,27 +1113,34 @@ mapeamento_colunas": mapeamento_colunas,
 
                 # Dados da parcela
                 dados_parcela = {
-                    "tipo_parcela": parcela_sequencial,
-                    "status_parcela": status_parcela,
-                    "data_vencimento": data_vencimento.isoformat() if data_vencimento else None,
-                    "valor": valor,
-                    "documento": documento,
-                    "vencida": vencida,
-                    "quitada": status_parcela.upper() == "QUITADA"
+                    "tipo_parcela":
+                    parcela_sequencial,
+                    "status_parcela":
+                    status_parcela,
+                    "data_vencimento":
+                    data_vencimento.isoformat() if data_vencimento else None,
+                    "valor":
+                    valor,
+                    "documento":
+                    documento,
+                    "vencida":
+                    vencida,
+                    "quitada":
+                    status_parcela.upper() == "QUITADA"
                 }
 
                 # Classificar por tipo (REGRA PDD)
                 if "CT" in parcela_sequencial or "COTA" in parcela_sequencial:
                     parcelas_ct.append(dados_parcela)
-                elif any(x in parcela_sequencial for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
+                elif any(x in parcela_sequencial
+                         for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
                     parcelas_rec_fat.append(dados_parcela)
                 else:
                     parcelas_outras.append(dados_parcela)
 
             # Calcular parcelas CT vencidas (REGRA CRÍTICA PDD)
             parcelas_ct_vencidas = [
-                p for p in parcelas_ct 
-                if p["vencida"] and not p["quitada"]
+                p for p in parcelas_ct if p["vencida"] and not p["quitada"]
             ]
 
             # Determinar status do cliente
@@ -1050,22 +1148,36 @@ mapeamento_colunas": mapeamento_colunas,
             status_cliente = "inadimplente" if qtd_ct_vencidas >= 3 else "adimplente"
 
             # Calcular saldo total
-            saldo_total = sum(p["valor"] for p in parcelas_ct + parcelas_rec_fat + parcelas_outras)
+            saldo_total = sum(p["valor"] for p in parcelas_ct +
+                              parcelas_rec_fat + parcelas_outras)
 
             resultado = {
-                "cliente": cliente,
-                "numero_titulo": numero_titulo,
-                "saldo_total": saldo_total,
-                "parcelas_pendentes": len([p for p in parcelas_ct if not p["quitada"]]),
-                "parcelas_ct": parcelas_ct,
-                "parcelas_rec_fat": parcelas_rec_fat,
-                "parcelas_outras": parcelas_outras,
-                "parcelas_ct_vencidas": parcelas_ct_vencidas,
-                "qtd_ct_vencidas": qtd_ct_vencidas,
-                "status_cliente": status_cliente,
-                "relatorio_exportado": True,
-                "dados_brutos": df,
-                "total_registros": len(df),
+                "cliente":
+                cliente,
+                "numero_titulo":
+                numero_titulo,
+                "saldo_total":
+                saldo_total,
+                "parcelas_pendentes":
+                len([p for p in parcelas_ct if not p["quitada"]]),
+                "parcelas_ct":
+                parcelas_ct,
+                "parcelas_rec_fat":
+                parcelas_rec_fat,
+                "parcelas_outras":
+                parcelas_outras,
+                "parcelas_ct_vencidas":
+                parcelas_ct_vencidas,
+                "qtd_ct_vencidas":
+                qtd_ct_vencidas,
+                "status_cliente":
+                status_cliente,
+                "relatorio_exportado":
+                True,
+                "dados_brutos":
+                df,
+                "total_registros":
+                len(df),
                 "resumo": {
                     "total_ct": len(parcelas_ct),
                     "total_rec_fat": len(parcelas_rec_fat),
@@ -1078,7 +1190,8 @@ mapeamento_colunas": mapeamento_colunas,
             self.log_progresso(f"   📊 Processamento PDD concluído:")
             self.log_progresso(f"      💰 Saldo total: R$ {saldo_total:,.2f}")
             self.log_progresso(f"      📋 Parcelas CT: {len(parcelas_ct)}")
-            self.log_progresso(f"      📋 Parcelas REC/FAT: {len(parcelas_rec_fat)}")
+            self.log_progresso(
+                f"      📋 Parcelas REC/FAT: {len(parcelas_rec_fat)}")
             self.log_progresso(f"      ⚠️ CT vencidas: {qtd_ct_vencidas}")
             self.log_progresso(f"      🎯 Status: {status_cliente.upper()}")
 
@@ -1100,7 +1213,10 @@ mapeamento_colunas": mapeamento_colunas,
 
             # Remover formatação brasileira
             if isinstance(valor, str):
-                valor = valor.replace("R$", "").replace(".", "").replace(",", ".").strip()
+                valor = valor.replace("R$",
+                                      "").replace(".",
+                                                  "").replace(",",
+                                                              ".").strip()
                 return float(valor)
 
             return 0.0
@@ -1121,7 +1237,8 @@ mapeamento_colunas": mapeamento_colunas,
         except:
             return ""
 
-    async def _registrar_auditoria_planilha(self, dados_processados: Dict[str, Any]):
+    async def _registrar_auditoria_planilha(self,
+                                            dados_processados: Dict[str, Any]):
         """
         Registra dados da planilha no sistema de auditoria (MongoDB + JSON)
         """
@@ -1132,7 +1249,8 @@ mapeamento_colunas": mapeamento_colunas,
                 "cliente": dados_processados.get("cliente"),
                 "numero_titulo": dados_processados.get("numero_titulo"),
                 "arquivo_original": dados_processados.get("arquivo_original"),
-                "arquivo_auditoria": dados_processados.get("arquivo_auditoria"),
+                "arquivo_auditoria":
+                dados_processados.get("arquivo_auditoria"),
                 "hash_arquivo": dados_processados.get("hash_arquivo"),
                 "saldo_total": dados_processados.get("saldo_total"),
                 "total_registros": dados_processados.get("total_registros"),
@@ -1148,19 +1266,25 @@ mapeamento_colunas": mapeamento_colunas,
             try:
                 from core.mongodb_manager import mongodb_manager
                 if hasattr(mongodb_manager, 'database'):
-                    await mongodb_manager.database.auditoria_planilhas_sienge.insert_one(registro_auditoria)
+                    await mongodb_manager.database.auditoria_planilhas_sienge.insert_one(
+                        registro_auditoria)
                     self.log_progresso("   ✅ Auditoria salva no MongoDB")
             except Exception as e:
                 self.log_progresso(f"   ⚠️ MongoDB indisponível: {str(e)}")
 
             # Fallback JSON
-            pasta_auditoria_json = Path("dados_processamento/auditoria_planilhas")
+            pasta_auditoria_json = Path(
+                "dados_processamento/auditoria_planilhas")
             pasta_auditoria_json.mkdir(parents=True, exist_ok=True)
 
             arquivo_json = pasta_auditoria_json / f"auditoria_{dados_processados.get('numero_titulo')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
             with open(arquivo_json, 'w', encoding='utf-8') as f:
-                json.dump(registro_auditoria, f, indent=2, ensure_ascii=False, default=str)
+                json.dump(registro_auditoria,
+                          f,
+                          indent=2,
+                          ensure_ascii=False,
+                          default=str)
 
             self.log_progresso(f"   💾 Auditoria salva: {arquivo_json}")
 
@@ -1182,10 +1306,8 @@ mapeamento_colunas": mapeamento_colunas,
 
 # Função auxiliar para uso direto
 async def executar_processamento_sienge(
-    contrato: Dict[str, Any],
-    indices_economicos: Dict[str, Any],
-    credenciais_sienge: Dict[str, str]
-) -> ResultadoRPA:
+        contrato: Dict[str, Any], indices_economicos: Dict[str, Any],
+        credenciais_sienge: Dict[str, str]) -> ResultadoRPA:
     """
     Função auxiliar para executar processamento Sienge diretamente
 
@@ -1204,11 +1326,9 @@ async def executar_processamento_sienge(
         await rpa.inicializar()
 
         # Executa processamento
-        resultado = await rpa.executar(
-            contrato=contrato,
-            credenciais_sienge=credenciais_sienge,
-            indices=indices_economicos
-        )
+        resultado = await rpa.executar(contrato=contrato,
+                                       credenciais_sienge=credenciais_sienge,
+                                       indices=indices_economicos)
 
         return resultado
 
@@ -1216,8 +1336,7 @@ async def executar_processamento_sienge(
         return ResultadoRPA(
             sucesso=False,
             mensagem="Erro na execução do processamento Sienge",
-            erro=str(e)
-        )
+            erro=str(e))
     finally:
         # Finaliza recursos
         try:
