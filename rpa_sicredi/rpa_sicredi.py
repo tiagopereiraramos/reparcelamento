@@ -26,6 +26,7 @@ import os
 import shutil
 
 # Logger integrado via BaseRPA
+from core.logger_avancado import LoggerAvancado
 
 class RPASicredi(BaseRPA):
     """

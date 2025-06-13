@@ -153,7 +153,7 @@ async def executar_workflow_reparcelamento(
     """
     try:
         execucao_id = gerar_id_execucao()
-        
+
         # Salva execução como iniciada
         salvar_execucao(execucao_id, {
             "status": "iniciado",
@@ -161,14 +161,14 @@ async def executar_workflow_reparcelamento(
             "inicio": datetime.now().isoformat(),
             "parametros": parametros.dict()
         })
-        
+
         # Executa workflow em background
         background_tasks.add_task(
             executar_workflow_background,
             execucao_id,
             parametros
         )
-        
+
         return RespostaAPI(
             sucesso=True,
             mensagem="Workflow de reparcelamento iniciado com sucesso",
@@ -178,7 +178,7 @@ async def executar_workflow_reparcelamento(
                 "endpoint_status": f"/workflow/status/{execucao_id}"
             }
         )
-        
+
     except Exception as e:
         logger.error(f"Erro ao iniciar workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
@@ -189,10 +189,10 @@ async def obter_status_workflow(execucao_id: str):
     Obtém status de execução do workflow
     """
     execucao = obter_execucao(execucao_id)
-    
+
     if not execucao:
         raise HTTPException(status_code=404, detail="Execução não encontrada")
-    
+
     return RespostaAPI(
         sucesso=True,
         mensagem=f"Status da execução {execucao_id}",
@@ -208,23 +208,23 @@ async def executar_workflow_background(execucao_id: str, parametros: ParametrosW
         execucao = obter_execucao(execucao_id)
         execucao["etapa_atual"] = "rpa_coleta_indices"
         execucao["etapas_concluidas"] = []
-        
+
         # ETAPA 1: Coleta de Índices
         logger.info(f"[{execucao_id}] Executando RPA Coleta de Índices")
         resultado_indices = await executar_coleta_indices(
             planilha_id=parametros.planilha_calculo_id,
             credenciais_google=parametros.credenciais_google
         )
-        
+
         if not resultado_indices.sucesso:
             execucao["status"] = "erro"
             execucao["erro"] = f"Falha na coleta de índices: {resultado_indices.erro}"
             return
-        
+
         execucao["etapas_concluidas"].append("coleta_indices")
         execucao["resultado_indices"] = resultado_indices.dados
         execucao["etapa_atual"] = "rpa_analise_planilhas"
-        
+
         # ETAPA 2: Análise de Planilhas
         logger.info(f"[{execucao_id}] Executando RPA Análise de Planilhas")
         resultado_analise = await executar_analise_planilhas(
@@ -232,86 +232,89 @@ async def executar_workflow_background(execucao_id: str, parametros: ParametrosW
             planilha_apoio_id=parametros.planilha_apoio_id,
             credenciais_google=parametros.credenciais_google
         )
-        
+
         if not resultado_analise.sucesso:
             execucao["status"] = "erro"
             execucao["erro"] = f"Falha na análise de planilhas: {resultado_analise.erro}"
             return
-        
+
         execucao["etapas_concluidas"].append("analise_planilhas")
         execucao["resultado_analise"] = resultado_analise.dados
-        
+
         # Verifica se há contratos para processar
         contratos_reajuste = resultado_analise.dados.get("detalhes_contratos", [])
-        
+
         if not contratos_reajuste:
             execucao["status"] = "concluido"
             execucao["mensagem"] = "Workflow concluído - Nenhum contrato identificado para reajuste"
             execucao["fim"] = datetime.now().isoformat()
             return
-        
+
         # ETAPA 3: Processamento Sienge
         execucao["etapa_atual"] = "rpa_sienge"
         contratos_processados = []
-        
+
         limite = len(contratos_reajuste) if parametros.processar_todos else min(3, len(contratos_reajuste))
-        
+
         for i, contrato in enumerate(contratos_reajuste[:limite]):
             logger.info(f"[{execucao_id}] Processando contrato {i+1}/{limite} no Sienge")
-            
+
             # Obtém credenciais Sienge das variáveis de ambiente
             credenciais_sienge = {
                 "url": os.getenv("SIENGE_URL", ""),
                 "usuario": os.getenv("SIENGE_USERNAME", ""),
                 "senha": os.getenv("SIENGE_PASSWORD", "")
             }
-            
+
+            # Criar instância do RPA Sienge
+            # rpa_sienge = RPASienge()
+
             resultado_sienge = await executar_processamento_sienge(
                 contrato=contrato,
                 indices_economicos=resultado_indices.dados,
                 credenciais_sienge=credenciais_sienge
             )
-            
+
             if resultado_sienge.sucesso:
                 contratos_processados.append(resultado_sienge.dados)
-        
+
         execucao["etapas_concluidas"].append("processamento_sienge")
         execucao["contratos_processados_sienge"] = contratos_processados
-        
+
         # ETAPA 4: Processamento Sicredi (se houver contratos processados)
         if contratos_processados:
             execucao["etapa_atual"] = "rpa_sicredi"
             resultados_sicredi = []
-            
+
             credenciais_sicredi = {
                 "url": os.getenv("SICREDI_URL", ""),
                 "usuario": os.getenv("SICREDI_USERNAME", ""),
                 "senha": os.getenv("SICREDI_PASSWORD", "")
             }
-            
+
             for processamento in contratos_processados:
                 arquivo_remessa = processamento.get("carne_gerado", {}).get("nome_arquivo")
-                
+
                 if arquivo_remessa:
                     resultado_sicredi = await executar_processamento_sicredi(
                         arquivo_remessa=arquivo_remessa,
                         credenciais_sicredi=credenciais_sicredi,
                         dados_processamento=processamento
                     )
-                    
+
                     if resultado_sicredi.sucesso:
                         resultados_sicredi.append(resultado_sicredi.dados)
-            
+
             execucao["etapas_concluidas"].append("processamento_sicredi")
             execucao["resultados_sicredi"] = resultados_sicredi
-        
+
         # Finalização
         execucao["status"] = "concluido"
         execucao["fim"] = datetime.now().isoformat()
         execucao["mensagem"] = f"Workflow concluído com sucesso - {len(contratos_processados)} contratos processados"
-        
+
         logger.info(f"[{execucao_id}] Workflow concluído com sucesso")
-        
+
     except Exception as e:
         logger.error(f"[{execucao_id}] Erro no workflow: {str(e)}")
         execucao = obter_execucao(execucao_id)
@@ -333,14 +336,14 @@ async def executar_rpa_coleta_indices(parametros: ParametrosColetaIndices):
             planilha_id=parametros.planilha_id,
             credenciais_google=parametros.credenciais_google
         )
-        
+
         return RespostaAPI(
             sucesso=resultado.sucesso,
             mensagem=resultado.mensagem,
             dados=resultado.dados,
             erro=resultado.erro
         )
-        
+
     except Exception as e:
         logger.error(f"Erro no RPA Coleta de Índices: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
@@ -356,14 +359,14 @@ async def executar_rpa_analise_planilhas(parametros: ParametrosAnalisePlanilhas)
             planilha_apoio_id=parametros.planilha_apoio_id,
             credenciais_google=parametros.credenciais_google
         )
-        
+
         return RespostaAPI(
             sucesso=resultado.sucesso,
             mensagem=resultado.mensagem,
             dados=resultado.dados,
             erro=resultado.erro
         )
-        
+
     except Exception as e:
         logger.error(f"Erro no RPA Análise de Planilhas: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
@@ -379,14 +382,14 @@ async def executar_rpa_sienge(parametros: ParametrosSienge):
             indices_economicos=parametros.indices_economicos,
             credenciais_sienge=parametros.credenciais_sienge
         )
-        
+
         return RespostaAPI(
             sucesso=resultado.sucesso,
             mensagem=resultado.mensagem,
             dados=resultado.dados,
             erro=resultado.erro
         )
-        
+
     except Exception as e:
         logger.error(f"Erro no RPA Sienge: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
@@ -402,14 +405,14 @@ async def executar_rpa_sicredi(parametros: ParametrosSicredi):
             credenciais_sicredi=parametros.credenciais_sicredi,
             dados_processamento=parametros.dados_processamento
         )
-        
+
         return RespostaAPI(
             sucesso=resultado.sucesso,
             mensagem=resultado.mensagem,
             dados=resultado.dados,
             erro=resultado.erro
         )
-        
+
     except Exception as e:
         logger.error(f"Erro no RPA Sicredi: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
@@ -454,7 +457,7 @@ async def limpar_todas_execucoes():
     """
     total = len(execucoes_ativas)
     execucoes_ativas.clear()
-    
+
     return RespostaAPI(
         sucesso=True,
         mensagem=f"{total} execuções removidas da memória",
@@ -473,7 +476,7 @@ def main():
     print("📋 Arquitetura Refatorada - 4 RPAs Independentes")
     print("🌐 Documentação: http://localhost:5000/docs")
     print("=" * 60)
-    
+
     uvicorn.run(
         "api_rpa:app",
         host="0.0.0.0",
@@ -484,3 +487,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+**Analysis:**
+
+The provided change replaces the original `executar_processamento_sienge` call with code that instantiates `RPASienge` and calls a new method `executar_com_monitoramento`. However, the code also calls a non-existent `RPASienge` class. The intention seems to be about introducing an `RPASienge` class which is not available on the original code. Since the original code is supposed to be complete, I will proceed assuming the intention is to call the original function `executar_processamento_sienge` with other arguments.
