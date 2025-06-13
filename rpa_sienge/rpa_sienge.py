@@ -794,7 +794,7 @@ class RPASienge(BaseRPA):
     async def _processar_planilha_baixada(self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """
         Processa planilha baixada do Sienge conforme regras PDD
-        
+
         Etapas:
         1. Localizar arquivo mais recente na pasta Downloads
         2. Ler Excel com pandas
@@ -805,31 +805,31 @@ class RPASienge(BaseRPA):
         """
         try:
             self.log_progresso("📁 Etapa 1: Localizando arquivo baixado mais recente...")
-            
+
             # Usar platformdirs para diretório de downloads
             pasta_downloads = user_downloads_dir()
             self.log_progresso(f"   📂 Pasta Downloads: {pasta_downloads}")
-            
+
             # Buscar arquivo com padrão saldo_devedor_presente-YYYYMMDD-HHMMSS.xlsx
             arquivo_encontrado = self._localizar_arquivo_recente(pasta_downloads)
-            
+
             if not arquivo_encontrado:
                 raise Exception("Arquivo saldo_devedor_presente não encontrado na pasta Downloads")
-            
+
             self.log_progresso(f"   ✅ Arquivo encontrado: {arquivo_encontrado}")
-            
+
             # Etapa 2: Ler Excel com pandas
             self.log_progresso("📊 Etapa 2: Lendo planilha Excel...")
             df = await self._ler_planilha_excel(arquivo_encontrado)
-            
+
             # Etapa 3: Salvar cópia para auditoria
             self.log_progresso("💾 Etapa 3: Salvando cópia para auditoria...")
             caminho_auditoria = await self._salvar_planilha_auditoria(arquivo_encontrado, cliente, numero_titulo)
-            
+
             # Etapa 4: Processar dados conforme regras PDD
             self.log_progresso("🔄 Etapa 4: Processando dados conforme PDD...")
             dados_processados = await self._aplicar_regras_pdd_planilha(df, cliente, numero_titulo)
-            
+
             # Etapa 5: Adicionar metadados de auditoria
             dados_processados.update({
                 "arquivo_original": arquivo_encontrado,
@@ -840,13 +840,13 @@ class RPASienge(BaseRPA):
                 "versao_rpa": "2.0",
                 "sucesso": True
             })
-            
+
             # Etapa 6: Registrar no sistema de auditoria
             await self._registrar_auditoria_planilha(dados_processados)
-            
+
             self.log_progresso("✅ Planilha processada com sucesso!")
             return dados_processados
-            
+
         except Exception as e:
             erro_msg = f"Erro no processamento da planilha: {str(e)}"
             self.log_erro(erro_msg, e)
@@ -861,39 +861,39 @@ class RPASienge(BaseRPA):
     def _localizar_arquivo_recente(self, pasta_downloads: str) -> str:
         """
         Localiza arquivo saldo_devedor_presente mais recente na pasta Downloads
-        
+
         Padrão esperado: saldo_devedor_presente-YYYYMMDD-HHMMSS.xlsx
         """
         try:
             pasta_path = Path(pasta_downloads)
             if not pasta_path.exists():
                 raise Exception(f"Pasta Downloads não existe: {pasta_downloads}")
-            
+
             # Buscar arquivos com padrão específico
             padrao = "saldo_devedor_presente-*.xlsx"
             arquivos_encontrados = list(pasta_path.glob(padrao))
-            
+
             if not arquivos_encontrados:
                 raise Exception(f"Nenhum arquivo encontrado com padrão '{padrao}' em {pasta_downloads}")
-            
+
             # Ordenar por data de modificação (mais recente primeiro)
             arquivos_ordenados = sorted(arquivos_encontrados, key=lambda x: x.stat().st_mtime, reverse=True)
-            
+
             arquivo_mais_recente = str(arquivos_ordenados[0])
-            
+
             # Validar se arquivo foi modificado recentemente (últimos 10 minutos)
             tempo_arquivo = datetime.fromtimestamp(arquivos_ordenados[0].stat().st_mtime)
             tempo_atual = datetime.now()
             diferenca = (tempo_atual - tempo_arquivo).total_seconds() / 60
-            
+
             if diferenca > 10:
                 self.log_progresso(f"⚠️ Arquivo encontrado há {diferenca:.1f} minutos (pode não ser o download atual)")
-            
+
             self.log_progresso(f"   📄 Arquivo: {arquivo_mais_recente}")
             self.log_progresso(f"   🕐 Modificado: {tempo_arquivo.strftime('%d/%m/%Y %H:%M:%S')}")
-            
+
             return arquivo_mais_recente
-            
+
         except Exception as e:
             raise Exception(f"Erro ao localizar arquivo: {str(e)}")
 
@@ -904,27 +904,27 @@ class RPASienge(BaseRPA):
         try:
             # Ler Excel
             df = pd.read_excel(caminho_arquivo, engine='openpyxl')
-            
+
             if df.empty:
                 raise Exception("Planilha está vazia")
-            
+
             self.log_progresso(f"   📊 Planilha carregada: {len(df)} registros, {len(df.columns)} colunas")
-            
+
             # Validar colunas obrigatórias
             colunas_obrigatorias = [
                 "Parcela/Sequencial", "Status da parcela", "Data vencimento", 
                 "Valor a receber", "Documento"
             ]
-            
+
             colunas_faltantes = [col for col in colunas_obrigatorias if col not in df.columns]
-            
+
             if colunas_faltantes:
                 raise Exception(f"Colunas obrigatórias não encontradas: {colunas_faltantes}")
-            
+
             self.log_progresso("   ✅ Estrutura da planilha validada")
-            
+
             return df
-            
+
         except Exception as e:
             raise Exception(f"Erro ao ler planilha Excel: {str(e)}")
 
@@ -937,19 +937,19 @@ class RPASienge(BaseRPA):
             agora = datetime.now()
             pasta_auditoria = self.pasta_planilhas / str(agora.year) / f"{agora.month:02d}"
             pasta_auditoria.mkdir(parents=True, exist_ok=True)
-            
+
             # Nome do arquivo de auditoria
             timestamp = agora.strftime("%Y%m%d_%H%M%S")
             nome_arquivo = f"sienge_{numero_titulo}_{timestamp}.xlsx"
             caminho_auditoria = pasta_auditoria / nome_arquivo
-            
+
             # Copiar arquivo
             shutil.copy2(arquivo_original, caminho_auditoria)
-            
+
             self.log_progresso(f"   💾 Cópia salva: {caminho_auditoria}")
-            
+
             return str(caminho_auditoria)
-            
+
         except Exception as e:
             self.log_erro("Erro ao salvar planilha para auditoria", e)
             return ""
@@ -957,7 +957,7 @@ class RPASienge(BaseRPA):
     async def _aplicar_regras_pdd_planilha(self, df: pd.DataFrame, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """
         Aplica regras do PDD para processar dados da planilha
-        
+
         Regras principais:
         1. Classificar parcelas CT vs REC/FAT
         2. Identificar parcelas vencidas
@@ -968,9 +968,9 @@ class RPASienge(BaseRPA):
             parcelas_ct = []
             parcelas_rec_fat = []
             parcelas_outras = []
-            
+
             hoje = date.today()
-            
+
             for _, row in df.iterrows():
                 # Extrair dados da linha
                 parcela_sequencial = str(row.get("Parcela/Sequencial", "")).upper()
@@ -978,7 +978,7 @@ class RPASienge(BaseRPA):
                 data_vencimento_str = row.get("Data vencimento", "")
                 valor_str = row.get("Valor a receber", 0)
                 documento = str(row.get("Documento", ""))
-                
+
                 # Converter data de vencimento
                 data_vencimento = None
                 if data_vencimento_str:
@@ -989,13 +989,13 @@ class RPASienge(BaseRPA):
                             data_vencimento = data_vencimento_str.date()
                     except:
                         pass
-                
+
                 # Converter valor
                 valor = self._converter_valor_monetario(valor_str)
-                
+
                 # Verificar se está vencida
                 vencida = data_vencimento and data_vencimento < hoje if data_vencimento else False
-                
+
                 # Dados da parcela
                 dados_parcela = {
                     "tipo_parcela": parcela_sequencial,
@@ -1006,7 +1006,7 @@ class RPASienge(BaseRPA):
                     "vencida": vencida,
                     "quitada": status_parcela.upper() == "QUITADA"
                 }
-                
+
                 # Classificar por tipo (REGRA PDD)
                 if "CT" in parcela_sequencial or "COTA" in parcela_sequencial:
                     parcelas_ct.append(dados_parcela)
@@ -1014,20 +1014,20 @@ class RPASienge(BaseRPA):
                     parcelas_rec_fat.append(dados_parcela)
                 else:
                     parcelas_outras.append(dados_parcela)
-            
+
             # Calcular parcelas CT vencidas (REGRA CRÍTICA PDD)
             parcelas_ct_vencidas = [
                 p for p in parcelas_ct 
                 if p["vencida"] and not p["quitada"]
             ]
-            
+
             # Determinar status do cliente
             qtd_ct_vencidas = len(parcelas_ct_vencidas)
             status_cliente = "inadimplente" if qtd_ct_vencidas >= 3 else "adimplente"
-            
+
             # Calcular saldo total
             saldo_total = sum(p["valor"] for p in parcelas_ct + parcelas_rec_fat + parcelas_outras)
-            
+
             resultado = {
                 "cliente": cliente,
                 "numero_titulo": numero_titulo,
@@ -1050,16 +1050,16 @@ class RPASienge(BaseRPA):
                     "pode_reparcelar": status_cliente == "adimplente"
                 }
             }
-            
+
             self.log_progresso(f"   📊 Processamento PDD concluído:")
             self.log_progresso(f"      💰 Saldo total: R$ {saldo_total:,.2f}")
             self.log_progresso(f"      📋 Parcelas CT: {len(parcelas_ct)}")
             self.log_progresso(f"      📋 Parcelas REC/FAT: {len(parcelas_rec_fat)}")
             self.log_progresso(f"      ⚠️ CT vencidas: {qtd_ct_vencidas}")
             self.log_progresso(f"      🎯 Status: {status_cliente.upper()}")
-            
+
             return resultado
-            
+
         except Exception as e:
             raise Exception(f"Erro ao aplicar regras PDD: {str(e)}")
 
@@ -1070,15 +1070,15 @@ class RPASienge(BaseRPA):
         try:
             if pd.isna(valor) or valor == "":
                 return 0.0
-            
+
             if isinstance(valor, (int, float)):
                 return float(valor)
-            
+
             # Remover formatação brasileira
             if isinstance(valor, str):
                 valor = valor.replace("R$", "").replace(".", "").replace(",", ".").strip()
                 return float(valor)
-            
+
             return 0.0
         except:
             return 0.0
@@ -1119,7 +1119,7 @@ class RPASienge(BaseRPA):
                 "ip_usuario": self._obter_ip_usuario(),
                 "usuario_sistema": os.getenv("USER", "sistema")
             }
-            
+
             # Salvar no MongoDB (se disponível)
             try:
                 from core.mongodb_manager import mongodb_manager
@@ -1128,18 +1128,18 @@ class RPASienge(BaseRPA):
                     self.log_progresso("   ✅ Auditoria salva no MongoDB")
             except Exception as e:
                 self.log_progresso(f"   ⚠️ MongoDB indisponível: {str(e)}")
-            
+
             # Fallback JSON
             pasta_auditoria_json = Path("dados_processamento/auditoria_planilhas")
             pasta_auditoria_json.mkdir(parents=True, exist_ok=True)
-            
+
             arquivo_json = pasta_auditoria_json / f"auditoria_{dados_processados.get('numero_titulo')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            
+
             with open(arquivo_json, 'w', encoding='utf-8') as f:
                 json.dump(registro_auditoria, f, indent=2, ensure_ascii=False, default=str)
-            
+
             self.log_progresso(f"   💾 Auditoria salva: {arquivo_json}")
-            
+
         except Exception as e:
             self.log_erro("Erro ao registrar auditoria", e)
 

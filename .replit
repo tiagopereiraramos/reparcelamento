@@ -139,6 +139,15 @@ task = "shell.exec"
 args = "streamlit run dashboard_rpa.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Teste Planilha Sienge"
+author = 43711956
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python rpa_sienge/testar_processamento_planilha.py completo"
+
 [deployment]
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 deploymentTarget = "autoscale"
