@@ -55,8 +55,7 @@ class RPAColetaIndices(BaseRPA):
             ResultadoRPA com dados dos índices coletados
         """
         try:
-            self.log_progresso("Iniciando coleta de índices econômicos")
-
+            self.log_info("📊 Iniciando coleta de índices econômicos...")
             # Valida parâmetros
             planilha_id = parametros.get("planilha_id")
             if not planilha_id:
@@ -766,66 +765,4 @@ class RPAColetaIndices(BaseRPA):
 
             # Adiciona novo registro
             novo_registro = {
-                "timestamp": datetime.now().isoformat(),
-                "ipca": dados_ipca,
-                "igpm": dados_igpm,
-                "planilha_id": planilha_id,
-                "tipo": "coleta_indices",
-                "status": "coletado"
-            }
-            dados_existentes.append(novo_registro)
-
-            # Salva arquivo atualizado
-            with open(arquivo_indices, 'w', encoding='utf-8') as f:
-                json.dump(dados_existentes, f, indent=2, ensure_ascii=False)
-
-            self.log_progresso(
-                f"✅ Índices salvos localmente: {arquivo_indices}")
-
-        except Exception as e:
-            self.log_progresso(
-                f"❌ Erro ao salvar índices localmente: {str(e)}")
-
-
-# Função auxiliar para uso direto
-
-
-async def executar_coleta_indices(planilha_id: str, credenciais_google: Optional[str] = None) -> ResultadoRPA:
-    """
-    Função auxiliar para executar coleta de índices diretamente
-
-    Args:
-        planilha_id: ID da planilha Google Sheets
-        credenciais_google: Caminho para credenciais (opcional)
-
-    Returns:
-        ResultadoRPA com resultado da execução
-    """
-    rpa = RPAColetaIndices()
-
-    parametros = {
-        "planilha_id": planilha_id,
-        "credenciais_google": credenciais_google
-    }
-
-    resultado = await rpa.executar_com_monitoramento(parametros)
-
-    # Enviar notificação
-    try:
-        if resultado.sucesso:
-            notificar_sucesso(
-                nome_rpa="RPA Coleta Índices",
-                tempo_execucao=f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
-                resultados=resultado.dados or {}
-            )
-        else:
-            notificar_erro(
-                nome_rpa="RPA Coleta Índices",
-                erro=resultado.erro or "Erro desconhecido",
-                detalhes=resultado.mensagem
-            )
-    except Exception as e:
-        # Falha na notificação não deve afetar o resultado do RPA
-        print(f"Aviso: Falha ao enviar notificação: {e}")
-
-    return resultado
+                "timestamp": datetime.now().iso

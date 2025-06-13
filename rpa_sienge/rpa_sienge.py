@@ -38,20 +38,8 @@ class RPASienge(BaseRPA):
     VERSÃO PRODUÇÃO - Apenas código real do Sienge
     """
 
-    def __init__(self, usar_logger_avancado: bool = False, empresa: str = "Empresa"):
-        """
-        Inicializa o RPA Sienge
-
-        Args:
-            usar_logger_avancado: Se deve usar logger avançado com webhook
-            empresa: Nome da empresa (para logger avançado)
-        """
-        super().__init__(
-            nome_rpa="Sienge", 
-            usar_browser=True,
-            usar_logger_avancado=usar_logger_avancado,
-            empresa=empresa
-        )
+    def __init__(self):
+        super().__init__(nome_rpa="Sienge", usar_browser=True)
         self.logado_sienge = False
         self.credenciais_sienge = {}
         self.pasta_planilhas = Path("dados_extraidos/planilhas_sienge")
@@ -782,7 +770,8 @@ class RPASienge(BaseRPA):
                 "parcelas_ct": parcelas_ct,
                 "parcelas_rec_fat": parcelas_rec_fat,
                 "parcelas_outras": parcelas_outras,
-                "dados_brutos": df,
+                "dados_brutos":```python
+ df,
                 "mapeamento_colunas": mapeamento_colunas,
                 "timestamp_processamento": datetime.now().isoformat()
             }
@@ -816,30 +805,22 @@ class RPASienge(BaseRPA):
         6. Salvar cópia para auditoria
         """
         try:
-            self.log_progresso("📁 Etapa 1: Localizando arquivo baixado mais recente...")
+            self.log_info("📁 Etapa 1: Localizando arquivo baixado mais recente...")
+            self.log_info(f"   📂 Pasta Downloads: {pasta_downloads}")
 
-            # Usar platformdirs para diretório de downloads
-            pasta_downloads = user_downloads_dir()
-            self.log_progresso(f"   📂 Pasta Downloads: {pasta_downloads}")
-
-            # Buscar arquivo com padrão saldo_devedor_presente-YYYYMMDD-HHMMSS.xlsx
             arquivo_encontrado = self._localizar_arquivo_recente(pasta_downloads)
+            self.log_info(f"   ✅ Arquivo encontrado: {arquivo_encontrado}")
 
-            if not arquivo_encontrado:
-                raise Exception("Arquivo saldo_devedor_presente não encontrado na pasta Downloads")
-
-            self.log_progresso(f"   ✅ Arquivo encontrado: {arquivo_encontrado}")
-
-            # Etapa 2: Ler Excel com pandas
-            self.log_progresso("📊 Etapa 2: Lendo planilha Excel...")
+            # Etapa 2: Ler planilha Excel  
+            self.log_info("📊 Etapa 2: Lendo planilha Excel...")
             df = await self._ler_planilha_excel(arquivo_encontrado)
 
             # Etapa 3: Salvar cópia para auditoria
-            self.log_progresso("💾 Etapa 3: Salvando cópia para auditoria...")
+            self.log_info("💾 Etapa 3: Salvando cópia para auditoria...")
             caminho_auditoria = await self._salvar_planilha_auditoria(arquivo_encontrado, cliente, numero_titulo)
 
             # Etapa 4: Processar dados conforme regras PDD
-            self.log_progresso("🔄 Etapa 4: Processando dados conforme PDD...")
+            self.log_info("🔄 Etapa 4: Processando dados conforme PDD...")
             dados_processados = await self._aplicar_regras_pdd_planilha(df, cliente, numero_titulo)
 
             # Etapa 5: Adicionar metadados de auditoria

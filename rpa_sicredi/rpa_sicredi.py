@@ -413,10 +413,10 @@ class RPASicredi(BaseRPA):
             with open(arquivo_dados, 'w', encoding='utf-8') as f:
                 json.dump(dados_existentes, f, indent=2, ensure_ascii=False)
 
-            self.log_progresso(f"✅ Dados salvos localmente: {arquivo_dados}")
+            self.log_info(f"✅ Dados salvos localmente: {arquivo_dados}")
 
         except Exception as e:
-            self.log_progresso(f"❌ Erro ao salvar dados localmente: {str(e)}")
+            self.log_error(f"❌ Erro ao salvar dados localmente: {str(e)}")
 
     async def _fazer_logout_sicredi(self):
         """
@@ -424,10 +424,10 @@ class RPASicredi(BaseRPA):
         """
         try:
             if self.logado_sicredi:
-                self.log_progresso("Fazendo logout do Sicredi WebBank")
+                self.log_info("Fazendo logout do Sicredi WebBank")
                 # TODO: Cliente deve implementar logout específico
                 self.logado_sicredi = False
-                self.log_progresso("✅ Logout realizado")
+                self.log_info("✅ Logout concluído")
 
         except Exception as e:
             self.log_erro("Erro no logout Sicredi", e)

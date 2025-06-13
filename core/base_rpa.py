@@ -10,39 +10,11 @@ from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import json
 import traceback
 import logging
+from core.logging_manager import LoggingManager
 
 # Import para type hints
 if TYPE_CHECKING:
     from core.browser_manager import RPABrowser
-
-# Import opcional do logger avançado
-try:
-    from core.logger_avancado import LoggerAvancado
-    LOGGER_AVANCADO_DISPONIVEL = True
-except ImportError:
-    LOGGER_AVANCADO_DISPONIVEL = False
-
-
-def get_logger(nome: str) -> logging.Logger:
-    """Cria logger simples para RPA sem duplicação"""
-    logger = logging.getLogger(nome)
-
-    # Evita duplicação - limpa handlers existentes
-    if logger.handlers:
-        logger.handlers.clear()
-
-    # Evita propagação para o logger raiz (evita duplicação)
-    logger.propagate = False
-
-    # Adiciona apenas um handler personalizado
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-
-    return logger
 
 
 # Importações para persistência
@@ -101,36 +73,33 @@ class BaseRPA(ABC):
     - Persistência de resultados
     """
 
-    def __init__(self, nome_rpa: str, usar_browser: bool = True, 
-                 usar_logger_avancado: bool = False, empresa: str = "Empresa"):
+    def __init__(self, nome_rpa: str, usar_browser: bool = True, webhook_enabled: bool = False, webhook_url: Optional[str] = None, company_name: str = "Sistema RPA"):
         """
         Inicializa RPA base
 
         Args:
             nome_rpa: Nome identificador do RPA
             usar_browser: Se deve inicializar o browser Selenium
-            usar_logger_avancado: Se deve usar o logger avançado com webhook
-            empresa: Nome da empresa (para logger avançado)
+            webhook_enabled: Se deve enviar logs para webhook (default: False)
+            webhook_url: URL do webhook (se habilitado)
+            company_name: Nome da empresa/cliente
         """
         self.nome_rpa = nome_rpa
         self.usar_browser = usar_browser
-        self.usar_logger_avancado = usar_logger_avancado
-        self.empresa = empresa
         self.browser: Optional['RPABrowser'] = None
         self.mongo_manager: Optional[Any] = None
         self.inicio_execucao = None
-        self.logger = get_logger(f"RPA.{nome_rpa}")
         
-        # Inicializar logger avançado se solicitado
-        self.logger_avancado = None
-        if usar_logger_avancado and LOGGER_AVANCADO_DISPONIVEL:
-            self.logger_avancado = LoggerAvancado(
-                nome_rpa=nome_rpa,
-                empresa=empresa
-            )
-            self.logger_avancado.info(f"🤖 Inicializando RPA: {nome_rpa}")
-        else:
-            self.logger.info(f"🤖 Inicializando RPA: {nome_rpa}")
+        # Novo sistema de logging
+        self.logging_manager = LoggingManager(nome_rpa)
+        self.webhook_enabled = webhook_enabled
+        self.webhook_url = webhook_url
+        self.company_name = company_name
+        
+        # Compatibilidade com código antigo
+        self.logger = self.logging_manager.logger
+
+        self.log_info(f"🤖 Inicializando RPA: {nome_rpa}")
 
     async def inicializar(self) -> bool:
         """
@@ -314,13 +283,7 @@ class BaseRPA(ABC):
             mensagem: Mensagem de progresso
             dados: Dados adicionais para log
         """
-        if self.logger_avancado:
-            self.logger_avancado.info(f"📈 {mensagem}", dados)
-        else:
-            if dados:
-                self.logger.info(f"📈 {mensagem}", extra=dados)
-            else:
-                self.logger.info(f"📈 {mensagem}")
+        self.log_info(f"📈 {mensagem}", dados_extras=dados)
 
     def log_erro(self, mensagem: str, erro: Exception):
         """
@@ -331,43 +294,63 @@ class BaseRPA(ABC):
             erro: Exception ocorrida
         """
         erro_detalhes = {
-            "erro": str(erro),
+            "erro_tipo": type(erro).__name__,
+            "erro_mensagem": str(erro),
             "traceback": traceback.format_exc()
         }
-        
-        if self.logger_avancado:
-            self.logger_avancado.error(f"❌ {mensagem}: {str(erro)}", erro_detalhes)
-        else:
-            self.logger.error(f"❌ {mensagem}: {str(erro)}")
-            self.logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+        self.log_error(f"❌ {mensagem}: {str(erro)}", dados_extras=erro_detalhes)
+        self.log_error(f"🔍 Traceback: {traceback.format_exc()}")
     
-    def log_avancado(self, 
-                    mensagem: str, 
-                    nivel: str = "info", 
-                    dados_extras: Optional[Dict[str, Any]] = None):
-        """
-        Log avançado com webhook (se habilitado)
-        
-        Args:
-            mensagem: Mensagem do log
-            nivel: Nível do log (info, error, critical, debug, warning)
-            dados_extras: Dados adicionais
-        """
-        if self.logger_avancado:
-            return self.logger_avancado.register_log(mensagem, nivel, dados_extras)
-        else:
-            # Fallback para logger padrão
-            if nivel == "error":
-                self.logger.error(mensagem)
-            elif nivel == "critical":
-                self.logger.critical(mensagem)
-            elif nivel == "debug":
-                self.logger.debug(mensagem)
-            elif nivel == "warning":
-                self.logger.warning(mensagem)
-            else:
-                self.logger.info(mensagem)
-            return True
+    # Métodos de logging melhorados
+    def log_info(self, mensagem: str, dados_extras: Optional[Dict[str, Any]] = None):
+        """Log de informação com webhook opcional"""
+        self.logging_manager.info(
+            mensagem, 
+            webhook_enabled=self.webhook_enabled,
+            webhook_url=self.webhook_url,
+            company_name=self.company_name,
+            dados_extras=dados_extras
+        )
+    
+    def log_error(self, mensagem: str, dados_extras: Optional[Dict[str, Any]] = None):
+        """Log de erro com webhook opcional"""
+        self.logging_manager.error(
+            mensagem,
+            webhook_enabled=self.webhook_enabled,
+            webhook_url=self.webhook_url, 
+            company_name=self.company_name,
+            dados_extras=dados_extras
+        )
+    
+    def log_warning(self, mensagem: str, dados_extras: Optional[Dict[str, Any]] = None):
+        """Log de aviso com webhook opcional"""
+        self.logging_manager.warning(
+            mensagem,
+            webhook_enabled=self.webhook_enabled,
+            webhook_url=self.webhook_url,
+            company_name=self.company_name,
+            dados_extras=dados_extras
+        )
+    
+    def log_debug(self, mensagem: str, dados_extras: Optional[Dict[str, Any]] = None):
+        """Log de debug com webhook opcional"""
+        self.logging_manager.debug(
+            mensagem,
+            webhook_enabled=self.webhook_enabled,
+            webhook_url=self.webhook_url,
+            company_name=self.company_name,
+            dados_extras=dados_extras
+        )
+    
+    def log_critical(self, mensagem: str, dados_extras: Optional[Dict[str, Any]] = None):
+        """Log crítico com webhook opcional"""
+        self.logging_manager.critical(
+            mensagem,
+            webhook_enabled=self.webhook_enabled,
+            webhook_url=self.webhook_url,
+            company_name=self.company_name,
+            dados_extras=dados_extras
+        )
 
     # ========== MÉTODOS DO BROWSER (DELEGATE) ==========
     # Estes métodos delegam para self.browser e aparecem no IntelliSense

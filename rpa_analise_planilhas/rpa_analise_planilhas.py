@@ -50,8 +50,9 @@ class RPAAnalisePlanilhas(BaseRPA):
             ResultadoRPA com lista de contratos para processamento
         """
         try:
-            self.log_progresso(
-                "Iniciando análise das planilhas para reparcelamento")
+            self.log_info("🔍 Iniciando análise de planilhas...")
+            self.log_info(f"📊 Planilha Base: {parametros.get('planilha_calculo_id')}")
+            self.log_info(f"📋 Planilha Apoio: {parametros.get('planilha_apoio_id')}")
 
             # Valida parâmetros obrigatórios
             planilha_calculo_id = parametros.get("planilha_calculo_id")
