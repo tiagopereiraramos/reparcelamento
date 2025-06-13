@@ -6,7 +6,7 @@ Permite testar o RPA fora da orquestração Temporal para desenvolvimento e homo
 Desenvolvido em Português Brasileiro
 """
 
-from rpa_sienge import RPASienge, executar_processamento_sienge
+from rpa_sienge.rpa_sienge import RPASienge, executar_processamento_sienge
 import asyncio
 import sys
 import os

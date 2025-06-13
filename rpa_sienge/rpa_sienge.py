@@ -1147,3 +1147,49 @@ unas,
             return ip_local
         except:
             return "unknown"
+
+
+# Função auxiliar para uso direto
+async def executar_processamento_sienge(
+    contrato: Dict[str, Any],
+    indices_economicos: Dict[str, Any],
+    credenciais_sienge: Dict[str, str]
+) -> ResultadoRPA:
+    """
+    Função auxiliar para executar processamento Sienge diretamente
+
+    Args:
+        contrato: Dados do contrato (número_titulo, cliente, etc.)
+        indices_economicos: Índices econômicos (IPCA/IGPM)
+        credenciais_sienge: Credenciais de acesso ao Sienge
+
+    Returns:
+        ResultadoRPA com resultado do processamento
+    """
+    rpa = RPASienge()
+    
+    try:
+        # Inicializa RPA
+        await rpa.inicializar()
+        
+        # Executa processamento
+        resultado = await rpa.executar(
+            contrato=contrato,
+            credenciais_sienge=credenciais_sienge,
+            indices=indices_economicos
+        )
+        
+        return resultado
+        
+    except Exception as e:
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem="Erro na execução do processamento Sienge",
+            erro=str(e)
+        )
+    finally:
+        # Finaliza recursos
+        try:
+            await rpa.finalizar()
+        except:
+            pass
