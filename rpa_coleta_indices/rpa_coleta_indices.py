@@ -765,4 +765,68 @@ class RPAColetaIndices(BaseRPA):
 
             # Adiciona novo registro
             novo_registro = {
-                "timestamp": datetime.now().iso
+                "timestamp": datetime.now().isoformat(),
+                "ipca": dados_ipca,
+                "igpm": dados_igpm,
+                "planilha_id": planilha_id,
+                "tipo": "coleta_indices",
+                "status": "processado"
+            }
+            dados_existentes.append(novo_registro)
+
+            # Salva arquivo atualizado
+            with open(arquivo_indices, 'w', encoding='utf-8') as f:
+                json.dump(dados_existentes, f, indent=2, ensure_ascii=False)
+
+            self.log_info(f"✅ Índices salvos localmente: {arquivo_indices}")
+
+        except Exception as e:
+            self.log_error(f"❌ Erro ao salvar índices localmente: {str(e)}")
+
+
+# Função auxiliar para uso direto
+async def executar_coleta_indices(
+    planilha_id: str,
+    credenciais_google: Optional[str] = None
+) -> ResultadoRPA:
+    """
+    Função auxiliar para executar coleta de índices diretamente
+
+    Args:
+        planilha_id: ID da planilha Google Sheets para atualizar
+        credenciais_google: Caminho para arquivo de credenciais Google (opcional)
+
+    Returns:
+        ResultadoRPA com resultado da coleta
+    """
+    rpa = RPAColetaIndices()
+
+    parametros = {
+        "planilha_id": planilha_id,
+        "credenciais_google": credenciais_google
+    }
+
+    resultado = await rpa.executar_com_monitoramento(parametros)
+
+    # Enviar notificação
+    try:
+        if resultado.sucesso:
+            notificar_sucesso(
+                nome_rpa="RPA Coleta de Índices",
+                tempo_execucao=f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
+                resultados={
+                    "ipca_coletado": resultado.dados.get("ipca", {}).get("valor", "N/A") if resultado.dados else "N/A",
+                    "igpm_coletado": resultado.dados.get("igpm", {}).get("valor", "N/A") if resultado.dados else "N/A",
+                    "planilha_atualizada": planilha_id
+                }
+            )
+        else:
+            notificar_erro(
+                nome_rpa="RPA Coleta de Índices",
+                erro=resultado.erro or "Erro desconhecido",
+                detalhes=resultado.mensagem
+            )
+    except Exception as e:
+        print(f"Aviso: Falha ao enviar notificação: {e}")
+
+    return resultado
