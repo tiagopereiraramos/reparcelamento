@@ -22,6 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
 
+# Logger integrado via BaseRPA
+
 
 class RPAAnalisePlanilhas(BaseRPA):
     """

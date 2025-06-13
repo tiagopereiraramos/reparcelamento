@@ -25,6 +25,8 @@ from pathlib import Path
 import os
 import shutil
 
+# Logger integrado via BaseRPA
+
 class RPASicredi(BaseRPA):
     """
     RPA responsável pelo processamento no sistema Sicredi WebBank

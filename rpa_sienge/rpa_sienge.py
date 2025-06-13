@@ -770,9 +770,9 @@ class RPASienge(BaseRPA):
                 "parcelas_ct": parcelas_ct,
                 "parcelas_rec_fat": parcelas_rec_fat,
                 "parcelas_outras": parcelas_outras,
-                "dados_brutos":```python
- df,
-                "mapeamento_colunas": mapeamento_colunas,
+                "dados_brutos": df,
+                "mapeamento_colunas": mapeamento_col```python
+unas,
                 "timestamp_processamento": datetime.now().isoformat()
             }
 

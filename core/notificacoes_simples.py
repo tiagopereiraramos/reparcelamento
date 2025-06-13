@@ -13,7 +13,6 @@ from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
-from core.logging_manager import LoggingManager
 import os
 import base64
 from datetime import datetime
@@ -21,11 +20,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, List, Any, Optional
 from enum import Enum
+from core.logger_avancado import LoggerAvancado
 
 
 # Configurar logger para notificações
-logging_manager = LoggingManager("Notificacoes")
-logger = logging_manager.logger
+logger_manager = LoggerAvancado(
+    nome_rpa="NotificacoesSimples",
+    empresa="Sistema RPA"
+)
+logger = logger_manager.logger
 
 try:
     from google.oauth2.service_account import Credentials
@@ -369,7 +372,19 @@ class SistemaNotificacoes:
             return True
 
         html = GeradorTemplates.template_rpa_concluido(nome_rpa, tempo_execucao, resultados)
-        return self._enviar_para_todos(f"✅ RPA {nome_rpa} - Execução Concluída", html)
+        sucesso = self._enviar_para_todos(f"✅ RPA {nome_rpa} - Execução Concluída", html)
+
+        if sucesso:
+            logger_manager.info(f"📢 Notificação de sucesso enviada: {nome_rpa}")
+            logger_manager.debug("Detalhes da notificação de sucesso", {
+                "nome_rpa": nome_rpa,
+                "tempo_execucao": tempo_execucao,
+                "resultados": resultados
+            })
+        else:
+            logger_manager.error(f"❌ Erro ao enviar notificação de sucesso: {str(e)}")
+
+        return sucesso
 
     def notificar_erro_rpa(self, nome_rpa: str, erro: str, detalhes: str) -> bool:
         """Notifica erro no RPA"""
@@ -377,7 +392,19 @@ class SistemaNotificacoes:
             return True
 
         html = GeradorTemplates.template_erro_rpa(nome_rpa, erro, detalhes)
-        return self._enviar_para_todos(f"🚨 ERRO - RPA {nome_rpa}", html)
+        sucesso = self._enviar_para_todos(f"🚨 ERRO - RPA {nome_rpa}", html)
+
+        if sucesso:
+            logger_manager.warning(f"⚠️ Notificação de erro enviada: {nome_rpa} - {erro}")
+            logger_manager.debug("Detalhes da notificação de erro", {
+                "nome_rpa": nome_rpa,
+                "erro": erro,
+                "detalhes": detalhes
+            })
+        else:
+            logger_manager.error(f"❌ Erro ao enviar notificação de erro: {str(e)}")
+
+        return sucesso
 
     def notificar_workflow_concluido(self, rpas_executados: List[str], contratos_processados: int, tempo_total: str) -> bool:
         """Notifica conclusão de workflow completo"""
