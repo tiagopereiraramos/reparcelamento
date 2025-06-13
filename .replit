@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["firefox", "geckodriver", "glibcLocales", "libxcrypt"]
 
 [workflows]
-runButton = "RPA 1 - Coleta Índices"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -30,15 +30,15 @@ args = "Dashboard Streamlit"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Dashboard RPA Completo"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Dashboard Demo"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Dashboard RPA Demo"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "RPA Dashboard"
 
 [[workflows.workflow]]
 name = "API RPA Sistema"
@@ -75,15 +75,6 @@ author = "agent"
 task = "shell.exec"
 args = "streamlit run dashboard_rpa.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true"
 waitForPort = 8501
-
-[[workflows.workflow]]
-name = "Dashboard RPA Completo"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run dashboard_rpa.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true"
-waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Dashboard Demo"
@@ -138,6 +129,15 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python rpa_analise_planilhas/teste_analise_planilhas.py"
+
+[[workflows.workflow]]
+name = "RPA Dashboard"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run dashboard_rpa.py --server.port=5000 --server.address=0.0.0.0 --server.headless=true"
+waitForPort = 5000
 
 [deployment]
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]

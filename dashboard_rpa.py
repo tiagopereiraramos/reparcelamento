@@ -281,10 +281,10 @@ def main():
 
             # Processa dados para gráfico
             df_historico = []
-            for exec in historico[-14:]:  # Últimos 14 dias
-                data = exec["resultado"]["data"]
-                sucesso = exec["resultado"].get("sucesso_geral", False)
-                contratos = exec["resultado"].get("contratos_identificados", 0)
+            for execucao in historico[-14:]:  # Últimos 14 dias
+                data = execucao["resultado"]["data"]
+                sucesso = execucao["resultado"].get("sucesso_geral", False)
+                contratos = execucao["resultado"].get("contratos_identificados", 0)
 
                 df_historico.append({
                     "Data": data,
@@ -543,5 +543,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-The code implements a dashboard with real-time monitoring of RPA processes, including statistics on processed contracts, success rates, and queue status, as well as historical data and scheduling information.
