@@ -1,0 +1,22 @@
+{
+  "tipo": "planilha_sienge",
+  "cliente": "CLIENTE TESTE LTDA",
+  "numero_titulo": "123456789",
+  "arquivo_original": "/Users/tiagopereiraramos/Downloads/saldo_devedor_presente-20250613-091159.xlsx",
+  "arquivo_auditoria": "dados_extraidos/planilhas_sienge/2025/06/sienge_123456789_20250613_091201.xlsx",
+  "hash_arquivo": "23b27c40897da6ca8a68402a0a8a2fec",
+  "saldo_total": 0.0,
+  "total_registros": 26,
+  "resumo": {
+    "total_ct": 0,
+    "total_rec_fat": 0,
+    "total_outras": 26,
+    "ct_vencidas": 0,
+    "pode_reparcelar": true
+  },
+  "processado_em": "2025-06-13T09:12:01.837126",
+  "processado_por": "RPA_Sienge",
+  "versao_rpa": "2.0",
+  "ip_usuario": "127.0.0.1",
+  "usuario_sistema": "tiagopereiraramos"
+}
