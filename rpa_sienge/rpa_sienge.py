@@ -1279,6 +1279,24 @@ class RPASienge(BaseRPA):
         4. Calcular saldos totais
         """
         try:
+            # ANÁLISE DE PADRÕES - Debug para entender o arquivo real
+            self.log_progresso(f"   🔍 ANÁLISE DE PADRÕES DO ARQUIVO:")
+            self.log_progresso(f"      📋 Total de registros: {len(df)}")
+            self.log_progresso(f"      📊 Colunas disponíveis: {list(df.columns)}")
+            
+            # Mostrar alguns exemplos de "Parcela/Sequencial" para entender o padrão
+            if "Parcela/Sequencial" in df.columns:
+                exemplos_parcelas = df["Parcela/Sequencial"].dropna().unique()[:10]
+                self.log_progresso(f"      📋 Exemplos de parcelas encontradas:")
+                for i, exemplo in enumerate(exemplos_parcelas):
+                    self.log_progresso(f"         {i+1}. '{exemplo}'")
+            
+            # Verificar status das parcelas
+            if "Status da parcela" in df.columns:
+                status_unicos = df["Status da parcela"].dropna().unique()
+                self.log_progresso(f"      📊 Status encontrados: {list(status_unicos)}")
+                
+            self.log_progresso(f"   🔄 INICIANDO CLASSIFICAÇÃO PDD...")
             parcelas_ct = []
             parcelas_rec_fat = []
             parcelas_outras = []
@@ -1345,35 +1363,55 @@ class RPASienge(BaseRPA):
                     status_parcela.upper() == "QUITADA"
                 }
 
+                # DEBUG: Log da parcela para análise
+                self.log_progresso(f"      🔍 Analisando parcela: '{parcela_sequencial}' | Status: '{status_parcela}' | Valor: R$ {valor:.2f}")
+
                 # CLASSIFICAÇÃO RIGOROSA POR TIPO (REGRA PDD CRÍTICA)
-                # CT = Cota de Terreno (todas as variações possíveis no Sienge)
+                # Normaliza string para análise (maiúscula, sem espaços extras)
+                parcela_normalizada = parcela_sequencial.strip().upper()
+                
+                # CT = Cota de Terreno (TODAS as variações possíveis no Sienge)
                 eh_ct = any([
-                    "CT-" in parcela_sequencial,  # Formato padrão: CT-001, CT-002, etc.
-                    "CT " in parcela_sequencial,   # Com espaço: CT 001
-                    parcela_sequencial.startswith("CT"),  # Inicia com CT
-                    "COTA" in parcela_sequencial,  # COTA, COTAS
-                    "CTA-" in parcela_sequencial,  # Variação CTA-
+                    "CT-" in parcela_normalizada,        # CT-001, CT-002, etc.
+                    "CT " in parcela_normalizada,        # CT 001, CT 002
+                    parcela_normalizada.startswith("CT"), # CT001, CT002
+                    "COTA" in parcela_normalizada,       # COTA, COTAS, COTA-001
+                    "CTA-" in parcela_normalizada,       # CTA-001
+                    # Novos padrões encontrados no Sienge:
+                    parcela_normalizada.endswith("-CT"),  # 001-CT
+                    "/CT" in parcela_normalizada,        # 001/CT
+                    "TERRENO" in parcela_normalizada,    # TERRENO
+                    "LOTE" in parcela_normalizada,       # LOTE (se aplicável)
+                    # Padrões numéricos simples que podem ser CT:
+                    (parcela_normalizada.isdigit() and len(parcela_normalizada) <= 3),  # 001, 002, etc.
+                    # Padrões com hífen e números:
+                    (len(parcela_normalizada.split('-')) == 2 and 
+                     all(part.isdigit() for part in parcela_normalizada.split('-'))),  # 001-002
                 ])
                 
                 # REC/FAT = Receitas e Faturamentos
                 eh_rec_fat = any([
-                    "REC-" in parcela_sequencial,
-                    "FAT-" in parcela_sequencial,
-                    "RECEITA" in parcela_sequencial,
-                    "FATURAMENTO" in parcela_sequencial,
-                    "TAXA" in parcela_sequencial,
-                    "CUSTO" in parcela_sequencial
+                    "REC-" in parcela_normalizada,
+                    "FAT-" in parcela_normalizada,
+                    "RECEITA" in parcela_normalizada,
+                    "FATURAMENTO" in parcela_normalizada,
+                    "TAXA" in parcela_normalizada,
+                    "CUSTO" in parcela_normalizada,
+                    "HONORARIOS" in parcela_normalizada,
+                    "HONORÁRIO" in parcela_normalizada,
+                    "CUSTAS" in parcela_normalizada,
+                    "DESPESAS" in parcela_normalizada
                 ])
 
                 if eh_ct:
                     parcelas_ct.append(dados_parcela)
-                    self.log_progresso(f"      🔶 CT classificada: {parcela_sequencial}")
+                    self.log_progresso(f"      🔶 CT DETECTADA: '{parcela_sequencial}' | Vencida: {vencida} | Quitada: {dados_parcela['quitada']}")
                 elif eh_rec_fat:
                     parcelas_rec_fat.append(dados_parcela)
-                    self.log_progresso(f"      🔷 REC/FAT classificada: {parcela_sequencial}")
+                    self.log_progresso(f"      🔷 REC/FAT DETECTADA: '{parcela_sequencial}'")
                 else:
                     parcelas_outras.append(dados_parcela)
-                    self.log_progresso(f"      ⚪ Outras classificada: {parcela_sequencial}")
+                    self.log_progresso(f"      ⚪ OUTRAS: '{parcela_sequencial}' (não CT nem REC/FAT)")
 
             # Calcular parcelas CT vencidas (REGRA CRÍTICA PDD)
             parcelas_ct_vencidas = [
