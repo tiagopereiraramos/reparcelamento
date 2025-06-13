@@ -1,4 +1,4 @@
-# Correcting imports in RPA Sienge files to resolve module not found error.
+# RPA Sienge code updated with TODOs for webscraping implementation.
 """
 RPA Sienge - Versão Produção
 Terceiro RPA do sistema - Processa reparcelamento no ERP Sienge
@@ -284,8 +284,7 @@ class RPASienge(BaseRPA):
 
                 # WEBSCRAPING REAL - Seleciona formato Excel
                 self.log_progresso("📁 Selecionando formato Excel...")
-                self.browser.click(
-                    xpath="//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]")
+                self.browser.click(xpath='//div[@id="mui-144"]')
                 time.sleep(1)
 
                 self.browser.click(
@@ -298,39 +297,28 @@ class RPASienge(BaseRPA):
                     xpath="//button[@type='button' and normalize-space()='Exportar']")
                 time.sleep(5)
 
-                # TODO PRÓXIMA ETAPA: Processar planilha baixada
-                # 1. Localizar arquivo baixado mais recente
-                # 2. Ler Excel com pandas
-                # 3. Processar dados conforme regras PDD
-                # 4. Classificar parcelas CT vs REC/FAT
-                # 5. Identificar parcelas vencidas
-                self.log_progresso(
-                    "📋 TODO: Processar planilha baixada (próxima implementação)")
+                # PROCESSAMENTO DA PLANILHA BAIXADA
+                self.log_progresso("📋 Processando planilha baixada...")
+                dados_planilha = await self._processar_planilha_baixada(cliente, numero_titulo)
 
-            # DADOS ESTRUTURADOS PARA REGRAS DE NEGÓCIO
-            # Estrutura obrigatória que meus métodos de validação esperam
-            dados_financeiros = {
-                "cliente": cliente,
-                "numero_titulo": numero_titulo,
-                "saldo_total": 150000.00,  # TODO: Extrair da planilha real
-                "parcelas_pendentes": 48,   # TODO: Contar da planilha real
-                "parcelas_ct": [            # TODO: Filtrar da planilha real - CRÍTICO PDD
-                    # Exemplo estrutura esperada:
-                    # {
-                    #     "tipo_parcela": "CT-001",
-                    #     "status_parcela": "Pendente",
-                    #     "data_vencimento": "2024-12-15",
-                    #     "valor": 3125.00
-                    # }
-                ],
-                "parcelas_rec_fat": [       # TODO: Filtrar da planilha real
-                    # Parcelas REC/FAT (custas/honorários)
-                ],
-                "status_cliente": "adimplente",  # TODO: Calcular baseado em parcelas CT vencidas
-                "relatorio_exportado": True,
-                "dados_brutos": None,       # TODO: DataFrame da planilha
-                "sucesso": True
-            }
+            # DADOS PROCESSADOS DA PLANILHA REAL
+            if dados_planilha and dados_planilha.get("sucesso"):
+                dados_financeiros = dados_planilha
+            else:
+                # Fallback com dados vazios se planilha não processada
+                dados_financeiros = {
+                    "cliente": cliente,
+                    "numero_titulo": numero_titulo,
+                    "saldo_total": 0.0,
+                    "parcelas_pendentes": 0,
+                    "parcelas_ct": [],
+                    "parcelas_rec_fat": [],
+                    "status_cliente": "erro_processamento",
+                    "relatorio_exportado": False,
+                    "dados_brutos": None,
+                    "sucesso": False,
+                    "erro": dados_planilha.get("erro", "Falha no processamento da planilha")
+                }
 
             self.log_progresso(
                 "✅ Webscraping concluído - Aguardando processamento da planilha")
@@ -343,133 +331,89 @@ class RPASienge(BaseRPA):
 
     async def _validar_contrato_reparcelamento(self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Valida se contrato pode ser reparcelado conforme regras RIGOROSAS do PDD
+        Valida se contrato pode ser reparcelado conforme regras do PDD seção 7.3.2
 
-        REGRA PRINCIPAL DO PDD:
-        - Cliente com 3+ parcelas CT vencidas = INADIMPLENTE (não reparcelar)
-        - Cliente com < 3 parcelas CT vencidas = PODE reparcelar
-
-        BASEADO NO ARQUIVO: 03_execucao_sienge_1749673423108.txt
+        REGRA PRINCIPAL:
+        - Cliente com 3 ou mais parcelas CT vencidas = INADIMPLENTE (não pode reparcelar)
+        - Cliente com menos de 3 parcelas CT vencidas = PODE reparcelar
         """
         try:
             if not dados_financeiros.get("sucesso", False):
                 return {
                     "pode_reparcelar": False,
-                    "motivo": "Erro na consulta de dados financeiros do Sienge",
-                    "status": "erro",
-                    "codigo_erro": "DADOS_INVALIDOS"
+                    "motivo": "Erro na consulta de dados financeiros",
+                    "status": "erro"
                 }
 
+            # Filtra apenas parcelas CT CONFORME PDD
+            parcelas_ct = dados_financeiros.get("parcelas_ct", [])
+
+            # Conta parcelas CT vencidas CONFORME PDD - status exato "Quitada"
+            parcelas_ct_vencidas = []
+            hoje = date.today()
+
+            for parcela in parcelas_ct:
+                data_vencimento = parcela.get("data_vencimento")
+                status = parcela.get("status_parcela", "")
+
+                # Converte data se necessário
+                if isinstance(data_vencimento, str):
+                    try:
+                        data_vencimento = datetime.strptime(
+                            data_vencimento, "%Y-%m-%d").date()
+                    except:
+                        continue
+
+                # REGRA PDD: Verifica se é CT vencida e NÃO está "Quitada" (status exato)
+                if (data_vencimento < hoje and
+                        status != "Quitada"):  # Status exato conforme PDD
+                    parcelas_ct_vencidas.append(parcela)
+
+            qtd_ct_vencidas = len(parcelas_ct_vencidas)
             cliente = dados_financeiros.get("cliente", "")
-            numero_titulo = dados_financeiros.get("numero_titulo", "")
 
-            # Usa dados já processados conforme PDD
-            qtd_ct_vencidas = dados_financeiros.get("qtd_ct_vencidas", 0)
-            status_cliente = dados_financeiros.get("status_cliente", "")
-            saldo_total = dados_financeiros.get("saldo_total", 0)
-
-            # Validações adicionais conforme PDD
-            validacoes_extras = self._validacoes_adicionais_pdd(
-                dados_financeiros)
-
-            self.log_progresso(f"🔍 VALIDANDO REPARCELAMENTO - PDD")
-            self.log_progresso(f"   👤 Cliente: {cliente}")
-            self.log_progresso(f"   📋 Título: {numero_titulo}")
-            self.log_progresso(f"   ⚠️ CT Vencidas: {qtd_ct_vencidas}")
-            self.log_progresso(f"   💰 Saldo: R$ {saldo_total:,.2f}")
-
-            # REGRA PRINCIPAL - EXATAMENTE CONFORME PDD
-            pode_reparcelar = qtd_ct_vencidas < 3
-
-            if pode_reparcelar:
-                # Verifica validações extras
-                if not validacoes_extras["todas_aprovadas"]:
-                    pode_reparcelar = False
-                    motivo = f"Reprovado por validações extras: {', '.join(validacoes_extras['motivos_reprovacao'])}"
-                    status = "reprovado_validacoes_extras"
-                else:
-                    motivo = f"✅ APROVADO - {qtd_ct_vencidas} parcelas CT vencidas (< 3 conforme PDD)"
-                    status = "aprovado"
-            else:
-                motivo = f"❌ REPROVADO - {qtd_ct_vencidas} parcelas CT vencidas (>= 3 conforme PDD)"
+            # Regra principal do PDD
+            if qtd_ct_vencidas >= 3:
+                motivo = f"Cliente inadimplente - {qtd_ct_vencidas} parcelas CT vencidas (>= 3)"
+                pode_reparcelar = False
                 status = "inadimplente"
+            else:
+                motivo = f"Cliente apto para reparcelamento - {qtd_ct_vencidas} parcelas CT vencidas (< 3)"
+                pode_reparcelar = True
+                status = "apto"
 
-            # Informações complementares
+            # Informações adicionais
             parcelas_rec_fat = dados_financeiros.get("parcelas_rec_fat", [])
-            if parcelas_rec_fat and pode_reparcelar:
-                motivo += f" | {len(parcelas_rec_fat)} pendências REC/FAT (não impedem reparcelamento)"
+            if len(parcelas_rec_fat) > 0 and pode_reparcelar:
+                motivo += f" + {len(parcelas_rec_fat)} pendências REC/FAT (não impedem)"
 
-            resultado = {
+            resultado_validacao = {
                 "pode_reparcelar": pode_reparcelar,
                 "motivo": motivo,
                 "status": status,
-                "regra_aplicada": "PDD_3_PARCELAS_CT_VENCIDAS",
                 "detalhes": {
                     "qtd_ct_vencidas": qtd_ct_vencidas,
-                    "limite_pdd": 3,
-                    "saldo_total": saldo_total,
-                    "total_parcelas_ct": len(dados_financeiros.get("parcelas_ct", [])),
-                    "total_parcelas_rec_fat": len(parcelas_rec_fat),
-                    "validacoes_extras": validacoes_extras,
+                    "qtd_rec_fat": len(parcelas_rec_fat),
                     "cliente": cliente,
-                    "numero_titulo": numero_titulo
-                },
-                "timestamp_validacao": datetime.now().isoformat()
+                    "saldo_total": dados_financeiros.get("saldo_total", 0)
+                }
             }
 
-            # Log do resultado
-            emoji = "✅" if pode_reparcelar else "❌"
-            self.log_progresso(f"{emoji} RESULTADO VALIDAÇÃO: {motivo}")
+            if pode_reparcelar:
+                self.log_progresso("✅ Cliente aprovado para reparcelamento")
+            else:
+                self.log_progresso(f"❌ Cliente reprovado: {motivo}")
 
-            return resultado
+            return resultado_validacao
 
         except Exception as e:
-            erro_msg = f"Erro crítico na validação PDD: {str(e)}"
-            self.log_erro(erro_msg, e)
+            erro_msg = f"Erro na validação: {str(e)}"
+            self.log_erro("Falha na validação de reparcelamento", e)
             return {
                 "pode_reparcelar": False,
                 "motivo": erro_msg,
-                "status": "erro_critico",
-                "codigo_erro": "FALHA_VALIDACAO",
-                "detalhes": {"erro_validacao": erro_msg},
-                "timestamp_validacao": datetime.now().isoformat()
-            }
-
-    def _validacoes_adicionais_pdd(self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
-        """Validações adicionais conforme critérios do PDD"""
-        try:
-            motivos_reprovacao = []
-
-            # Validação 1: Saldo mínimo
-            saldo_total = dados_financeiros.get("saldo_total", 0)
-            if saldo_total < 1000:  # Critério mínimo conforme PDD
-                motivos_reprovacao.append(
-                    f"Saldo baixo (R$ {saldo_total:,.2f} < R$ 1.000)")
-
-            # Validação 2: Tem parcelas CT
-            parcelas_ct = dados_financeiros.get("parcelas_ct", [])
-            if not parcelas_ct:
-                motivos_reprovacao.append("Nenhuma parcela CT encontrada")
-
-            # Validação 3: Dados básicos
-            if not dados_financeiros.get("cliente"):
-                motivos_reprovacao.append("Cliente não identificado")
-
-            todas_aprovadas = len(motivos_reprovacao) == 0
-
-            return {
-                "todas_aprovadas": todas_aprovadas,
-                "motivos_reprovacao": motivos_reprovacao,
-                "total_validacoes": 3,
-                "aprovadas": 3 - len(motivos_reprovacao)
-            }
-
-        except Exception as e:
-            return {
-                "todas_aprovadas": False,
-                "motivos_reprovacao": [f"Erro nas validações extras: {str(e)}"],
-                "total_validacoes": 0,
-                "aprovadas": 0
+                "status": "erro",
+                "detalhes": {"erro_validacao": erro_msg}
             }
 
     async def _processar_reparcelamento(
@@ -783,12 +727,7 @@ class RPASienge(BaseRPA):
             }
 
     def _processar_dados_relatorio_sienge(self, dados_relatorio: Dict[str, Any], contrato: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Processa dados do relatório do Sienge conforme regras do PDD e estrutura real da planilha
-
-        BASEADO NA PLANILHA REAL: saldo_devedor_presente-20250610-093716.xlsx
-        REGRAS DO PDD: Anexo 03_execucao_sienge_1749673423108.txt
-        """
+        """Processa dados do relatório do Sienge conforme regras do PDD"""
         try:
             if not dados_relatorio.get("sucesso", False):
                 return {
@@ -803,274 +742,456 @@ class RPASienge(BaseRPA):
                     "erro": "Nenhum dado encontrado no relatório"
                 }
 
-            self.log_progresso(
-                "🔄 Processando dados conforme PDD e planilha real do Sienge...")
+            self.log_progresso("🔄 Processando dados conforme regras PDD...")
 
-            # MAPEAMENTO BASEADO NA PLANILHA REAL DO SIENGE
-            colunas_sienge = {
-                "titulo": "Título",
-                "cliente": "Cliente",
-                "tipo_parcela": "Parcela/Condição",
-                "status": "Status da parcela",
-                "data_vencimento": "Data vencimento",
-                "valor": "Valor a receber",
-                "documento": "Documento"
-            }
+            # Identifica colunas importantes (mapping flexível)
+            mapeamento_colunas = self._mapear_colunas_sienge(
+                df.columns.tolist())
 
-            # VALIDAÇÃO DE COLUNAS OBRIGATÓRIAS
-            colunas_faltantes = []
-            for chave, nome_coluna in colunas_sienge.items():
-                if nome_coluna not in df.columns:
-                    colunas_faltantes.append(nome_coluna)
-
-            if colunas_faltantes:
-                self.log_progresso(
-                    f"⚠️ Colunas não encontradas: {colunas_faltantes}")
-
-            # PROCESSAMENTO CONFORME REGRAS PDD
+            # Filtra parcelas CT (Cota de Terreno) - REGRA PRINCIPAL PDD
             parcelas_ct = []
             parcelas_rec_fat = []
-            hoje = date.today()
+            parcelas_outras = []
 
-            self.log_progresso(
-                f"📊 Processando {len(df)} linhas do relatório...")
+            for _, row in df.iterrows():
+                tipo_parcela = str(
+                    row.get(mapeamento_colunas.get("tipo_parcela", ""), "")).upper()
+                status_parcela = str(
+                    row.get(mapeamento_colunas.get("status", ""), ""))
 
-            for idx, row in df.iterrows():
+                # Classifica por tipo
+                if "CT" in tipo_parcela or "COTA" in tipo_parcela:
+                    parcelas_ct.append(row.to_dict())
+                elif any(x in tipo_parcela for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
+                    parcelas_rec_fat.append(row.to_dict())
+                else:
+                    parcelas_outras.append(row.to_dict())
+
+            # Calcula saldo total
+            coluna_valor = mapeamento_colunas.get("valor", "")
+            saldo_total = 0
+            if coluna_valor:
                 try:
-                    # Extrai dados principais
-                    tipo_parcela = str(
-                        row.get(colunas_sienge["tipo_parcela"], "")).upper().strip()
-                    status_parcela = str(
-                        row.get(colunas_sienge["status"], "")).strip()
-                    valor_str = str(row.get(colunas_sienge["valor"], "0"))
-                    data_venc_str = str(
-                        row.get(colunas_sienge["data_vencimento"], ""))
+                    saldo_total = df[coluna_valor].apply(
+                        self._converter_valor_monetario).sum()
+                except:
+                    saldo_total = 0
 
-                    # Converte valor monetário
-                    valor = self._converter_valor_monetario(valor_str)
-
-                    # Converte data
-                    data_vencimento = self._converter_data_sienge(
-                        data_venc_str)
-
-                    # Monta objeto da parcela
-                    parcela = {
-                        "titulo": str(row.get(colunas_sienge["titulo"], "")),
-                        "cliente": str(row.get(colunas_sienge["cliente"], "")),
-                        "tipo_parcela": tipo_parcela,
-                        "status_parcela": status_parcela,
-                        "data_vencimento": data_vencimento,
-                        "valor": valor,
-                        "documento": str(row.get(colunas_sienge["documento"], "")),
-                        "linha_original": idx + 1
-                    }
-
-                    # CLASSIFICAÇÃO CONFORME PDD - REGRA CRÍTICA
-                    if self._is_parcela_ct(tipo_parcela):
-                        parcelas_ct.append(parcela)
-                    elif self._is_parcela_rec_fat(tipo_parcela):
-                        parcelas_rec_fat.append(parcela)
-                    else:
-                        # Log para tipos não reconhecidos
-                        self.log_progresso(
-                            f"⚠️ Tipo de parcela não reconhecido: '{tipo_parcela}' (linha {idx + 1})")
-
-                except Exception as e:
-                    self.log_erro(
-                        f"Erro ao processar linha {idx + 1}: {str(e)}", e)
-                    continue
-
-            # CÁLCULOS CONFORME PDD
-            saldo_total = sum(p["valor"] for p in parcelas_ct +
-                              parcelas_rec_fat if p["valor"] > 0)
-
-            # Conta parcelas CT vencidas (REGRA PRINCIPAL PDD)
-            parcelas_ct_vencidas = [
-                p for p in parcelas_ct
-                if (p["data_vencimento"] and
-                    p["data_vencimento"] < hoje and
-                    p["status_parcela"] != "Quitada")
-            ]
-
-            # Status do cliente conforme PDD
-            qtd_ct_vencidas = len(parcelas_ct_vencidas)
-            status_cliente = "inadimplente" if qtd_ct_vencidas >= 3 else "adimplente"
-
+            # Estrutura resultado final
             resultado = {
                 "sucesso": True,
-                "cliente": contrato.get("cliente", ""),
-                "numero_titulo": contrato.get("numero_titulo", ""),
+                "cliente": cliente,
+                "numero_titulo": numero_titulo,
+                "total_parcelas_ct": len(parcelas_ct),
+                "total_parcelas_rec_fat": len(parcelas_rec_fat),
                 "saldo_total": saldo_total,
-                "total_parcelas": len(df),
                 "parcelas_ct": parcelas_ct,
                 "parcelas_rec_fat": parcelas_rec_fat,
-                "parcelas_ct_vencidas": parcelas_ct_vencidas,
-                "qtd_ct_vencidas": qtd_ct_vencidas,
-                "status_cliente": status_cliente,
-                "pode_reparcelar": qtd_ct_vencidas < 3,
-                "resumo": {
-                    "total_ct": len(parcelas_ct),
-                    "total_rec_fat": len(parcelas_rec_fat),
-                    "ct_vencidas": qtd_ct_vencidas,
-                    "saldo_pendente": saldo_total
-                },
+                "parcelas_outras": parcelas_outras,
                 "dados_brutos": df,
+                "mapeamento_colunas": mapeamento_colunas,
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
             self.log_progresso(f"✅ Processamento concluído:")
-            self.log_progresso(f"   📊 Total de parcelas: {len(df)}")
-            self.log_progresso(f"   📋 Parcelas CT: {len(parcelas_ct)}")
+            self.log_progresso(f"   📊 Total parcelas CT: {len(parcelas_ct)}")
+            self.log_progresso(
+                f"   📊 Total parcelas REC/FAT: {len(parcelas_rec_fat)}")
             self.log_progresso(f"   💰 Saldo total: R$ {saldo_total:,.2f}")
-            self.log_progresso(f"   ⚠️ CT vencidas: {qtd_ct_vencidas}")
-            self.log_progresso(f"   📈 Status: {status_cliente}")
 
             return resultado
 
         except Exception as e:
-            erro_msg = f"Erro no processamento de dados: {str(e)}"
+            self.log_erro("Erro no processamento de dados do relatório", e)
+            return {
+                "sucesso": False,
+                "erro": str(e),
+                "cliente": contrato.get("cliente", ""),
+                "numero_titulo": contrato.get("numero_titulo", "")
+            }
+
+    async def _processar_planilha_baixada(self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+        """
+        Processa planilha baixada do Sienge conforme regras PDD
+
+        Etapas:
+        1. Localizar arquivo mais recente na pasta Downloads
+        2. Ler Excel com pandas
+        3. Processar dados conforme regras PDD
+        4. Classificar parcelas CT vs REC/FAT
+        5. Identificar parcelas vencidas
+        6. Salvar cópia para auditoria
+        """
+        try:
+            self.log_progresso(
+                "📁 Etapa 1: Localizando arquivo baixado mais recente...")
+
+            # Usar platformdirs para diretório de downloads
+            pasta_downloads = user_downloads_dir()
+            self.log_progresso(f"   📂 Pasta Downloads: {pasta_downloads}")
+
+            # Buscar arquivo com padrão saldo_devedor_presente-YYYYMMDD-HHMMSS.xlsx
+            arquivo_encontrado = self._localizar_arquivo_recente(
+                pasta_downloads)
+
+            if not arquivo_encontrado:
+                raise Exception(
+                    "Arquivo saldo_devedor_presente não encontrado na pasta Downloads")
+
+            self.log_progresso(
+                f"   ✅ Arquivo encontrado: {arquivo_encontrado}")
+
+            # Etapa 2: Ler Excel com pandas
+            self.log_progresso("📊 Etapa 2: Lendo planilha Excel...")
+            df = await self._ler_planilha_excel(arquivo_encontrado)
+
+            # Etapa 3: Salvar cópia para auditoria
+            self.log_progresso("💾 Etapa 3: Salvando cópia para auditoria...")
+            caminho_auditoria = await self._salvar_planilha_auditoria(arquivo_encontrado, cliente, numero_titulo)
+
+            # Etapa 4: Processar dados conforme regras PDD
+            self.log_progresso("🔄 Etapa 4: Processando dados conforme PDD...")
+            dados_processados = await self._aplicar_regras_pdd_planilha(df, cliente, numero_titulo)
+
+            # Etapa 5: Adicionar metadados de auditoria
+            dados_processados.update({
+                "arquivo_original": arquivo_encontrado,
+                "arquivo_auditoria": caminho_auditoria,
+                "hash_arquivo": self._calcular_hash_arquivo(arquivo_encontrado),
+                "processado_em": datetime.now().isoformat(),
+                "processado_por": "RPA_Sienge",
+                "versao_rpa": "2.0",
+                "sucesso": True
+            })
+
+            # Etapa 6: Registrar no sistema de auditoria
+            await self._registrar_auditoria_planilha(dados_processados)
+
+            self.log_progresso("✅ Planilha processada com sucesso!")
+            return dados_processados
+
+        except Exception as e:
+            erro_msg = f"Erro no processamento da planilha: {str(e)}"
             self.log_erro(erro_msg, e)
             return {
                 "sucesso": False,
                 "erro": erro_msg,
-                "dados_brutos": df if 'df' in locals() else pd.DataFrame()
+                "cliente": cliente,
+                "numero_titulo": numero_titulo,
+                "timestamp_erro": datetime.now().isoformat()
             }
 
-    def _is_parcela_ct(self, tipo_parcela: str) -> bool:
-        """Identifica se é parcela CT (Cota de Terreno) conforme PDD"""
-        if not tipo_parcela:
-            return False
+    def _localizar_arquivo_recente(self, pasta_downloads: str) -> str:
+        """
+        Localiza arquivo saldo_devedor_presente mais recente na pasta Downloads
 
-        # Padrões para identificar parcelas CT
-        padroes_ct = [
-            "CT-",
-            "COTA",
-            "TERRENO",
-            "LOTE"
-        ]
-
-        return any(padrao in tipo_parcela.upper() for padrao in padroes_ct)
-
-    def _is_parcela_rec_fat(self, tipo_parcela: str) -> bool:
-        """Identifica se é parcela REC/FAT (Receitas/Faturamento) conforme PDD"""
-        if not tipo_parcela:
-            return False
-
-        # Padrões para identificar parcelas REC/FAT
-        padroes_rec_fat = [
-            "REC-",
-            "FAT-",
-            "RECEITA",
-            "FATURAMENTO",
-            "CUSTAS",
-            "HONORARIOS",
-            "TAXA"
-        ]
-
-        return any(padrao in tipo_parcela.upper() for padrao in padroes_rec_fat)
-
-    def _converter_valor_monetario(self, valor_str: str) -> float:
-        """Converte string de valor monetário para float"""
+        Padrão esperado: saldo_devedor_presente-YYYYMMDD-HHMMSS.xlsx
+        """
         try:
-            if not valor_str or valor_str in ["", "nan", "None"]:
-                return 0.0
+            pasta_path = Path(pasta_downloads)
+            if not pasta_path.exists():
+                raise Exception(
+                    f"Pasta Downloads não existe: {pasta_downloads}")
 
-            # Remove símbolos monetários e espaços
-            valor_limpo = str(valor_str).replace("R$", "").replace(
-                ".", "").replace(",", ".").strip()
+            # Buscar arquivos com padrão específico
+            padrao = "saldo_devedor_presente-*.xlsx"
+            arquivos_encontrados = list(pasta_path.glob(padrao))
 
-            # Remove caracteres não numéricos exceto ponto e hífen
-            valor_numerico = ""
-            for char in valor_limpo:
-                if char.isdigit() or char in ".-":
-                    valor_numerico += char
+            if not arquivos_encontrados:
+                raise Exception(
+                    f"Nenhum arquivo encontrado com padrão '{padrao}' em {pasta_downloads}")
 
-            return float(valor_numerico) if valor_numerico else 0.0
+            # Ordenar por data de modificação (mais recente primeiro)
+            arquivos_ordenados = sorted(
+                arquivos_encontrados, key=lambda x: x.stat().st_mtime, reverse=True)
 
-        except (ValueError, TypeError):
-            return 0.0
+            arquivo_mais_recente = str(arquivos_ordenados[0])
 
-    def _converter_data_sienge(self, data_str: str) -> date:
-        """Converte string de data do Sienge para objeto date"""
+            # Validar se arquivo foi modificado recentemente (últimos 10 minutos)
+            tempo_arquivo = datetime.fromtimestamp(
+                arquivos_ordenados[0].stat().st_mtime)
+            tempo_atual = datetime.now()
+            diferenca = (tempo_atual - tempo_arquivo).total_seconds() / 60
+
+            if diferenca > 10:
+                self.log_progresso(
+                    f"⚠️ Arquivo encontrado há {diferenca:.1f} minutos (pode não ser o download atual)")
+
+            self.log_progresso(f"   📄 Arquivo: {arquivo_mais_recente}")
+            self.log_progresso(
+                f"   🕐 Modificado: {tempo_arquivo.strftime('%d/%m/%Y %H:%M:%S')}")
+
+            return arquivo_mais_recente
+
+        except Exception as e:
+            raise Exception(f"Erro ao localizar arquivo: {str(e)}")
+
+    async def _ler_planilha_excel(self, caminho_arquivo: str) -> pd.DataFrame:
+        """
+        Lê planilha Excel e valida estrutura conforme PDD
+        """
         try:
-            if not data_str or data_str in ["", "nan", "None"]:
-                return None
+            # Ler Excel
+            df = pd.read_excel(caminho_arquivo, engine='openpyxl')
 
-            # Formatos possíveis do Sienge
-            formatos = [
-                "%d/%m/%Y",
-                "%Y-%m-%d",
-                "%d-%m-%Y",
-                "%d.%m.%Y"
+            if df.empty:
+                raise Exception("Planilha está vazia")
+
+            self.log_progresso(
+                f"   📊 Planilha carregada: {len(df)} registros, {len(df.columns)} colunas")
+
+            # Validar colunas obrigatórias
+            colunas_obrigatorias = [
+                "Parcela/Sequencial", "Status da parcela", "Data vencimento",
+                "Valor a receber", "Documento"
             ]
 
-            for formato in formatos:
-                try:
-                    return datetime.strptime(str(data_str).strip(), formato).date()
-                except ValueError:
-                    continue
+            colunas_faltantes = [
+                col for col in colunas_obrigatorias if col not in df.columns]
 
-            return None
+            if colunas_faltantes:
+                raise Exception(
+                    f"Colunas obrigatórias não encontradas: {colunas_faltantes}")
 
-        except Exception:
-            return None
+            self.log_progresso("   ✅ Estrutura da planilha validada")
 
+            return df
 
-# ========================
-# FUNÇÃO STANDALONE PRINCIPAL
-# ========================
+        except Exception as e:
+            raise Exception(f"Erro ao ler planilha Excel: {str(e)}")
 
-async def executar_processamento_sienge(
-    contrato: Dict[str, Any],
-    indices_economicos: Dict[str, Any],
-    credenciais_sienge: Dict[str, str]
-) -> ResultadoRPA:
-    """
-    Função principal para executar processamento no Sienge
+    async def _salvar_planilha_auditoria(self, arquivo_original: str, cliente: str, numero_titulo: str) -> str:
+        """
+        Salva cópia da planilha para auditoria com nomenclatura padronizada
+        """
+        try:
+            # Criar estrutura de pastas por ano/mês
+            agora = datetime.now()
+            pasta_auditoria = self.pasta_planilhas / \
+                str(agora.year) / f"{agora.month:02d}"
+            pasta_auditoria.mkdir(parents=True, exist_ok=True)
 
-    Args:
-        contrato: Dados do contrato a ser processado
-        indices_economicos: Índices IPCA/IGPM atualizados
-        credenciais_sienge: Credenciais de acesso ao Sienge
+            # Nome do arquivo de auditoria
+            timestamp = agora.strftime("%Y%m%d_%H%M%S")
+            nome_arquivo = f"sienge_{numero_titulo}_{timestamp}.xlsx"
+            caminho_auditoria = pasta_auditoria / nome_arquivo
 
-    Returns:
-        ResultadoRPA: Resultado do processamento
-    """
-    rpa_sienge = None
+            # Copiar arquivo
+            shutil.copy2(arquivo_original, caminho_auditoria)
 
-    try:
-        # Inicializa RPA Sienge
-        rpa_sienge = RPASienge()
+            self.log_progresso(f"   💾 Cópia salva: {caminho_auditoria}")
 
-        if not await rpa_sienge.inicializar():
-            return ResultadoRPA(
-                sucesso=False,
-                mensagem="Falha na inicialização do RPA Sienge",
-                erro="Erro ao inicializar recursos do RPA"
-            )
+            return str(caminho_auditoria)
 
-        # Executa processamento
-        resultado = await rpa_sienge.executar(
-            contrato=contrato,
-            credenciais_sienge=credenciais_sienge,
-            indices=indices_economicos
-        )
+        except Exception as e:
+            self.log_erro("Erro ao salvar planilha para auditoria", e)
+            return ""
 
-        return resultado
+    async def _aplicar_regras_pdd_planilha(self, df: pd.DataFrame, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+        """
+        Aplica regras do PDD para processar dados da planilha
 
-    except Exception as e:
-        erro_msg = f"Erro na execução do processamento Sienge: {str(e)}"
+        Regras principais:
+        1. Classificar parcelas CT vs REC/FAT
+        2. Identificar parcelas vencidas
+        3. Calcular inadimplência (≥3 CT vencidas)
+        4. Calcular saldos totais
+        """
+        try:
+            parcelas_ct = []
+            parcelas_rec_fat = []
+            parcelas_outras = []
 
-        return ResultadoRPA(
-            sucesso=False,
-            mensagem="Falha no processamento Sienge",
-            erro=erro_msg
-        )
+            hoje = date.today()
 
-    finally:
-        # Garante limpeza de recursos
-        if rpa_sienge:
+            for _, row in df.iterrows():
+                # Extrair dados da linha
+                parcela_sequencial = str(
+                    row.get("Parcela/Sequencial", "")).upper()
+                status_parcela = str(row.get("Status da parcela", ""))
+                data_vencimento_str = row.get("Data vencimento", "")
+                valor_str = row.get("Valor a receber", 0)
+                documento = str(row.get("Documento", ""))
+
+                # Converter data de vencimento
+                data_vencimento = None
+                if data_vencimento_str:
+                    try:
+                        if isinstance(data_vencimento_str, str):
+                            data_vencimento = datetime.strptime(
+                                data_vencimento_str, "%d/%m/%Y").date()
+                        else:
+                            data_vencimento = data_vencimento_str.date()
+                    except:
+                        pass
+
+                # Converter valor
+                valor = self._converter_valor_monetario(valor_str)
+
+                # Verificar se está vencida
+                vencida = data_vencimento and data_vencimento < hoje if data_vencimento else False
+
+                # Dados da parcela
+                dados_parcela = {
+                    "tipo_parcela": parcela_sequencial,
+                    "status_parcela": status_parcela,
+                    "data_vencimento": data_vencimento.isoformat() if data_vencimento else None,
+                    "valor": valor,
+                    "documento": documento,
+                    "vencida": vencida,
+                    "quitada": status_parcela.upper() == "QUITADA"
+                }
+
+                # Classificar por tipo (REGRA PDD)
+                if "CT" in parcela_sequencial or "COTA" in parcela_sequencial:
+                    parcelas_ct.append(dados_parcela)
+                elif any(x in parcela_sequencial for x in ["REC", "FAT", "RECEITA", "FATURAMENTO"]):
+                    parcelas_rec_fat.append(dados_parcela)
+                else:
+                    parcelas_outras.append(dados_parcela)
+
+            # Calcular parcelas CT vencidas (REGRA CRÍTICA PDD)
+            parcelas_ct_vencidas = [
+                p for p in parcelas_ct
+                if p["vencida"] and not p["quitada"]
+            ]
+
+            # Determinar status do cliente
+            qtd_ct_vencidas = len(parcelas_ct_vencidas)
+            status_cliente = "inadimplente" if qtd_ct_vencidas >= 3 else "adimplente"
+
+            # Calcular saldo total
+            saldo_total = sum(p["valor"] for p in parcelas_ct +
+                              parcelas_rec_fat + parcelas_outras)
+
+            resultado = {
+                "cliente": cliente,
+                "numero_titulo": numero_titulo,
+                "saldo_total": saldo_total,
+                "parcelas_pendentes": len([p for p in parcelas_ct if not p["quitada"]]),
+                "parcelas_ct": parcelas_ct,
+                "parcelas_rec_fat": parcelas_rec_fat,
+                "parcelas_outras": parcelas_outras,
+                "parcelas_ct_vencidas": parcelas_ct_vencidas,
+                "qtd_ct_vencidas": qtd_ct_vencidas,
+                "status_cliente": status_cliente,
+                "relatorio_exportado": True,
+                "dados_brutos": df,
+                "total_registros": len(df),
+                "resumo": {
+                    "total_ct": len(parcelas_ct),
+                    "total_rec_fat": len(parcelas_rec_fat),
+                    "total_outras": len(parcelas_outras),
+                    "ct_vencidas": qtd_ct_vencidas,
+                    "pode_reparcelar": status_cliente == "adimplente"
+                }
+            }
+
+            self.log_progresso(f"   📊 Processamento PDD concluído:")
+            self.log_progresso(f"      💰 Saldo total: R$ {saldo_total:,.2f}")
+            self.log_progresso(f"      📋 Parcelas CT: {len(parcelas_ct)}")
+            self.log_progresso(
+                f"      📋 Parcelas REC/FAT: {len(parcelas_rec_fat)}")
+            self.log_progresso(f"      ⚠️ CT vencidas: {qtd_ct_vencidas}")
+            self.log_progresso(f"      🎯 Status: {status_cliente.upper()}")
+
+            return resultado
+
+        except Exception as e:
+            raise Exception(f"Erro ao aplicar regras PDD: {str(e)}")
+
+    def _converter_valor_monetario(self, valor) -> float:
+        """
+        Converte valor monetário para float
+        """
+        try:
+            if pd.isna(valor) or valor == "":
+                return 0.0
+
+            if isinstance(valor, (int, float)):
+                return float(valor)
+
+            # Remover formatação brasileira
+            if isinstance(valor, str):
+                valor = valor.replace("R$", "").replace(
+                    ".", "").replace(",", ".").strip()
+                return float(valor)
+
+            return 0.0
+        except:
+            return 0.0
+
+    def _calcular_hash_arquivo(self, caminho_arquivo: str) -> str:
+        """
+        Calcula hash MD5 do arquivo para verificação de integridade
+        """
+        try:
+            import hashlib
+            hash_md5 = hashlib.md5()
+            with open(caminho_arquivo, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+        except:
+            return ""
+
+    async def _registrar_auditoria_planilha(self, dados_processados: Dict[str, Any]):
+        """
+        Registra dados da planilha no sistema de auditoria (MongoDB + JSON)
+        """
+        try:
+            # Preparar dados para auditoria
+            registro_auditoria = {
+                "tipo": "planilha_sienge",
+                "cliente": dados_processados.get("cliente"),
+                "numero_titulo": dados_processados.get("numero_titulo"),
+                "arquivo_original": dados_processados.get("arquivo_original"),
+                "arquivo_auditoria": dados_processados.get("arquivo_auditoria"),
+                "hash_arquivo": dados_processados.get("hash_arquivo"),
+                "saldo_total": dados_processados.get("saldo_total"),
+                "total_registros": dados_processados.get("total_registros"),
+                "resumo": dados_processados.get("resumo"),
+                "processado_em": dados_processados.get("processado_em"),
+                "processado_por": dados_processados.get("processado_por"),
+                "versao_rpa": dados_processados.get("versao_rpa"),
+                "ip_usuario": self._obter_ip_usuario(),
+                "usuario_sistema": os.getenv("USER", "sistema")
+            }
+
+            # Salvar no MongoDB (se disponível)
             try:
-                await rpa_sienge.finalizar()
+                from core.mongodb_manager import mongodb_manager
+                if hasattr(mongodb_manager, 'database'):
+                    await mongodb_manager.database.auditoria_planilhas_sienge.insert_one(registro_auditoria)
+                    self.log_progresso("   ✅ Auditoria salva no MongoDB")
             except Exception as e:
-                print(f"⚠️ Erro ao finalizar RPA: {str(e)}")
+                self.log_progresso(f"   ⚠️ MongoDB indisponível: {str(e)}")
+
+            # Fallback JSON
+            pasta_auditoria_json = Path(
+                "dados_processamento/auditoria_planilhas")
+            pasta_auditoria_json.mkdir(parents=True, exist_ok=True)
+
+            arquivo_json = pasta_auditoria_json / \
+                f"auditoria_{dados_processados.get('numero_titulo')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+            with open(arquivo_json, 'w', encoding='utf-8') as f:
+                json.dump(registro_auditoria, f, indent=2,
+                          ensure_ascii=False, default=str)
+
+            self.log_progresso(f"   💾 Auditoria salva: {arquivo_json}")
+
+        except Exception as e:
+            self.log_erro("Erro ao registrar auditoria", e)
+
+    def _obter_ip_usuario(self) -> str:
+        """
+        Obtém IP do usuário para auditoria
+        """
+        try:
+            import socket
+            hostname = socket.gethostname()
+            ip_local = socket.gethostbyname(hostname)
+            return ip_local
+        except:
+            return "unknown"

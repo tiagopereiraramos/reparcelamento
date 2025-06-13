@@ -1,0 +1,28 @@
+[
+  {
+    "timestamp": "2025-06-12T08:05:00.460663",
+    "ipca": {
+      "tipo": "IPCA",
+      "valor": "5,32",
+      "mes": "mai.-25",
+      "periodo": "acumulado_12_meses",
+      "fonte": "IBGE",
+      "url": "https://www.ibge.gov.br/explica/inflacao.php",
+      "metodo": "webscraping_selenium",
+      "timestamp": "2025-06-12T08:04:48.581290"
+    },
+    "igpm": {
+      "tipo": "IGPM",
+      "valor": "7,02",
+      "mes": "mai.-25",
+      "periodo": "acumulado_12_meses",
+      "fonte": "FGV",
+      "url": "https://portalibre.fgv.br/taxonomy/term/94",
+      "metodo": "webscraping_selenium_download",
+      "timestamp": "2025-06-12T08:04:57.663352"
+    },
+    "planilha_id": "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk",
+    "tipo": "coleta_indices",
+    "status": "coletado"
+  }
+]
