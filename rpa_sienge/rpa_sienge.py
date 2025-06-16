@@ -1133,6 +1133,10 @@ class RPASienge(BaseRPA):
             # Etapa 6: Registrar no sistema de auditoria
             await self._registrar_auditoria_planilha(dados_processados)
 
+            # Etapa 7: Retroalimentação da planilha base de cálculo (PDD 9.1.2)
+            self.log_progresso("🔄 Etapa 7: Atualizando planilha base de cálculo...")
+            await self._atualizar_planilha_base_calculo(dados_processados, contrato)
+
             self.log_progresso("✅ Planilha processada com sucesso!")
             return dados_processados
 
@@ -1863,6 +1867,257 @@ class RPASienge(BaseRPA):
             return ip_local
         except:
             return "unknown"
+
+    async def _atualizar_planilha_base_calculo(self, dados_processados: Dict[str, Any], contrato: Dict[str, Any]):
+        """
+        Atualiza planilha "BASE DE CÁLCULO REPARCELAMENTO 2025" conforme PDD seção 9.1.2
+        
+        CAMPOS OBRIGATÓRIOS PDD:
+        - PENDÊNCIAS SIENGE INAD: Quantidade de parcelas CT vencidas (se > 0)
+        - PENDÊNCIAS SIENGE: Quantidade de pendências REC/FAT (se > 0)  
+        - Parcelas a vencer: Quantidade de parcelas CT a vencer
+        - Valor da Parcela Base: Valor identificado da parcela atual
+        - Dia de vencimento de parcelas: Dia comum identificado
+        - 1º vencimento carnê: Data calculada do 1º vencimento
+        """
+        try:
+            # Verificar se Google Sheets está disponível
+            if not hasattr(self, 'cliente_sheets') or not self.cliente_sheets:
+                await self._conectar_google_sheets()
+            
+            if not self.cliente_sheets:
+                self.log_progresso("⚠️ Google Sheets não disponível - Salvando dados localmente")
+                await self._salvar_dados_base_calculo_local(dados_processados, contrato)
+                return
+
+            # ID da planilha base de cálculo (deve ser configurado via ambiente)
+            planilha_base_id = os.getenv("PLANILHA_BASE_CALCULO_ID")
+            if not planilha_base_id:
+                self.log_progresso("⚠️ ID da planilha base não configurado - Salvando dados localmente")
+                await self._salvar_dados_base_calculo_local(dados_processados, contrato)
+                return
+
+            self.log_progresso(f"📊 Atualizando planilha base: {planilha_base_id}")
+
+            # Abrir planilha
+            planilha_base = self.cliente_sheets.open_by_key(planilha_base_id)
+            aba_base_calculo = planilha_base.worksheet("Base de cálculo")
+
+            # Localizar linha do contrato
+            numero_titulo = contrato.get("numero_titulo", "")
+            cliente = contrato.get("cliente", "")
+            
+            linha_contrato = await self._localizar_linha_contrato(aba_base_calculo, numero_titulo, cliente)
+            
+            if linha_contrato:
+                # Atualizar campos conforme PDD 9.1.2
+                await self._atualizar_campos_pdd_planilha(aba_base_calculo, linha_contrato, dados_processados)
+                self.log_progresso(f"✅ Planilha base atualizada na linha {linha_contrato}")
+            else:
+                self.log_progresso(f"⚠️ Contrato não encontrado na planilha base: {numero_titulo}")
+                # Adicionar nova linha se necessário
+                await self._adicionar_contrato_planilha_base(aba_base_calculo, contrato, dados_processados)
+
+        except Exception as e:
+            self.log_erro("Erro ao atualizar planilha base de cálculo", e)
+            # Fallback: salvar dados localmente
+            await self._salvar_dados_base_calculo_local(dados_processados, contrato)
+
+    async def _conectar_google_sheets(self):
+        """Conecta ao Google Sheets"""
+        try:
+            import gspread
+            from google.oauth2.service_account import Credentials
+
+            # Caminho das credenciais
+            credenciais_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "gspread-credentials.json")
+            
+            if not os.path.exists(credenciais_path):
+                self.log_progresso(f"⚠️ Arquivo de credenciais não encontrado: {credenciais_path}")
+                return
+
+            # Configurar credenciais
+            scopes = [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive'
+            ]
+            
+            credentials = Credentials.from_service_account_file(credenciais_path, scopes=scopes)
+            self.cliente_sheets = gspread.authorize(credentials)
+            
+            self.log_progresso("✅ Google Sheets conectado com sucesso")
+
+        except Exception as e:
+            self.log_erro("Erro ao conectar Google Sheets", e)
+            self.cliente_sheets = None
+
+    async def _localizar_linha_contrato(self, aba_base_calculo, numero_titulo: str, cliente: str) -> int:
+        """
+        Localiza linha do contrato na planilha base
+        """
+        try:
+            # Obter todos os dados
+            dados_planilha = aba_base_calculo.get_all_records()
+            
+            # Buscar por título ou cliente
+            for linha, registro in enumerate(dados_planilha, start=2):  # Linha 1 é cabeçalho
+                titulo_planilha = str(registro.get("numero_titulo", "")).strip()
+                cliente_planilha = str(registro.get("Cliente", "")).strip()
+                
+                # Busca por título exato ou cliente parcial
+                if (numero_titulo and titulo_planilha == numero_titulo) or \
+                   (cliente and cliente.lower() in cliente_planilha.lower()):
+                    return linha
+            
+            return None
+
+        except Exception as e:
+            self.log_erro("Erro ao localizar linha do contrato", e)
+            return None
+
+    async def _atualizar_campos_pdd_planilha(self, aba_base_calculo, linha: int, dados_processados: Dict[str, Any]):
+        """
+        Atualiza campos obrigatórios conforme PDD seção 9.1.2
+        """
+        try:
+            # Obter cabeçalhos da planilha
+            cabecalhos = aba_base_calculo.row_values(1)
+            
+            # Mapear colunas importantes
+            mapa_colunas = {}
+            for i, cabecalho in enumerate(cabecalhos, start=1):
+                cabecalho_upper = str(cabecalho).upper()
+                if "PENDÊNCIAS SIENGE INAD" in cabecalho_upper:
+                    mapa_colunas["pendencias_inad"] = i
+                elif "PENDÊNCIAS SIENGE" in cabecalho_upper and "INAD" not in cabecalho_upper:
+                    mapa_colunas["pendencias_sienge"] = i
+                elif "PARCELAS A VENCER" in cabecalho_upper:
+                    mapa_colunas["parcelas_vencer"] = i
+                elif "VALOR DA PARCELA BASE" in cabecalho_upper:
+                    mapa_colunas["valor_parcela"] = i
+                elif "DIA DE VENCIMENTO" in cabecalho_upper:
+                    mapa_colunas["dia_vencimento"] = i
+                elif "1º VENCIMENTO CARNÊ" in cabecalho_upper:
+                    mapa_colunas["primeiro_vencimento"] = i
+
+            # Preparar atualizações
+            atualizacoes = []
+
+            # PENDÊNCIAS SIENGE INAD
+            if "pendencias_inad" in mapa_colunas:
+                qtd_ct_vencidas = dados_processados.get("qtd_ct_vencidas", 0)
+                if qtd_ct_vencidas > 0:
+                    celula = f'{chr(64 + mapa_colunas["pendencias_inad"])}{linha}'
+                    atualizacoes.append({"range": celula, "values": [[qtd_ct_vencidas]]})
+
+            # PENDÊNCIAS SIENGE
+            if "pendencias_sienge" in mapa_colunas:
+                qtd_rec_fat = dados_processados.get("qtd_pendencias_rec_fat", 0)
+                if qtd_rec_fat > 0:
+                    celula = f'{chr(64 + mapa_colunas["pendencias_sienge"])}{linha}'
+                    atualizacoes.append({"range": celula, "values": [[qtd_rec_fat]]})
+
+            # PARCELAS A VENCER
+            if "parcelas_vencer" in mapa_colunas:
+                qtd_parcelas_vencer = dados_processados.get("qtd_parcelas_ct_a_vencer", 0)
+                celula = f'{chr(64 + mapa_colunas["parcelas_vencer"])}{linha}'
+                atualizacoes.append({"range": celula, "values": [[qtd_parcelas_vencer]]})
+
+            # VALOR DA PARCELA BASE
+            if "valor_parcela" in mapa_colunas:
+                valor_parcela = dados_processados.get("valor_parcela_base", 0)
+                celula = f'{chr(64 + mapa_colunas["valor_parcela"])}{linha}'
+                atualizacoes.append({"range": celula, "values": [[f"R$ {valor_parcela:,.2f}"]]})
+
+            # DIA DE VENCIMENTO
+            if "dia_vencimento" in mapa_colunas:
+                dia_vencimento = dados_processados.get("dia_vencimento_parcelas")
+                if dia_vencimento:
+                    celula = f'{chr(64 + mapa_colunas["dia_vencimento"])}{linha}'
+                    atualizacoes.append({"range": celula, "values": [[dia_vencimento]]})
+
+            # 1º VENCIMENTO CARNÊ (TODO: implementar cálculo)
+            if "primeiro_vencimento" in mapa_colunas:
+                # TODO: Implementar cálculo do 1º vencimento conforme regras PDD
+                primeiro_vencimento = "A CALCULAR"
+                celula = f'{chr(64 + mapa_colunas["primeiro_vencimento"])}{linha}'
+                atualizacoes.append({"range": celula, "values": [[primeiro_vencimento]]})
+
+            # Executar atualizações em lote
+            if atualizacoes:
+                for atualizacao in atualizacoes:
+                    aba_base_calculo.update(atualizacao["range"], atualizacao["values"])
+                
+                self.log_progresso(f"   ✅ {len(atualizacoes)} campos atualizados na planilha base")
+
+        except Exception as e:
+            self.log_erro("Erro ao atualizar campos da planilha", e)
+
+    async def _adicionar_contrato_planilha_base(self, aba_base_calculo, contrato: Dict[str, Any], dados_processados: Dict[str, Any]):
+        """
+        Adiciona novo contrato na planilha base se não encontrado
+        """
+        try:
+            # Obter próxima linha vazia
+            dados_existentes = aba_base_calculo.get_all_values()
+            proxima_linha = len(dados_existentes) + 1
+
+            # Preparar dados básicos do contrato
+            nova_linha = [
+                contrato.get("cliente", ""),
+                contrato.get("numero_titulo", ""),
+                contrato.get("empreendimento", ""),
+                dados_processados.get("qtd_ct_vencidas", 0) if dados_processados.get("qtd_ct_vencidas", 0) > 0 else "",
+                dados_processados.get("qtd_pendencias_rec_fat", 0) if dados_processados.get("qtd_pendencias_rec_fat", 0) > 0 else "",
+                dados_processados.get("qtd_parcelas_ct_a_vencer", 0),
+                f"R$ {dados_processados.get('valor_parcela_base', 0):,.2f}",
+                dados_processados.get("dia_vencimento_parcelas", ""),
+                "A CALCULAR"  # 1º vencimento carnê
+            ]
+
+            # Adicionar linha
+            aba_base_calculo.append_row(nova_linha)
+            
+            self.log_progresso(f"   ✅ Novo contrato adicionado na linha {proxima_linha}")
+
+        except Exception as e:
+            self.log_erro("Erro ao adicionar contrato na planilha base", e)
+
+    async def _salvar_dados_base_calculo_local(self, dados_processados: Dict[str, Any], contrato: Dict[str, Any]):
+        """
+        Salva dados localmente quando Google Sheets não está disponível
+        """
+        try:
+            # Criar pasta se não existir
+            pasta_backup = Path("dados_processamento/backup_planilha_base")
+            pasta_backup.mkdir(parents=True, exist_ok=True)
+
+            # Preparar dados para backup
+            dados_backup = {
+                "timestamp": datetime.now().isoformat(),
+                "contrato": contrato,
+                "dados_sienge": {
+                    "pendencias_sienge_inad": dados_processados.get("qtd_ct_vencidas", 0) if dados_processados.get("qtd_ct_vencidas", 0) > 0 else None,
+                    "pendencias_sienge": dados_processados.get("qtd_pendencias_rec_fat", 0) if dados_processados.get("qtd_pendencias_rec_fat", 0) > 0 else None,
+                    "parcelas_a_vencer": dados_processados.get("qtd_parcelas_ct_a_vencer", 0),
+                    "valor_parcela_base": dados_processados.get("valor_parcela_base", 0),
+                    "dia_vencimento_parcelas": dados_processados.get("dia_vencimento_parcelas"),
+                    "primeiro_vencimento_carne": "A CALCULAR"
+                },
+                "status_processamento": "pendente_atualizacao_planilha"
+            }
+
+            # Salvar arquivo
+            numero_titulo = contrato.get("numero_titulo", "sem_titulo").replace("/", "_").replace("\\", "_")
+            arquivo_backup = pasta_backup / f"backup_base_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            
+            with open(arquivo_backup, 'w', encoding='utf-8') as f:
+                json.dump(dados_backup, f, indent=2, ensure_ascii=False)
+
+            self.log_progresso(f"   💾 Backup salvo: {arquivo_backup}")
+
+        except Exception as e:
+            self.log_erro("Erro ao salvar backup local", e)
 
 
 # Função auxiliar para uso direto
