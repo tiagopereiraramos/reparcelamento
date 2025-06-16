@@ -1197,7 +1197,41 @@ class RPASienge(BaseRPA):
             raise Exception(f"Erro ao localizar arquivo: {str(e)}")
 
     async def _ler_planilha_excel(self, caminho_arquivo: str) -> pd.DataFrame:
+        """
+        Lê planilha Excel e valida estrutura conforme PDD
+        """
+        try:
+            # Ler Excel
+            df = pd.read_excel(caminho_arquivo, engine='openpyxl')
 
+            if df.empty:
+                raise Exception("Planilha está vazia")
+
+            self.log_progresso(
+                f"   📊 Planilha carregada: {len(df)} registros, {len(df.columns)} colunas"
+            )
+
+            # Validar colunas obrigatórias
+            colunas_obrigatorias = [
+                "Parcela/Sequencial", "Status da parcela", "Data vencimento",
+                "Valor a receber", "Documento"
+            ]
+
+            colunas_faltantes = [
+                col for col in colunas_obrigatorias if col not in df.columns
+            ]
+
+            if colunas_faltantes:
+                raise Exception(
+                    f"Colunas obrigatórias não encontradas: {colunas_faltantes}"
+                )
+
+            self.log_progresso("   ✅ Estrutura da planilha validada")
+
+            return df
+
+        except Exception as e:
+            raise Exception(f"Erro ao ler planilha Excel: {str(e)}")
 
     def _calcular_primeiro_vencimento_carne(self, dia_vencimento: int, 
                                            tipo_reajuste: str = "anual",
