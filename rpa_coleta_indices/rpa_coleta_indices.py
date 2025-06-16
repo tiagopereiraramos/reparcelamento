@@ -67,8 +67,9 @@ class RPAColetaIndices(BaseRPA):
                     erro="Parâmetro 'planilha_id' é obrigatório"
                 )
 
-            # Conecta ao Google Sheets
-            await self._conectar_google_sheets(parametros.get("credenciais_google") or "./credentials/google_service_account.json")
+            # Conecta ao Google Sheets se especificado
+            credenciais_path = parametros.get("credenciais_google") or os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
+            await self._conectar_google_sheets(credenciais_path)
 
             # Coleta IPCA do IBGE
             self.log_progresso("Coletando IPCA do site oficial do IBGE")
@@ -761,7 +762,8 @@ class RPAColetaIndices(BaseRPA):
 
             # Carrega dados existentes ou cria lista vazia
             dados_existentes = []
-            if os.path.exists(arquivo_indices):
+            if os.path.exists(```python
+arquivo_indices):
                 with open(arquivo_indices, 'r', encoding='utf-8') as f:
                     dados_existentes = json.load(f)
 

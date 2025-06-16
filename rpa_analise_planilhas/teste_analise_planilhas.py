@@ -28,10 +28,10 @@ async def teste_completo():
     print("=" * 50)
 
     # Configurações de teste
-    # IDs das planilhas do cliente (você pode alterar aqui)
-    PLANILHA_CALCULO_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
-    PLANILHA_APOIO_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
-    CREDENCIAIS_GOOGLE = "credentials/gspread-459713-aab8a657f9b0.json"
+    # IDs das planilhas (configurar com suas planilhas)
+    PLANILHA_CALCULO_ID = os.getenv("PLANILHA_CALCULO_ID", "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U")
+    PLANILHA_APOIO_ID = os.getenv("PLANILHA_APOIO_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
+    CREDENCIAIS_GOOGLE = os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
 
     print(f"📊 Planilha de Cálculo: {PLANILHA_CALCULO_ID}")
     print(f"📋 Planilha de Apoio: {PLANILHA_APOIO_ID}")
@@ -115,8 +115,8 @@ async def teste_conexao_google_sheets():
             print("✅ Conexão Google Sheets estabelecida")
 
             # Testa acesso às planilhas
-            PLANILHA_CALCULO_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
-            PLANILHA_APOIO_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
+            PLANILHA_CALCULO_ID = os.getenv("PLANILHA_CALCULO_ID", "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U")
+            PLANILHA_APOIO_ID = os.getenv("PLANILHA_APOIO_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
 
             planilha_calculo = rpa.cliente_sheets.open_by_key(PLANILHA_CALCULO_ID)
             print(f"✅ Planilha de Cálculo acessada: {planilha_calculo.title}")
@@ -162,7 +162,7 @@ async def teste_processamento_novos_contratos():
 
         # Testa processamento de novos contratos
         print("📊 Testando processamento de novos contratos...")
-        PLANILHA_APOIO_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
+        PLANILHA_APOIO_ID = os.getenv("PLANILHA_APOIO_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
 
         novos_contratos = await rpa._processar_novos_contratos(PLANILHA_APOIO_ID)
 
@@ -196,7 +196,7 @@ async def teste_processamento_iptu():
 
         # Testa processamento de pendências IPTU
         print("🏠 Testando processamento de pendências IPTU...")
-        PLANILHA_APOIO_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
+        PLANILHA_APOIO_ID = os.getenv("PLANILHA_APOIO_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
 
         pendencias_iptu = await rpa._processar_pendencias_iptu(PLANILHA_APOIO_ID)
 

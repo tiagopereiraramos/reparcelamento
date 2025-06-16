@@ -129,7 +129,7 @@ class RPAAnalisePlanilhas(BaseRPA):
         try:
             # Valida parâmetro de credenciais
             if not credenciais_google:
-                credenciais_google = "credentials/gspread-459713-aab8a657f9b0.json"
+                credenciais_google = os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
 
             self.log_progresso(
                 f"Conectando ao Google Sheets: {credenciais_google}")

@@ -1,10 +1,6 @@
 """
-API REST para Sistema RPA de Reparcelamento
-Interface moderna e simplificada para orquestrar os 4 RPAs
-
-Desenvolvido em Português Brasileiro
+The code has been modified to load environment variables from a .env file and use them as defaults for planilha and credentials configurations in the API endpoints for enhanced flexibility and security.
 """
-
 import asyncio
 import os
 from datetime import datetime
@@ -15,6 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import structlog
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Importa os 4 RPAs refatorados
 from rpa_coleta_indices.rpa_coleta_indices import executar_coleta_indices
@@ -332,9 +331,13 @@ async def executar_rpa_coleta_indices(parametros: ParametrosColetaIndices):
     Executa apenas o RPA de Coleta de Índices Econômicos
     """
     try:
+        # Configuração da planilha via variáveis de ambiente
+        parametros_dict = parametros.dict()
+        planilha_id = parametros_dict.get("planilha_id") or os.getenv("PLANILHA_INDICES_ID") or os.getenv("PLANILHA_CALCULO_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
+        credenciais_google = parametros_dict.get("credenciais_google") or os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
         resultado = await executar_coleta_indices(
-            planilha_id=parametros.planilha_id,
-            credenciais_google=parametros.credenciais_google
+            planilha_id=planilha_id,
+            credenciais_google=credenciais_google
         )
 
         return RespostaAPI(
@@ -354,10 +357,17 @@ async def executar_rpa_analise_planilhas(parametros: ParametrosAnalisePlanilhas)
     Executa apenas o RPA de Análise de Planilhas
     """
     try:
+        # Configuração das planilhas via variáveis de ambiente
+        parametros_dict = parametros.dict()
+        planilha_calculo_id = parametros_dict.get("planilha_calculo_id") or os.getenv("PLANILHA_CALCULO_ID", "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U")
+        planilha_apoio_id = parametros_dict.get("planilha_apoio_id") or os.getenv("PLANILHA_APOIO_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
+        credenciais_google = parametros_dict.get("credenciais_google") or os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
+
+
         resultado = await executar_analise_planilhas(
-            planilha_calculo_id=parametros.planilha_calculo_id,
-            planilha_apoio_id=parametros.planilha_apoio_id,
-            credenciais_google=parametros.credenciais_google
+            planilha_calculo_id=planilha_calculo_id,
+            planilha_apoio_id=planilha_apoio_id,
+            credenciais_google=credenciais_google
         )
 
         return RespostaAPI(
@@ -487,8 +497,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-**Analysis:**
-
-The provided change replaces the original `executar_processamento_sienge` call with code that instantiates `RPASienge` and calls a new method `executar_com_monitoramento`. However, the code also calls a non-existent `RPASienge` class. The intention seems to be about introducing an `RPASienge` class which is not available on the original code. Since the original code is supposed to be complete, I will proceed assuming the intention is to call the original function `executar_processamento_sienge` with other arguments.

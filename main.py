@@ -8,6 +8,12 @@ Desenvolvido em Português Brasileiro
 import asyncio
 import os
 from datetime import datetime
+import multiprocessing
+from contextlib import asynccontextmanager
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from typing import Dict, Any, Optional
 import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks

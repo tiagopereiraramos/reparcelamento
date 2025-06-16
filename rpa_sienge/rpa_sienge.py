@@ -1891,7 +1891,7 @@ class RPASienge(BaseRPA):
                 return
 
             # ID da planilha base de cálculo (deve ser configurado via ambiente)
-            planilha_base_id = os.getenv("PLANILHA_BASE_CALCULO_ID")
+            planilha_base_id = os.getenv("PLANILHA_BASE_CALCULO_ID") or os.getenv("PLANILHA_CALCULO_ID")
             if not planilha_base_id:
                 self.log_progresso("⚠️ ID da planilha base não configurado - Salvando dados localmente")
                 await self._salvar_dados_base_calculo_local(dados_processados, contrato)
@@ -1930,7 +1930,7 @@ class RPASienge(BaseRPA):
             from google.oauth2.service_account import Credentials
 
             # Caminho das credenciais
-            credenciais_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "gspread-credentials.json")
+            credenciais_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
             
             if not os.path.exists(credenciais_path):
                 self.log_progresso(f"⚠️ Arquivo de credenciais não encontrado: {credenciais_path}")
