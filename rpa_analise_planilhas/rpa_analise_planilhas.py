@@ -52,6 +52,11 @@ class RPAAnalisePlanilhas(BaseRPA):
             ResultadoRPA com lista de contratos para processamento
         """
         try:
+            # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
+            from core.data_manager import data_manager, garantir_inicializacao
+            await garantir_inicializacao()
+            self.log_info("💾 Sistema híbrido MongoDB+JSON inicializado")
+            
             self.log_info("🔍 Iniciando análise de planilhas...")
             self.log_info(f"📊 Planilha Base: {parametros.get('planilha_calculo_id')}")
             self.log_info(f"📋 Planilha Apoio: {parametros.get('planilha_apoio_id')}")

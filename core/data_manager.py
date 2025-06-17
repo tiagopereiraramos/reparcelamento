@@ -1,4 +1,3 @@
-
 """
 Data Manager Híbrido Unificado
 Sistema que SEMPRE grava simultaneamente em MongoDB (principal) + JSON (fallback)
@@ -38,14 +37,14 @@ class DataManagerUnificado:
         self.arquivo_indices = os.path.join(self.pasta_dados, "indices_economicos.json")
         self.arquivo_fila_sienge = os.path.join(self.pasta_dados, "fila_contratos_sienge.json")
         self.arquivo_planilhas = os.path.join(self.pasta_dados, "planilhas_extraidas.json")
-        
+
         self.mongodb_ativo = False
         self._garantir_estrutura_dados()
 
     def _garantir_estrutura_dados(self):
         """Cria estrutura de pastas e arquivos se não existir"""
         Path(self.pasta_dados).mkdir(parents=True, exist_ok=True)
-        
+
         # Inicializa arquivos JSON se não existirem
         arquivos_base = [
             (self.arquivo_execucoes, []),
@@ -54,7 +53,7 @@ class DataManagerUnificado:
             (self.arquivo_fila_sienge, {"timestamp_ultima_atualizacao": "", "total_contratos": 0, "status_geral": "ativo", "contratos": []}),
             (self.arquivo_planilhas, [])
         ]
-        
+
         for arquivo, estrutura_inicial in arquivos_base:
             if not os.path.exists(arquivo):
                 self._salvar_json_seguro(arquivo, estrutura_inicial)
@@ -62,7 +61,7 @@ class DataManagerUnificado:
     async def inicializar(self):
         """Inicializa sistema híbrido"""
         self._garantir_estrutura_dados()  # Garante que arquivos existem
-        
+
         # Tenta conectar MongoDB
         if MONGODB_DISPONIVEL:
             try:
@@ -84,7 +83,7 @@ class DataManagerUnificado:
         """Verifica saúde do MongoDB e reconecta se necessário"""
         if not MONGODB_DISPONIVEL:
             return
-        
+
         try:
             saude = await mongodb_manager.verificar_saude()
             if saude.get("status") != "conectado":
@@ -98,7 +97,7 @@ class DataManagerUnificado:
                                   resultado: Dict[str, Any]) -> Dict[str, str]:
         """
         SEMPRE salva execução em MongoDB + JSON simultaneamente
-        
+
         Returns:
             Dict com status de cada operação
         """
@@ -119,11 +118,13 @@ class DataManagerUnificado:
         # 1. MongoDB (principal) - COM TENTATIVA DE RECONEXÃO
         if self.mongodb_ativo:
             try:
+                logger.info(f"🔄 Tentando salvar execução {nome_rpa} no MongoDB...")
                 # Primeiro tenta salvar
                 mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
                 if mongo_id:
                     resultados["mongodb"] = "sucesso"
                     dados_execucao["_id_mongodb"] = mongo_id
+                    logger.info(f"✅ Execução {nome_rpa} salva no MongoDB: {mongo_id}")
                 else:
                     # Se falhou, tenta reconectar uma vez
                     logger.info("🔄 Tentando reconectar MongoDB...")
@@ -428,7 +429,7 @@ class DataManagerUnificado:
         try:
             indices = self._carregar_json_seguro(self.arquivo_indices, [])
             execucoes = self._carregar_json_seguro(self.arquivo_execucoes, [])
-            
+
             # Verifica MongoDB também
             mongo_stats = {}
             if self.mongodb_ativo and MONGODB_DISPONIVEL:
@@ -436,7 +437,7 @@ class DataManagerUnificado:
                     mongo_stats = await mongodb_manager.obter_estatisticas_dashboard()
                 except Exception as e:
                     mongo_stats = {"erro": str(e)}
-            
+
             # Estrutura correta que o teste está esperando
             return {
                 "total_execucoes": len(execucoes),
@@ -474,22 +475,22 @@ class DataManagerUnificado:
         """Salva execução em JSON"""
         historico = self._carregar_json_seguro(self.arquivo_execucoes, [])
         historico.append(dados_execucao)
-        
+
         # Manter apenas últimas 200 execuções
         if len(historico) > 200:
             historico = historico[-200:]
-        
+
         self._salvar_json_seguro(self.arquivo_execucoes, historico)
 
     async def _salvar_contrato_json(self, documento: Dict[str, Any]):
         """Salva contrato em JSON"""
         contratos = self._carregar_json_seguro(self.arquivo_contratos, [])
-        
+
         # Remove contrato anterior com mesmo número de título
         numero_titulo = documento.get("numero_titulo")
         if numero_titulo:
             contratos = [c for c in contratos if c.get("numero_titulo") != numero_titulo]
-        
+
         contratos.append(documento)
         self._salvar_json_seguro(self.arquivo_contratos, contratos)
 
@@ -498,11 +499,11 @@ class DataManagerUnificado:
         try:
             indices = self._carregar_json_seguro(self.arquivo_indices, [])
             indices.append(documento)
-            
+
             # Manter apenas últimos 50 registros
             if len(indices) > 50:
                 indices = indices[-50:]
-            
+
             self._salvar_json_seguro(self.arquivo_indices, indices)
             logger.info(f"✅ Índices salvos em {self.arquivo_indices}")
         except Exception as e:
@@ -525,16 +526,16 @@ class DataManagerUnificado:
         try:
             execucoes = self._carregar_json_seguro(self.arquivo_execucoes, [])
             contratos = self._carregar_json_seguro(self.arquivo_contratos, [])
-            
+
             # Estatísticas básicas
             hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             execucoes_hoje = len([e for e in execucoes if e.get("timestamp_inicio", "").startswith(hoje.strftime("%Y-%m-%d"))])
-            
+
             # Taxa de sucesso últimos 30 registros
             execucoes_recentes = execucoes[-30:] if len(execucoes) > 30 else execucoes
             sucessos = len([e for e in execucoes_recentes if e.get("sucesso", False)])
             taxa_sucesso = (sucessos / len(execucoes_recentes) * 100) if execucoes_recentes else 0
-            
+
             return {
                 "total_execucoes": len(execucoes),
                 "execucoes_hoje": execucoes_hoje,

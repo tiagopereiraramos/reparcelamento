@@ -233,12 +233,22 @@ class BaseRPA(ABC):
 
     async def executar_com_monitoramento(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
-        Versão com monitoramento e salvamento automático
+        Executa RPA com monitoramento completo e persistência automática
         """
-        self.inicio_execucao = datetime.now()
+        inicio = datetime.now()
 
         try:
-            self.log_info("🔧 Inicializando recursos do RPA...")
+            # ✅ FORÇA inicialização do data_manager ANTES de tudo
+            from core.data_manager import garantir_inicializacao
+            await garantir_inicializacao()
+
+            # Garante que recursos estão inicializados
+            if not await self.inicializar():
+                return ResultadoRPA(
+                    sucesso=False,
+                    mensagem="Falha na inicialização dos recursos",
+                    erro="Recursos do RPA não puderam ser inicializados"
+                )
 
             # Inicializa recursos obrigatórios
             await self._inicializar_recursos_obrigatorios()
