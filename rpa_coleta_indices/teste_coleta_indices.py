@@ -247,11 +247,14 @@ async def main():
         print(f"⚠️ Aviso: Falha ao inicializar dados híbridos: {e}")
 
     rpa = RPAColetaIndices()
-
+    # IDs das planilhas para teste (configurar com suas planilhas)
+    PLANILHA_CALCULO_ID = os.getenv("PLANILHA_CALCULO_ID", "")
+    CREDENCIAIS_GOOGLE = os.getenv("GOOGLE_CREDENTIALS_PATH",
+                                   "./gspread-credentials.json")
     # Parâmetros de teste
     parametros_teste = {
-        "planilha_id": "1ULrNsRwLXzWGHOjJqeJ7TnTUyS1Y5OPCKbGLhK4kWmk",
-        "credenciais_google": "./.credentials/gspread-459713-aab8a657f9b0.json"
+        "planilha_id": PLANILHA_CALCULO_ID,
+        "credenciais_google": CREDENCIAIS_GOOGLE
     }
 
     try:
