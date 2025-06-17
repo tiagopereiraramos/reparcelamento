@@ -288,7 +288,7 @@ class RPASienge(BaseRPA):
             self.log_progresso(f"Navegação inicial para: {url_relatorio}")
             
             self.browser.get(url_relatorio)
-            await asyncio.sleep(3)
+            time.sleep(3)
             
             # Validar que chegou na tela correta
             campo_pesquisa = self.browser.find_element(
