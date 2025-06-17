@@ -726,7 +726,7 @@ class RPAColetaIndices(BaseRPA):
         try:
             if self.mongo_manager and self.mongo_manager.conectado:
                 # Salva no MongoDB
-                collection = self.mongo_manager.database.indices_coletados
+                collection = self.mongo_manager.database.indices_economicos
                 documento = {
                     "timestamp": datetime.now(),
                     "ipca": dados_ipca,
