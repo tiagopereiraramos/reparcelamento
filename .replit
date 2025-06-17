@@ -7,12 +7,3 @@ packages = ["firefox", "geckodriver", "glibcLocales", "libxcrypt"]
 [workflows]
 runButton = "Project"
 
-[[workflows.workflow]]
-name = "Testar Sistema"
-author = 43711956
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python testar_sistema_completo.py"
-
