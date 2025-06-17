@@ -15,7 +15,7 @@ from pathlib import Path
 # Adiciona o diretório raiz do projeto ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from rpa_analise_planilhas.rpa_analise_planilhas import RPAAnalisePlanilhas, executar_analise_planilhas
+from rpa_analise_planilhas import RPAAnalisePlanilhas, executar_analise_planilhas
 
 
 async def teste_completo():
