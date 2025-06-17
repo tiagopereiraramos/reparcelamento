@@ -175,6 +175,56 @@ class BaseRPA(ABC):
         """
         pass
 
+    async def _inicializar_recursos_obrigatorios(self):
+        """
+        Inicializa recursos obrigatórios do RPA
+        """
+        try:
+            # Conecta ao MongoDB se disponível
+            if MONGODB_DISPONIVEL:
+                self.mongo_manager = mongodb_manager
+                self.logger.info("✅ MongoDB conectado com sucesso")
+        except Exception as e:
+            self.logger.warning(f"⚠️ MongoDB não disponível: {str(e)}")
+
+    async def _inicializar_recursos_opcionais(self):
+        """
+        Inicializa recursos opcionais do RPA
+        """
+        try:
+            # Inicializa browser se necessário
+            if self.usar_browser and not self.browser:
+                try:
+                    from core.browser_manager import RPABrowser
+                    self.browser = RPABrowser(headless=False)
+                    self.logger.info("✅ Browser Selenium inicializado")
+                except ImportError:
+                    self.logger.warning("⚠️ Browser não disponível")
+                    self.browser = None
+        except Exception as e:
+            self.logger.warning(f"⚠️ Erro ao inicializar recursos opcionais: {str(e)}")
+
+    async def _finalizar_recursos(self):
+        """
+        Finaliza recursos do RPA
+        """
+        try:
+            # Fecha browser
+            if self.browser:
+                self.browser.close()
+                self.logger.info("✅ Browser fechado")
+
+            # Desconecta MongoDB
+            if self.mongo_manager:
+                if hasattr(self.mongo_manager, 'desconectar'):
+                    await self.mongo_manager.desconectar()
+                elif hasattr(self.mongo_manager, 'disconnect'):
+                    await self.mongo_manager.disconnect()
+                self.logger.info("✅ MongoDB desconectado")
+
+        except Exception as e:
+            self.logger.warning(f"⚠️ Erro na finalização de recursos: {str(e)}")
+
     async def executar_com_monitoramento(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
         Versão com monitoramento e salvamento automático
