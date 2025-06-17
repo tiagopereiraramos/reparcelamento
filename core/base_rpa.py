@@ -240,9 +240,13 @@ class BaseRPA(ABC):
         try:
             # ✅ FORÇA inicialização do data_manager ANTES de tudo
             from core.data_manager import data_manager
+            
+            self.log_info("🔧 Inicializando sistema de dados...")
             await data_manager.inicializar()
+            self.log_info("✅ Sistema de dados inicializado")
 
             # Garante que recursos estão inicializados
+            self.log_info("🔧 Inicializando recursos do RPA...")
             if not await self.inicializar():
                 return ResultadoRPA(
                     sucesso=False,
@@ -265,6 +269,7 @@ class BaseRPA(ABC):
             resultado.tempo_execucao = tempo_execucao
 
             # FORÇA salvamento da execução no sistema
+            self.log_info("💾 Salvando execução no sistema...")
             await self._salvar_execucao_sistema(parametros, resultado)
 
             self.log_info(f"✅ RPA {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
@@ -281,7 +286,11 @@ class BaseRPA(ABC):
             )
 
             # FORÇA salvamento da execução com erro
-            await self._salvar_execucao_sistema(parametros, resultado_erro)
+            try:
+                self.log_info("💾 Salvando execução com erro no sistema...")
+                await self._salvar_execucao_sistema(parametros, resultado_erro)
+            except Exception as save_error:
+                self.log_erro(f"❌ Falha ao salvar execução com erro: {str(save_error)}", save_error)
 
             self.log_erro(f"🔍 Erro: {str(e)}", e)
             return resultado_erro
@@ -299,6 +308,13 @@ class BaseRPA(ABC):
             # Usa data_manager para salvar no MongoDB e JSON
             from core.data_manager import data_manager
 
+            # Força re-inicialização se necessário
+            if not hasattr(data_manager, 'mongodb_ativo'):
+                self.log_info("🔄 Re-inicializando data_manager...")
+                await data_manager.inicializar()
+
+            self.log_info(f"💾 Tentando salvar execução {self.nome_rpa}...")
+            
             # Salva a execução usando o data_manager
             resultados = await data_manager.salvar_execucao_rpa(
                 nome_rpa=self.nome_rpa,
@@ -306,16 +322,44 @@ class BaseRPA(ABC):
                 resultado=resultado.para_dict()
             )
 
+            self.log_info(f"💾 Resultados do salvamento: {resultados}")
+
             # Log mais específico baseado nos resultados
             if resultados.get("mongodb") == "sucesso" and resultados.get("json") == "sucesso":
-                self.log_info("💾 Execução salva com sucesso no sistema (MongoDB + JSON)")
+                self.log_info("✅ Execução salva com sucesso no sistema (MongoDB + JSON)")
             elif resultados.get("json") == "sucesso":
-                self.log_info("💾 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)")
+                self.log_info("📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)")
             else:
-                self.log_info("⚠️ Execução salva com problemas no sistema")
+                self.log_info(f"⚠️ Execução salva com problemas: MongoDB={resultados.get('mongodb')}, JSON={resultados.get('json')}")
 
         except Exception as e:
             self.log_erro(f"❌ Erro ao salvar execução no sistema: {str(e)}", e)
+            
+            # Fallback direto para JSON se tudo falhar
+            try:
+                self.log_info("🔄 Tentando fallback direto para JSON...")
+                import json
+                import os
+                from datetime import datetime
+                
+                dados_execucao = {
+                    "nome_rpa": self.nome_rpa,
+                    "timestamp_inicio": datetime.now().isoformat(),
+                    "parametros_entrada": parametros,
+                    "resultado": resultado.para_dict(),
+                    "fallback": True
+                }
+                
+                os.makedirs("dados_processamento", exist_ok=True)
+                arquivo_fallback = f"dados_processamento/execucao_fallback_{self.nome_rpa}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                with open(arquivo_fallback, 'w', encoding='utf-8') as f:
+                    json.dump(dados_execucao, f, indent=2, ensure_ascii=False, default=str)
+                
+                self.log_info(f"📄 Fallback salvo em: {arquivo_fallback}")
+                
+            except Exception as fallback_error:
+                self.log_erro(f"❌ Falha completa no salvamento: {str(fallback_error)}", fallback_error)
 
     async def _salvar_execucao(self, parametros: Dict[str, Any],
                                resultado: ResultadoRPA):

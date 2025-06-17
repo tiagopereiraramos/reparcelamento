@@ -60,24 +60,40 @@ class DataManagerUnificado:
 
     async def inicializar(self):
         """Inicializa sistema híbrido"""
+        logger.info("🔧 Inicializando data_manager...")
         self._garantir_estrutura_dados()  # Garante que arquivos existem
 
         # Tenta conectar MongoDB
         if MONGODB_DISPONIVEL:
             try:
+                logger.info("🔄 Tentando conectar ao MongoDB...")
                 self.mongodb_ativo = await mongodb_manager.conectar()
+                logger.info(f"🔍 Resultado conexão MongoDB: {self.mongodb_ativo}")
+                
                 if self.mongodb_ativo:
                     logger.info("✅ Sistema Híbrido: MongoDB + JSON ativo")
                     # Verifica saúde inicial
                     await self._verificar_saude_mongodb()
+                    
+                    # Teste básico de operação
+                    try:
+                        test_result = await mongodb_manager.verificar_saude()
+                        logger.info(f"🔍 Saúde MongoDB: {test_result.get('status', 'unknown')}")
+                    except Exception as health_e:
+                        logger.warning(f"⚠️ Erro no teste de saúde: {str(health_e)}")
                 else:
+                    logger.warning("⚠️ MongoDB conectou mas retornou False")
                     logger.info("📄 Sistema Fallback: Apenas JSON (MongoDB indisponível)")
+                    
             except Exception as e:
-                logger.warning(f"⚠️ Falha ao conectar MongoDB: {str(e)}")
+                logger.error(f"❌ Falha ao conectar MongoDB: {str(e)}")
                 self.mongodb_ativo = False
                 logger.info("📄 Sistema Fallback: Apenas JSON")
         else:
+            logger.warning("⚠️ MONGODB_DISPONIVEL = False")
             logger.info("📄 Sistema JSON: MongoDB não disponível nesta instalação")
+            
+        logger.info(f"✅ Data manager inicializado - MongoDB ativo: {self.mongodb_ativo}")
 
     async def _verificar_saude_mongodb(self):
         """Verifica saúde do MongoDB e reconecta se necessário"""
@@ -116,39 +132,60 @@ class DataManagerUnificado:
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
         # 1. MongoDB (principal) - COM TENTATIVA DE RECONEXÃO
-        if self.mongodb_ativo:
+        logger.info(f"🔍 MongoDB ativo: {self.mongodb_ativo}, MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
+        
+        if MONGODB_DISPONIVEL and self.mongodb_ativo:
             try:
                 logger.info(f"🔄 Tentando salvar execução {nome_rpa} no MongoDB...")
+                logger.info(f"🔍 Status conexão MongoDB: {mongodb_manager.conectado}")
+                
                 # Primeiro tenta salvar
                 mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+                logger.info(f"🔍 Resultado MongoDB save: {mongo_id}")
+                
                 if mongo_id:
                     resultados["mongodb"] = "sucesso"
                     dados_execucao["_id_mongodb"] = mongo_id
                     logger.info(f"✅ Execução {nome_rpa} salva no MongoDB: {mongo_id}")
                 else:
+                    logger.warning("⚠️ MongoDB retornou None, tentando reconectar...")
                     # Se falhou, tenta reconectar uma vez
-                    logger.info("🔄 Tentando reconectar MongoDB...")
                     reconectado = await mongodb_manager.conectar()
+                    logger.info(f"🔍 Reconexão result: {reconectado}")
+                    
                     if reconectado:
                         mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+                        logger.info(f"🔍 MongoDB save após reconexão: {mongo_id}")
+                        
                         if mongo_id:
                             resultados["mongodb"] = "sucesso"
                             dados_execucao["_id_mongodb"] = mongo_id
+                            logger.info(f"✅ Execução {nome_rpa} salva no MongoDB após reconexão: {mongo_id}")
                         else:
                             resultados["mongodb"] = "falhou_apos_reconexao"
+                            logger.warning("❌ Falha mesmo após reconexão")
                     else:
                         resultados["mongodb"] = "reconexao_falhou"
                         self.mongodb_ativo = False
+                        logger.error("❌ Reconexão MongoDB falhou")
+                        
             except Exception as e:
-                logger.warning(f"⚠️ Execução MongoDB falhou: {str(e)}")
+                logger.error(f"❌ Exceção no salvamento MongoDB: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
                 # Tenta reconectar em caso de erro
                 try:
-                    await mongodb_manager.conectar()
-                except:
+                    reconectou = await mongodb_manager.conectar()
+                    logger.info(f"🔍 Tentativa reconexão após erro: {reconectou}")
+                except Exception as reconnect_error:
+                    logger.error(f"❌ Erro na reconexão: {str(reconnect_error)}")
                     self.mongodb_ativo = False
         else:
-            resultados["mongodb"] = "desconectado"
+            if not MONGODB_DISPONIVEL:
+                resultados["mongodb"] = "nao_disponivel"
+                logger.warning("⚠️ MongoDB não disponível (módulo não importado)")
+            else:
+                resultados["mongodb"] = "desconectado"
+                logger.warning("⚠️ MongoDB desconectado")
 
         # 2. SEMPRE salvar JSON (fallback garantido)
         try:
