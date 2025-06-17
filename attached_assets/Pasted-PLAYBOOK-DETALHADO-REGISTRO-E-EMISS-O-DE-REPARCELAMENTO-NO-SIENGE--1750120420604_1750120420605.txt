@@ -1,0 +1,105 @@
+PLAYBOOK DETALHADO – REGISTRO E EMISSÃO DE REPARCELAMENTO NO SIENGE
+
+-----------------------------------------------------------
+1. REGISTRO DO REPARCELAMENTO NO SISTEMA SIENGE
+-----------------------------------------------------------
+
+1.1. Acesso e navegação:
+- Acesse o Sienge com suas credenciais.
+- Siga o menu: Financeiro > Contas a Receber > Reparcelamento > Inclusão.
+
+1.2. Inclusão do novo parcelamento:
+1. Preencha o campo “Número do título em reparcelamento”.
+2. Clique em “Consultar”.
+3. Selecione os documentos desejados e clique em “Próximo”.
+4. Aguarde o carregamento completo da tela.
+5. Role até o fim e clique no botão “Marcar todos”.
+6. Desmarque todas as parcelas com vencimento igual ou anterior ao mês vigente (atrasadas ou não).
+   - Mantenha apenas parcelas futuras (vencimento a partir do mês do novo parcelamento).
+7. Clique em “Próximo” e role a tela novamente.
+
+1.3. Detalhamento e preenchimento dos dados:
+8. No campo “Detalhamento” informe: Correção + mês/ano (ex: CORREÇÃO 04/25).
+9. Clique em “Adicionar”.
+10. Preencha os campos conforme a planilha base:
+    - Tipo condição: PM
+    - Valor total: saldo devedor novo (calculado na planilha)
+    - Quantidade de parcelas: número de parcelas pendentes
+    - Data do 1º vencimento: data do relatório/planilha
+    - Portador: 1 Carteira (não alterar)
+    - Operação de cobrança: 0 Cobrança em Carteira (não alterar)
+    - Indexador: 1 IGP-M (mesmo que a planilha indique IPCA, informar IGP-M)
+    - Data base: preenchida automaticamente pelo sistema
+11. Tipo de juros: selecionar “Nenhum”
+12. Percentual ao período e Data base para juros: não alterar.
+13. Clique em “Confirmar”.
+
+1.4. Ajustes de correção:
+14. Se o sistema exibir mensagem de diferença de valores:
+    - Replique o valor do campo “diferença” no campo “correção”.
+    - Clique em “Salvar”.
+15. Confirme todas as mensagens (“OK”) até a confirmação da atualização das parcelas.
+16. Repita o processo para cada cliente/título listado no mês.
+
+-----------------------------------------------------------
+2. EMISSÃO DE CARNÊ (BOLETOS) – SISTEMA SIENGE
+-----------------------------------------------------------
+
+2.1. Pré-requisitos:
+- Gerar carnê apenas para clientes com status OK nas colunas de pendência (PENDÊNCIAS PMFI, SIENGE INAD, SIENGE).
+- Caso haja pendência, revalidar na planilha “Base apoio”:
+    - Buscar o cliente/título específico.
+    - Se permanecer pendente, não gerar carnê e enviar log ao analista financeiro.
+
+2.2. Geração dos boletos:
+1. Navegue: Financeiro > Contas a Receber > Cobrança Escritural > Geração de Arquivos de Remessa.
+2. Solicite liberação de acesso, se necessário.
+3. Preencha o período:
+    - Data inicial: 1º vencimento do carnê (da planilha)
+    - Data final: mesma data, mês anterior, ano seguinte (ex.: inicial 15/05/2025, final 15/04/2026)
+4. Selecione a empresa/unidade de acordo com o reparcelamento.
+5. Gere um arquivo de remessa para cada unidade.
+
+2.3. Configurações específicas:
+6. Marque:
+    - Incluir Títulos Inadimplentes
+    - Incluir Títulos sub judice
+7. Clique na lupa em “Conta Corrente” para selecionar a conta correta.
+8. Nome do arquivo de remessa:
+    - Formato: [5 primeiros dígitos da conta corrente][nº mês][nº dia].[nº sequencial remessa]
+    - Exemplo: 24053312.2231
+    - Unidades especiais:
+        - Rio Almada: prefixar 06300
+        - SPE RESIDENCIAL PARQUE DA LAGOA: prefixar 01870
+    - Registrar no log o número e unidade para rastreio.
+
+2.4. Mensagens e opções de emissão:
+9. Marque:
+    - Mensagem para Remessa: 1 (Mensagem de Boleto Sicredi)
+    - Mensagem para Boletos: 12 (Boleto de Correção de Parcel)
+    - Imprimir boletos de cobrança
+    - Enviar boletos
+    - Agrupar boletos do cliente em um único e-mail
+    - Gerar boletos em arquivos separados
+    - Considerar apenas tipos de condições que geram cobrança
+    - Considerar parcelas já enviadas para cobrança
+    - Desmarcar opção de Fazer Download
+10. Clique em “Consultar”, aguarde o carregamento e role para ver o resultado.
+
+2.5. Seleção e geração dos arquivos:
+11. Na lista de clientes adimplentes, selecione as 12 parcelas geradas.
+12. Clique em “Gerar Arquivo de Remessa”.
+
+-----------------------------------------------------------
+3. PONTOS DE ATENÇÃO E EXCEÇÕES
+-----------------------------------------------------------
+
+- Não gerar carnê para clientes com pendências não regularizadas (PENDÊNCIAS SIENGE INAD, SIENGE, PMFI).
+- Logar e reportar ao analista financeiro qualquer pendência ou inconsistência encontrada.
+- Confirmar a atualização antes de finalizar cada etapa.
+- Repetir o processo para todos os clientes/títulos do mês vigente.
+- Após concluir todos os clientes/títulos, seguir para emissão e importação dos arquivos de remessa no Sicredi para cada empresa.
+
+-----------------------------------------------------------
+FIM DO PLAYBOOK
+-----------------------------------------------------------
