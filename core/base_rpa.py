@@ -239,8 +239,8 @@ class BaseRPA(ABC):
 
         try:
             # ✅ FORÇA inicialização do data_manager ANTES de tudo
-            from core.data_manager import garantir_inicializacao
-            await garantir_inicializacao()
+            from core.data_manager import data_manager
+            await data_manager.inicializar()
 
             # Garante que recursos estão inicializados
             if not await self.inicializar():

@@ -53,8 +53,8 @@ class RPAAnalisePlanilhas(BaseRPA):
         """
         try:
             # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
-            from core.data_manager import data_manager, garantir_inicializacao
-            await garantir_inicializacao()
+            from core.data_manager import data_manager
+            await data_manager.inicializar()
             self.log_info("💾 Sistema híbrido MongoDB+JSON inicializado")
             
             self.log_info("🔍 Iniciando análise de planilhas...")
