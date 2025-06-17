@@ -166,6 +166,15 @@ mode = "sequential"
 task = "shell.exec"
 args = "python rpa_sienge/testar_processamento_planilha.py completo"
 
+[[workflows.workflow]]
+name = "Agendador RPA"
+author = 43711956
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python agendador_diario.py"
+
 [deployment]
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 deploymentTarget = "autoscale"
