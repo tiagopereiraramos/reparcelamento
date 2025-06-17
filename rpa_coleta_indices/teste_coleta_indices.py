@@ -290,7 +290,7 @@ async def main():
     finally:
         # Cleanup
         if hasattr(rpa, 'browser') and rpa.browser:
-            rpa.browser.fechar()
+            rpa.browser.close()
         print("\n🔄 Cleanup concluído")
 
     print("=" * 60)
