@@ -69,6 +69,8 @@ class DataManagerUnificado:
                 self.mongodb_ativo = await mongodb_manager.conectar()
                 if self.mongodb_ativo:
                     logger.info("✅ Sistema Híbrido: MongoDB + JSON ativo")
+                    # Verifica saúde inicial
+                    await self._verificar_saude_mongodb()
                 else:
                     logger.info("📄 Sistema Fallback: Apenas JSON (MongoDB indisponível)")
             except Exception as e:
@@ -77,6 +79,20 @@ class DataManagerUnificado:
                 logger.info("📄 Sistema Fallback: Apenas JSON")
         else:
             logger.info("📄 Sistema JSON: MongoDB não disponível nesta instalação")
+
+    async def _verificar_saude_mongodb(self):
+        """Verifica saúde do MongoDB e reconecta se necessário"""
+        if not MONGODB_DISPONIVEL:
+            return
+        
+        try:
+            saude = await mongodb_manager.verificar_saude()
+            if saude.get("status") != "conectado":
+                logger.warning("⚠️ MongoDB não saudável, tentando reconectar...")
+                self.mongodb_ativo = await mongodb_manager.conectar()
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao verificar saúde MongoDB: {str(e)}")
+            self.mongodb_ativo = False
 
     async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any], 
                                   resultado: Dict[str, Any]) -> Dict[str, str]:
@@ -100,16 +116,36 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. MongoDB (principal)
+        # 1. MongoDB (principal) - COM TENTATIVA DE RECONEXÃO
         if self.mongodb_ativo:
             try:
+                # Primeiro tenta salvar
                 mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
                 if mongo_id:
                     resultados["mongodb"] = "sucesso"
                     dados_execucao["_id_mongodb"] = mongo_id
+                else:
+                    # Se falhou, tenta reconectar uma vez
+                    logger.info("🔄 Tentando reconectar MongoDB...")
+                    reconectado = await mongodb_manager.conectar()
+                    if reconectado:
+                        mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+                        if mongo_id:
+                            resultados["mongodb"] = "sucesso"
+                            dados_execucao["_id_mongodb"] = mongo_id
+                        else:
+                            resultados["mongodb"] = "falhou_apos_reconexao"
+                    else:
+                        resultados["mongodb"] = "reconexao_falhou"
+                        self.mongodb_ativo = False
             except Exception as e:
                 logger.warning(f"⚠️ Execução MongoDB falhou: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
+                # Tenta reconectar em caso de erro
+                try:
+                    await mongodb_manager.conectar()
+                except:
+                    self.mongodb_ativo = False
         else:
             resultados["mongodb"] = "desconectado"
 

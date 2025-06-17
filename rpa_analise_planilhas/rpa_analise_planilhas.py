@@ -167,7 +167,20 @@ class RPAAnalisePlanilhas(BaseRPA):
             if not self.cliente_sheets:
                 raise Exception("Cliente Google Sheets não inicializado")
 
-            planilha_apoio = self.cliente_sheets.open_by_key(planilha_apoio_id)
+            # CORRIGIDO: Adiciona retry para operações Google Sheets
+            max_tentativas = 3
+            for tentativa in range(max_tentativas):
+                try:
+                    planilha_apoio = self.cliente_sheets.open_by_key(planilha_apoio_id)
+                    break
+                except Exception as e:
+                    if "503" in str(e) and tentativa < max_tentativas - 1:
+                        import time
+                        tempo_espera = (tentativa + 1) * 30  # 30, 60, 90 segundos
+                        self.log_progresso(f"⚠️ Erro 503 - aguardando {tempo_espera}s antes da próxima tentativa...")
+                        time.sleep(tempo_espera)
+                        continue
+                    raise e
 
             # Lista abas disponíveis
             abas_disponiveis = [
@@ -868,21 +881,44 @@ class RPAAnalisePlanilhas(BaseRPA):
                     break
 
             if coluna_ultimo_reajuste:
-                # Atualiza célula específica
-                celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}'
-                aba_base_calculo.update(celula, data_reajuste)
-
-                cliente = contrato.get(
-                    'Cliente', contrato.get('cliente', 'N/A'))
-                self.log_progresso(
-                    f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
+                # CORRIGIDO: Valida se coluna está dentro do limite válido (A-Z = 1-26)
+                if coluna_ultimo_reajuste <= 26:
+                    celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}'
+                    
+                    # CORRIGIDO: Tenta atualizar com tratamento robusto de erro
+                    try:
+                        aba_base_calculo.update(celula, data_reajuste)
+                        cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
+                        self.log_progresso(f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
+                    except Exception as update_err:
+                        # Se der erro específico da API, tenta método alternativo
+                        if "Invalid value" in str(update_err):
+                            try:
+                                # Método alternativo usando range de células
+                                range_celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}:{chr(64 + coluna_ultimo_reajuste)}{linha}'
+                                aba_base_calculo.update(range_celula, [[data_reajuste]])
+                                cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
+                                self.log_progresso(f"✅ Último reajuste atualizado (alt): {cliente} -> {data_reajuste}")
+                            except Exception as alt_err:
+                                self.log_progresso(f"⚠️ Falha completa ao atualizar: {str(alt_err)}")
+                        else:
+                            raise update_err
+                else:
+                    # Para colunas além de Z (26), usa notação diferente
+                    if coluna_ultimo_reajuste <= 702:  # Até ZZ
+                        primeira_letra = chr(64 + ((coluna_ultimo_reajuste - 1) // 26))
+                        segunda_letra = chr(64 + ((coluna_ultimo_reajuste - 1) % 26) + 1)
+                        celula = f'{primeira_letra}{segunda_letra}{linha}'
+                        aba_base_calculo.update(celula, data_reajuste)
+                        cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
+                        self.log_progresso(f"✅ Último reajuste atualizado (ext): {cliente} -> {data_reajuste}")
+                    else:
+                        self.log_progresso(f"⚠️ Coluna muito avançada para atualizar: {coluna_ultimo_reajuste}")
             else:
-                self.log_progresso(
-                    "⚠️ Coluna 'Último reajuste' não encontrada para atualizar")
+                self.log_progresso("⚠️ Coluna 'Último reajuste' não encontrada para atualizar")
 
         except Exception as e:
-            self.log_progresso(
-                f"⚠️ Erro ao atualizar último reajuste: {str(e)}")
+            self.log_progresso(f"⚠️ Erro ao atualizar último reajuste: {str(e)}")
 
     async def _salvar_fila_local(self, fila_processamento: List[Dict[str, Any]]):
         """
