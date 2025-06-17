@@ -61,14 +61,14 @@ class DataManagerUnificado:
     async def inicializar(self):
         """Inicializa sistema híbrido com debug detalhado"""
         logger.info("🔧 Inicializando data_manager...")
-        
+
         # Debug das variáveis de ambiente
         logger.info("🔍 Verificando variáveis de ambiente MongoDB...")
         db_url = os.getenv('DATABASE_URL') or os.getenv('MONGODB_URI') or os.getenv('MONGO_URL')
         db_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
         logger.info(f"   DATABASE_URL: {'SET' if db_url else 'NOT SET'}")
         logger.info(f"   DATABASE_NAME: {db_name}")
-        
+
         self._garantir_estrutura_dados()  # Garante que arquivos existem
 
         # Tenta conectar MongoDB
@@ -76,19 +76,19 @@ class DataManagerUnificado:
             try:
                 logger.info("🔄 Tentando conectar ao MongoDB...")
                 logger.info(f"   Usando URL: {db_url[:20] + '...' if db_url else 'localhost:27017'}")
-                
+
                 # Força reconexão se já estava conectado
                 if mongodb_manager.conectado:
                     logger.info("♻️ Desconectando MongoDB anterior...")
                     await mongodb_manager.desconectar()
-                
+
                 self.mongodb_ativo = await mongodb_manager.conectar()
                 logger.info(f"🔍 Resultado conexão MongoDB: {self.mongodb_ativo}")
                 logger.info(f"🔍 mongodb_manager.conectado: {mongodb_manager.conectado}")
-                
+
                 if self.mongodb_ativo and mongodb_manager.conectado:
                     logger.info("✅ Sistema Híbrido: MongoDB + JSON ativo")
-                    
+
                     # Teste prático de inserção
                     try:
                         test_doc = {
@@ -98,25 +98,25 @@ class DataManagerUnificado:
                         }
                         result = await mongodb_manager.database.teste_conexao.insert_one(test_doc)
                         logger.info(f"✅ Teste inserção MongoDB: {result.inserted_id}")
-                        
+
                         # Remove documento de teste
                         await mongodb_manager.database.teste_conexao.delete_one({"_id": result.inserted_id})
                         logger.info("🧹 Documento de teste removido")
-                        
+
                     except Exception as test_e:
                         logger.error(f"❌ Falha no teste de inserção: {str(test_e)}")
                         self.mongodb_ativo = False
-                        
+
                     # Verifica saúde inicial
                     await self._verificar_saude_mongodb()
-                    
+
                 else:
                     logger.warning("⚠️ MongoDB conectou mas algo está incorreto")
                     logger.warning(f"   mongodb_ativo: {self.mongodb_ativo}")
                     logger.warning(f"   manager.conectado: {mongodb_manager.conectado}")
                     self.mongodb_ativo = False
                     logger.info("📄 Sistema Fallback: Apenas JSON (MongoDB com problemas)")
-                    
+
             except Exception as e:
                 logger.error(f"❌ Falha ao conectar MongoDB: {str(e)}")
                 logger.error(f"   Tipo do erro: {type(e).__name__}")
@@ -127,15 +127,15 @@ class DataManagerUnificado:
         else:
             logger.warning("⚠️ MONGODB_DISPONIVEL = False")
             logger.info("📄 Sistema JSON: MongoDB não disponível nesta instalação")
-            
+
         logger.info(f"✅ Data manager inicializado - MongoDB ativo: {self.mongodb_ativo}")
-        
+
         # Debug final do estado
         logger.info("🔍 Estado final da inicialização:")
         logger.info(f"   MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
         logger.info(f"   self.mongodb_ativo: {self.mongodb_ativo}")
         logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
-        logger.info(f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager.database else 'NOT SET'}")
+        logger.info(f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager.database is not None else 'NOT SET'}")
 
     async def _verificar_saude_mongodb(self):
         """Verifica saúde do MongoDB e reconecta se necessário"""
@@ -180,12 +180,12 @@ class DataManagerUnificado:
         logger.info(f"   mongodb_manager existe: {mongodb_manager is not None}")
         if MONGODB_DISPONIVEL:
             logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado}")
-            logger.info(f"   mongodb_manager.database: {'SET' if mongodb_manager.database else 'NOT SET'}")
-        
+            logger.info(f"   mongodb_manager.database: {'SET' if mongodb_manager.database is not None else 'NOT SET'}")
+
         if MONGODB_DISPONIVEL and self.mongodb_ativo and mongodb_manager.conectado:
             try:
                 logger.info(f"🔄 Tentando salvar execução {nome_rpa} no MongoDB...")
-                
+
                 # Verifica se database está acessível
                 if not mongodb_manager.database:
                     logger.error("❌ mongodb_manager.database não está configurado")
@@ -194,7 +194,7 @@ class DataManagerUnificado:
                     # Primeiro tenta salvar
                     mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
                     logger.info(f"🔍 Resultado MongoDB save: {mongo_id}")
-                    
+
                     if mongo_id:
                         resultados["mongodb"] = "sucesso"
                         dados_execucao["_id_mongodb"] = mongo_id
@@ -204,11 +204,11 @@ class DataManagerUnificado:
                         # Se falhou, tenta reconectar uma vez
                         reconectado = await mongodb_manager.conectar()
                         logger.info(f"🔍 Reconexão result: {reconectado}")
-                        
+
                         if reconectado:
                             mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
                             logger.info(f"🔍 MongoDB save após reconexão: {mongo_id}")
-                            
+
                             if mongo_id:
                                 resultados["mongodb"] = "sucesso"
                                 dados_execucao["_id_mongodb"] = mongo_id
@@ -220,14 +220,14 @@ class DataManagerUnificado:
                             resultados["mongodb"] = "reconexao_falhou"
                             self.mongodb_ativo = False
                             logger.error("❌ Reconexão MongoDB falhou")
-                        
+
             except Exception as e:
                 logger.error(f"❌ Exceção no salvamento MongoDB: {str(e)}")
                 logger.error(f"   Tipo do erro: {type(e).__name__}")
                 import traceback
                 logger.error(f"   Traceback completo: {traceback.format_exc()}")
                 resultados["mongodb"] = f"erro: {str(e)}"
-                
+
                 # Tenta reconectar em caso de erro
                 try:
                     logger.info("🔄 Tentando reconectar após erro...")
@@ -247,7 +247,7 @@ class DataManagerUnificado:
                 motivo.append("mongodb_ativo=False")
             if MONGODB_DISPONIVEL and not mongodb_manager.conectado:
                 motivo.append("mongodb_manager.conectado=False")
-            
+
             logger.warning(f"⚠️ MongoDB não tentado: {', '.join(motivo)}")
             resultados["mongodb"] = f"nao_tentado: {', '.join(motivo)}"
 

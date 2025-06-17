@@ -325,7 +325,7 @@ class MongoDBManager:
             return {
                 "status": "conectado",
                 "url": self._url_conexao.split('@')[-1] if self._url_conexao else "unknown",
-                "database": self.database.name,
+                "database": self.database.name if self.database is not None else "none",
                 "total_execucoes": total_execucoes,
                 "timestamp": datetime.now().isoformat()
             }
