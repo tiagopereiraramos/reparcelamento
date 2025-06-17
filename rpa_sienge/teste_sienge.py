@@ -60,37 +60,77 @@ async def carregar_fila_contratos() -> List[Dict[str, Any]]:
     try:
         # Inicializa o data_manager (garante conexão MongoDB se disponível)
         from core.data_manager import data_manager
-        await data_manager.inicializar()
+        from core.mongodb_manager import mongodb_manager, MONGODB_DISPONIVEL
         
         print("🔍 Carregando fila de contratos...")
-        print(f"   MongoDB ativo: {data_manager.mongodb_ativo}")
         
-        # Usa o método unificado do data_manager
-        fila_dados = await data_manager.obter_fila_sienge()
+        # Força inicialização do data_manager
+        await data_manager.inicializar()
         
-        if fila_dados and fila_dados.get("contratos"):
-            contratos = fila_dados.get("contratos", [])
-            total = len(contratos)
-            
-            if data_manager.mongodb_ativo:
-                print(f"📊 Fila carregada do MongoDB: {total} contratos")
-            else:
-                print(f"📄 Fila carregada do JSON: {total} contratos")
+        print(f"   Data Manager - MongoDB ativo: {data_manager.mongodb_ativo}")
+        print(f"   MongoDB Manager - Conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
+        print(f"   MongoDB - Disponível: {MONGODB_DISPONIVEL}")
+        
+        contratos = []
+        fonte_dados = "none"
+        
+        # PRIORIDADE 1: Tentar MongoDB DIRETAMENTE se disponível
+        if MONGODB_DISPONIVEL and mongodb_manager.conectado:
+            try:
+                print("📊 Tentando carregar do MongoDB...")
+                collection = mongodb_manager.database.fila_processamento_sienge
+                documento = await asyncio.get_event_loop().run_in_executor(
+                    mongodb_manager.executor,
+                    lambda: collection.find_one()
+                )
                 
-            # Debug: mostra alguns contratos
-            if total > 0:
-                print("📋 Primeiros contratos na fila:")
-                for i, contrato in enumerate(contratos[:3]):
-                    titulo = contrato.get("numero_titulo", "N/A")
-                    cliente = contrato.get("cliente", "N/A")
-                    status = contrato.get("status_processamento", "N/A")
-                    print(f"   {i+1}. {titulo} - {cliente} [{status}]")
-                if total > 3:
-                    print(f"   ... e mais {total-3} contratos")
+                if documento and documento.get("contratos"):
+                    contratos = documento.get("contratos", [])
+                    fonte_dados = "mongodb"
+                    print(f"✅ Fila carregada do MongoDB: {len(contratos)} contratos")
+                else:
+                    print("⚠️ Documento de fila não encontrado no MongoDB")
+                    
+            except Exception as e:
+                print(f"⚠️ Erro ao acessar MongoDB: {str(e)}")
+        
+        # PRIORIDADE 2: Fallback para data_manager se MongoDB falhou
+        if not contratos:
+            print("📄 Tentando carregar via data_manager...")
+            fila_dados = await data_manager.obter_fila_sienge()
             
+            if fila_dados and fila_dados.get("contratos"):
+                contratos = fila_dados.get("contratos", [])
+                fonte_dados = "json"
+                print(f"✅ Fila carregada do JSON: {len(contratos)} contratos")
+        
+        # PRIORIDADE 3: Fallback direto para arquivo JSON
+        if not contratos:
+            print("📄 Tentando carregar diretamente do arquivo JSON...")
+            import json
+            arquivo_fila = os.path.join("dados_processamento", "fila_contratos_sienge.json")
+            
+            if os.path.exists(arquivo_fila):
+                with open(arquivo_fila, 'r', encoding='utf-8') as f:
+                    fila_dados = json.load(f)
+                    contratos = fila_dados.get("contratos", [])
+                    fonte_dados = "arquivo_json"
+                    print(f"✅ Fila carregada do arquivo JSON: {len(contratos)} contratos")
+        
+        if contratos:
+            print(f"📋 Fonte dos dados: {fonte_dados}")
+            print("📋 Primeiros contratos na fila:")
+            for i, contrato in enumerate(contratos[:3]):
+                titulo = contrato.get("numero_titulo", "N/A")
+                cliente = contrato.get("cliente", "N/A")
+                status = contrato.get("status_processamento", "N/A")
+                print(f"   {i+1}. {titulo} - {cliente} [{status}]")
+            if len(contratos) > 3:
+                print(f"   ... e mais {len(contratos)-3} contratos")
+                
             return contratos
         else:
-            print("⚠️ Fila vazia ou não encontrada")
+            print("⚠️ Nenhuma fila encontrada em nenhuma fonte")
             print("💡 Execute primeiro: python rpa_analise_planilhas/teste_analise_planilhas.py")
             return []
 
