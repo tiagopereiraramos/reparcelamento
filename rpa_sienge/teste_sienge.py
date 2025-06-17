@@ -6,7 +6,7 @@ Permite testar o RPA fora da orquestração Temporal para desenvolvimento e homo
 Desenvolvido em Português Brasileiro
 """
 
-from rpa_sienge.rpa_sienge import RPASienge, executar_processamento_sienge
+from rpa_sienge.rpa_sienge import RPASienge
 import asyncio
 import sys
 import os
@@ -18,6 +18,40 @@ import json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+async def executar_processamento_sienge(contrato: Dict[str, Any],
+                                      indices_economicos: Dict[str, Any],
+                                      credenciais_sienge: Dict[str, str],
+                                      etapa: str = "completa",
+                                      autorizar_reparcelamento: bool = False,
+                                      notificar_analista: bool = True):
+    """
+    Função auxiliar para executar o RPA Sienge
+    """
+    try:
+        rpa = RPASienge()
+        await rpa.inicializar()
+        
+        resultado = await rpa.executar(
+            contrato=contrato,
+            credenciais_sienge=credenciais_sienge,
+            indices=indices_economicos,
+            etapa=etapa,
+            autorizar_reparcelamento=autorizar_reparcelamento,
+            notificar_analista=notificar_analista
+        )
+        
+        await rpa.finalizar()
+        return resultado
+        
+    except Exception as e:
+        from core.base_rpa import ResultadoRPA
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem="Erro na execução do RPA Sienge",
+            erro=str(e)
+        )
+
+
 async def carregar_fila_contratos() -> List[Dict[str, Any]]:
     """
     Carrega a fila de contratos da análise de planilhas
@@ -27,9 +61,9 @@ async def carregar_fila_contratos() -> List[Dict[str, Any]]:
         # Tentar MongoDB primeiro
         try:
             from core.mongodb_manager import mongodb_manager
-            if await mongodb_manager.conectar():
-                fila_doc = await mongodb_manager.database.fila_processamento_sienge.find_one(
-                )
+            conectado = await mongodb_manager.conectar()
+            if conectado:
+                fila_doc = await mongodb_manager.database.fila_processamento_sienge.find_one({})
                 if fila_doc and fila_doc.get("contratos"):
                     print("📊 Fila carregada do MongoDB")
                     return fila_doc.get("contratos", [])
@@ -68,9 +102,10 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
         # Tentar MongoDB primeiro
         try:
             from core.mongodb_manager import mongodb_manager
-            if await mongodb_manager.conectar():
+            conectado = await mongodb_manager.conectar()
+            if conectado:
                 indices_doc = await mongodb_manager.database.indices_economicos.find_one(
-                    sort=[("timestamp", -1)]  # Mais recente
+                    {}, sort=[("timestamp", -1)]  # Mais recente
                 )
                 if indices_doc:
                     print("📊 Índices carregados do MongoDB")
@@ -185,7 +220,8 @@ async def atualizar_status_contrato(numero_titulo: str,
         # Tentar MongoDB primeiro
         try:
             from core.mongodb_manager import mongodb_manager
-            if await mongodb_manager.conectar():
+            conectado = await mongodb_manager.conectar()
+            if conectado:
                 await mongodb_manager.database.fila_processamento_sienge.update_one(
                     {"contratos.numero_titulo": numero_titulo}, {
                         "$set": {
