@@ -24,6 +24,7 @@ try:
     from core.mongodb_manager import mongodb_manager
     MONGODB_DISPONIVEL = True
 except ImportError:
+    mongodb_manager = None
     MONGODB_DISPONIVEL = False
 
 logger = structlog.get_logger()
@@ -181,9 +182,14 @@ class BaseRPA(ABC):
         """
         try:
             # Conecta ao MongoDB se disponível
-            if MONGODB_DISPONIVEL:
+            if MONGODB_DISPONIVEL and mongodb_manager:
+                if not mongodb_manager.conectado:
+                    await mongodb_manager.conectar()
                 self.mongo_manager = mongodb_manager
-                self.logger.info("✅ MongoDB conectado com sucesso")
+                if mongodb_manager.conectado:
+                    self.logger.info("✅ MongoDB conectado com sucesso")
+                else:
+                    self.logger.warning("⚠️ MongoDB configurado mas não conectado")
         except Exception as e:
             self.logger.warning(f"⚠️ MongoDB não disponível: {str(e)}")
 

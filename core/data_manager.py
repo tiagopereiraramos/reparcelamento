@@ -15,8 +15,12 @@ from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
 
-# MongoDB será implementado diretamente aqui quando necessário
-MONGODB_DISPONIVEL = False
+# Importa MongoDB manager
+try:
+    from core.mongodb_manager import mongodb_manager
+    MONGODB_DISPONIVEL = True
+except ImportError:
+    MONGODB_DISPONIVEL = False
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +61,22 @@ class DataManagerUnificado:
 
     async def inicializar(self):
         """Inicializa sistema híbrido"""
-        self.mongodb_ativo = False
         self._garantir_estrutura_dados()  # Garante que arquivos existem
-        logger.info("📄 Sistema Profissional: JSON com estrutura preparada para MongoDB futuro")
+        
+        # Tenta conectar MongoDB
+        if MONGODB_DISPONIVEL:
+            try:
+                self.mongodb_ativo = await mongodb_manager.conectar()
+                if self.mongodb_ativo:
+                    logger.info("✅ Sistema Híbrido: MongoDB + JSON ativo")
+                else:
+                    logger.info("📄 Sistema Fallback: Apenas JSON (MongoDB indisponível)")
+            except Exception as e:
+                logger.warning(f"⚠️ Falha ao conectar MongoDB: {str(e)}")
+                self.mongodb_ativo = False
+                logger.info("📄 Sistema Fallback: Apenas JSON")
+        else:
+            logger.info("📄 Sistema JSON: MongoDB não disponível nesta instalação")
 
     async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any], 
                                   resultado: Dict[str, Any]) -> Dict[str, str]:
@@ -83,9 +100,18 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. MongoDB será implementado futuramente quando necessário
-        # Por enquanto, foco no JSON que já funciona perfeitamente
-        resultados["mongodb"] = "não_implementado"
+        # 1. MongoDB (principal)
+        if self.mongodb_ativo:
+            try:
+                mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+                if mongo_id:
+                    resultados["mongodb"] = "sucesso"
+                    dados_execucao["_id_mongodb"] = mongo_id
+            except Exception as e:
+                logger.warning(f"⚠️ Execução MongoDB falhou: {str(e)}")
+                resultados["mongodb"] = f"erro: {str(e)}"
+        else:
+            resultados["mongodb"] = "desconectado"
 
         # 2. SEMPRE salvar JSON (fallback garantido)
         try:
@@ -165,17 +191,18 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. MongoDB (principal) - Por enquanto não implementado
-        if MONGODB_DISPONIVEL and self.mongodb_ativo:
+        # 1. MongoDB (principal)
+        if self.mongodb_ativo:
             try:
-                # Implementar quando MongoDB estiver disponível
-                resultados["mongodb"] = "sucesso"
-                documento["_id_mongodb"] = "mongodb_id_placeholder"
+                mongo_id = await mongodb_manager.salvar_indices_economicos(indices_data)
+                if mongo_id:
+                    resultados["mongodb"] = "sucesso"
+                    documento["_id_mongodb"] = mongo_id
             except Exception as e:
                 logger.warning(f"⚠️ Índices MongoDB falhou: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
         else:
-            resultados["mongodb"] = "não_implementado"
+            resultados["mongodb"] = "desconectado"
 
         # 2. JSON (fallback garantido)
         try:
