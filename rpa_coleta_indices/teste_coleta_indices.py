@@ -258,7 +258,7 @@ async def main():
     }
 
     try:
-        # Executa RPA
+        # Executa RPA COM MONITORAMENTO (força salvamento)
         resultado = await rpa.executar_com_monitoramento(parametros_teste)
 
         # Processa resultado

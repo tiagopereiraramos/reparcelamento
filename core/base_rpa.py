@@ -1,4 +1,4 @@
-# Applying the changes to ensure data_manager is initialized correctly within BaseRPA and during execution.
+# Applying the changes to ensure data_manager is initialized correctly within BaseRPA and during execution, forcing saving of executions.
 """
 BaseRPA - Classe base para todos os RPAs do sistema
 Desenvolvido em Português Brasileiro para máxima simplicidade e manutenção
@@ -234,79 +234,72 @@ class BaseRPA(ABC):
     async def executar_com_monitoramento(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
         Versão com monitoramento e salvamento automático
-
-        Args:
-            parametros: Parâmetros de entrada
-
-        Returns:
-            ResultadoRPA com resultado completo
         """
         self.inicio_execucao = datetime.now()
-        resultado = None
 
         try:
-            self.logger.info(f"🔧 Iniciando {self.nome_rpa}...")
+            self.log_info("🔧 Inicializando recursos do RPA...")
 
-            # Garantir que data_manager esteja inicializado
-            from core.data_manager import data_manager
-            await data_manager.inicializar()
-
-            # Recursos obrigatórios sempre inicializados
+            # Inicializa recursos obrigatórios
             await self._inicializar_recursos_obrigatorios()
 
-            # Recursos opcionais baseados na configuração
+            # Inicializa recursos opcionais
             await self._inicializar_recursos_opcionais()
 
-            self.logger.info("✅ Todos os recursos inicializados")
-
-            # Executa RPA principal
+            # Executa o RPA
+            self.log_info(f"▶️ Iniciando execução do RPA {self.nome_rpa}")
             resultado = await self.executar(parametros)
 
-            # Finaliza recursos automaticamente
-            await self._finalizar_recursos()
+            # Calcula tempo de execução
+            if self.inicio_execucao:
+                resultado.tempo_execucao = (datetime.now() - self.inicio_execucao).total_seconds()
 
-            # Salva execução para auditoria SEMPRE (MongoDB ou JSON)
-            await self._salvar_execucao(parametros, resultado)
+            # FORÇA salvamento da execução no sistema
+            await self._salvar_execucao_sistema(parametros, resultado)
 
-            # Log resultado
-            tempo_execucao = (datetime.now() - self.inicio_execucao).total_seconds()
-            resultado.tempo_execucao = tempo_execucao
-
-            if resultado.sucesso:
-                self.logger.info(f"✅ RPA executado com sucesso em {tempo_execucao:.2f}s")
-                self.logger.info(f"📊 Resultado: {resultado.mensagem}")
-            else:
-                self.logger.error(f"❌ RPA falhou após {tempo_execucao:.2f}s")
-                self.logger.error(f"💥 Erro: {resultado.erro}")
-
+            self.log_info(f"✅ RPA {self.nome_rpa} executado com sucesso em {resultado.tempo_execucao:.2f}s")
             return resultado
 
         except Exception as e:
-            # Captura erros não tratados
-            tempo_execucao = (datetime.now() - self.inicio_execucao).total_seconds()
+            tempo_execucao = (datetime.now() - self.inicio_execucao).total_seconds() if self.inicio_execucao else 0
 
             resultado_erro = ResultadoRPA(
                 sucesso=False,
-                mensagem=f"Erro crítico durante execução do {self.nome_rpa}",
+                mensagem=f"❌ FALHA: Erro crítico durante execução do {self.nome_rpa}",
                 erro=str(e),
                 tempo_execucao=tempo_execucao
             )
 
-            # Tenta salvar mesmo com erro
-            try:
-                await self._salvar_execucao(parametros, resultado_erro)
-            except Exception as save_error:
-                self.logger.error(f"⚠️ Falha ao salvar execução com erro: {str(save_error)}")
+            # FORÇA salvamento da execução com erro
+            await self._salvar_execucao_sistema(parametros, resultado_erro)
 
-            self.logger.error(f"💥 Erro crítico: {str(e)}")
+            self.log_erro(f"🔍 Erro: {str(e)}", e)
             return resultado_erro
 
         finally:
-            # Cleanup sempre executado
-            try:
-                await self._finalizar_recursos()
-            except Exception as cleanup_error:
-                self.logger.warning(f"⚠️ Erro no cleanup: {str(cleanup_error)}")
+            # Finaliza recursos
+            await self._finalizar_recursos()
+
+    async def _salvar_execucao_sistema(self, parametros: Dict[str, Any],
+                                       resultado: ResultadoRPA):
+        """
+        Salva a execução no sistema de dados (MongoDB + JSON)
+        """
+        try:
+            # Usa data_manager para salvar no MongoDB e JSON
+            from core.data_manager import data_manager
+
+            # Salva a execução usando o data_manager
+            await data_manager.salvar_execucao_rpa(
+                nome_rpa=self.nome_rpa,
+                parametros=parametros,
+                resultado=resultado.para_dict()
+            )
+
+            self.log_info("💾 Execução salva com sucesso no sistema")
+
+        except Exception as e:
+            self.log_erro(f"❌ Erro ao salvar execução no sistema: {str(e)}", e)
 
     async def _salvar_execucao(self, parametros: Dict[str, Any],
                                resultado: ResultadoRPA):

@@ -385,25 +385,46 @@ class DataManagerUnificado:
             logger.error(f"❌ Falha estatísticas JSON: {str(e)}")
             return {}
 
-    async def debug_verificar_indices_salvos(self) -> Dict[str, Any]:
+    async def debug_verificar_dados_salvos(self) -> Dict[str, Any]:
         """
-        Método de debug para verificar se índices foram salvos
+        Método de debug para verificar dados salvos
         """
         try:
             indices = self._carregar_json_seguro(self.arquivo_indices, [])
             execucoes = self._carregar_json_seguro(self.arquivo_execucoes, [])
             
+            # Verifica MongoDB também
+            mongo_stats = {}
+            if self.mongodb_ativo and MONGODB_DISPONIVEL:
+                try:
+                    mongo_stats = await mongodb_manager.obter_estatisticas_dashboard()
+                except Exception as e:
+                    mongo_stats = {"erro": str(e)}
+            
             return {
-                "total_indices_salvos": len(indices),
-                "total_execucoes": len(execucoes),
-                "ultimo_indice": indices[-1] if indices else None,
-                "ultima_execucao": execucoes[-1] if execucoes else None,
-                "arquivo_indices_existe": os.path.exists(self.arquivo_indices),
-                "arquivo_execucoes_existe": os.path.exists(self.arquivo_execucoes)
+                "json": {
+                    "total_indices_salvos": len(indices),
+                    "total_execucoes": len(execucoes),
+                    "ultimo_indice": indices[-1] if indices else None,
+                    "ultima_execucao": execucoes[-1] if execucoes else None,
+                    "arquivo_indices_existe": os.path.exists(self.arquivo_indices),
+                    "arquivo_execucoes_existe": os.path.exists(self.arquivo_execucoes)
+                },
+                "mongodb": mongo_stats,
+                "sistema_ativo": {
+                    "mongodb_ativo": self.mongodb_ativo,
+                    "mongodb_disponivel": MONGODB_DISPONIVEL
+                }
             }
         except Exception as e:
             logger.error(f"❌ Erro no debug: {str(e)}")
             return {"erro": str(e)}
+
+    async def debug_verificar_indices_salvos(self) -> Dict[str, Any]:
+        """
+        Método de debug para verificar se índices foram salvos (mantido para compatibilidade)
+        """
+        return await self.debug_verificar_dados_salvos()
 
     # Métodos auxiliares JSON
     async def _salvar_execucao_json(self, dados_execucao: Dict[str, Any]):
