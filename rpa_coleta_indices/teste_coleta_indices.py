@@ -23,7 +23,7 @@ from datetime import datetime
 # Adiciona o diretório raiz do projeto ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from rpa_coleta_indices.rpa_coleta_indices import RPAColetaIndices, executar_coleta_indices
+from rpa_coleta_indices import RPAColetaIndices, executar_coleta_indices
 
 
 async def teste_completo():
