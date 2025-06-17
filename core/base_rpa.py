@@ -260,18 +260,18 @@ class BaseRPA(ABC):
             self.log_info(f"▶️ Iniciando execução do RPA {self.nome_rpa}")
             resultado = await self.executar(parametros)
 
-            # Calcula tempo de execução
-            if self.inicio_execucao:
-                resultado.tempo_execucao = (datetime.now() - self.inicio_execucao).total_seconds()
+            # Calcula tempo de execução SEMPRE
+            tempo_execucao = (datetime.now() - inicio).total_seconds()
+            resultado.tempo_execucao = tempo_execucao
 
             # FORÇA salvamento da execução no sistema
             await self._salvar_execucao_sistema(parametros, resultado)
 
-            self.log_info(f"✅ RPA {self.nome_rpa} executado com sucesso em {resultado.tempo_execucao:.2f}s")
+            self.log_info(f"✅ RPA {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
             return resultado
 
         except Exception as e:
-            tempo_execucao = (datetime.now() - self.inicio_execucao).total_seconds() if self.inicio_execucao else 0
+            tempo_execucao = (datetime.now() - inicio).total_seconds()
 
             resultado_erro = ResultadoRPA(
                 sucesso=False,
@@ -300,13 +300,19 @@ class BaseRPA(ABC):
             from core.data_manager import data_manager
 
             # Salva a execução usando o data_manager
-            await data_manager.salvar_execucao_rpa(
+            resultados = await data_manager.salvar_execucao_rpa(
                 nome_rpa=self.nome_rpa,
                 parametros=parametros,
                 resultado=resultado.para_dict()
             )
 
-            self.log_info("💾 Execução salva com sucesso no sistema")
+            # Log mais específico baseado nos resultados
+            if resultados.get("mongodb") == "sucesso" and resultados.get("json") == "sucesso":
+                self.log_info("💾 Execução salva com sucesso no sistema (MongoDB + JSON)")
+            elif resultados.get("json") == "sucesso":
+                self.log_info("💾 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)")
+            else:
+                self.log_info("⚠️ Execução salva com problemas no sistema")
 
         except Exception as e:
             self.log_erro(f"❌ Erro ao salvar execução no sistema: {str(e)}", e)
