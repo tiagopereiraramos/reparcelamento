@@ -1,7 +1,7 @@
 
 """
 MongoDB Manager - Sistema RPA v2.0
-Gerenciador de conexão e operações MongoDB usando integração Replit
+Gerenciador de conexão e operações MongoDB usando PyMongo com executor assíncrono
 
 Desenvolvido em Português Brasileiro
 """
@@ -11,8 +11,9 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import logging
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+import concurrent.futures
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,11 @@ class MongoDBManager:
     """
 
     def __init__(self):
-        self.client: Optional[AsyncIOMotorClient] = None
+        self.client: Optional[MongoClient] = None
         self.database = None
         self.conectado = False
         self._url_conexao = None
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
     async def conectar(self) -> bool:
         """
@@ -65,7 +67,7 @@ class MongoDBManager:
             
             logger.info("🔌 Criando cliente MongoDB...")
             # Configura cliente com timeout menor para falhar rápido
-            self.client = AsyncIOMotorClient(
+            self.client = MongoClient(
                 mongodb_uri,
                 serverSelectionTimeoutMS=5000,  # 5 segundos
                 connectTimeoutMS=5000,
@@ -73,8 +75,14 @@ class MongoDBManager:
             )
 
             logger.info("🏓 Testando conexão com ping...")
-            # Testa conexão
-            ping_result = await self.client.admin.command('ping')
+            # Testa conexão de forma síncrona em executor
+            def _test_connection():
+                ping_result = self.client.admin.command('ping')
+                return ping_result
+            
+            ping_result = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _test_connection
+            )
             logger.info(f"✅ Ping successful: {ping_result}")
             
             logger.info(f"🗄️ Configurando database: {database_name}")
@@ -83,13 +91,18 @@ class MongoDBManager:
             
             # Teste prático com a database
             logger.info("🧪 Testando operação na database...")
-            test_collection = self.database.teste_conexao_inicial
-            test_doc = {"teste": True, "timestamp": datetime.now()}
-            result = await test_collection.insert_one(test_doc)
-            logger.info(f"✅ Teste inserção: {result.inserted_id}")
+            def _test_database():
+                test_collection = self.database.teste_conexao_inicial
+                test_doc = {"teste": True, "timestamp": datetime.now()}
+                result = test_collection.insert_one(test_doc)
+                # Remove documento de teste
+                test_collection.delete_one({"_id": result.inserted_id})
+                return result.inserted_id
             
-            # Remove documento de teste
-            await test_collection.delete_one({"_id": result.inserted_id})
+            test_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _test_database
+            )
+            logger.info(f"✅ Teste inserção: {test_id}")
             logger.info("🧹 Documento de teste removido")
             
             self.conectado = True
@@ -117,20 +130,24 @@ class MongoDBManager:
     async def _criar_indices(self):
         """Cria índices necessários nas collections"""
         try:
-            # Índices para execucoes_rpa
-            await self.database.execucoes_rpa.create_index("nome_rpa")
-            await self.database.execucoes_rpa.create_index("timestamp_inicio")
-            await self.database.execucoes_rpa.create_index("sucesso")
+            def _create_indexes():
+                # Índices para execucoes_rpa
+                self.database.execucoes_rpa.create_index("nome_rpa")
+                self.database.execucoes_rpa.create_index("timestamp_inicio")
+                self.database.execucoes_rpa.create_index("sucesso")
 
-            # Índices para indices_economicos
-            await self.database.indices_economicos.create_index("timestamp_coleta")
-            await self.database.indices_economicos.create_index("fonte_coleta")
+                # Índices para indices_economicos
+                self.database.indices_economicos.create_index("timestamp_coleta")
+                self.database.indices_economicos.create_index("fonte_coleta")
 
-            # Índices para contratos_processados
-            await self.database.contratos_processados.create_index("numero_titulo")
-            await self.database.contratos_processados.create_index("data_processamento")
-            await self.database.contratos_processados.create_index("status_sienge")
+                # Índices para contratos_processados
+                self.database.contratos_processados.create_index("numero_titulo")
+                self.database.contratos_processados.create_index("data_processamento")
+                self.database.contratos_processados.create_index("status_sienge")
 
+            await asyncio.get_event_loop().run_in_executor(
+                self.executor, _create_indexes
+            )
             logger.debug("📊 Índices MongoDB criados com sucesso")
 
         except Exception as e:
@@ -145,6 +162,7 @@ class MongoDBManager:
             ID do documento inserido ou None se falhou
         """
         if not self.conectado:
+            logger.warning("⚠️ MongoDB não conectado - não pode salvar execução")
             return None
 
         try:
@@ -160,12 +178,21 @@ class MongoDBManager:
                 "erro": resultado.get("erro", None)
             }
 
-            result = await self.database.execucoes_rpa.insert_one(documento)
-            logger.debug(f"📊 Execução {nome_rpa} salva no MongoDB: {result.inserted_id}")
-            return str(result.inserted_id)
+            def _save_execution():
+                result = self.database.execucoes_rpa.insert_one(documento)
+                return str(result.inserted_id)
+
+            document_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _save_execution
+            )
+            
+            logger.info(f"📊 Execução {nome_rpa} salva no MongoDB: {document_id}")
+            return document_id
 
         except Exception as e:
             logger.error(f"❌ Erro ao salvar execução no MongoDB: {str(e)}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
             return None
 
     async def salvar_indices_economicos(self, indices_data: Dict[str, Any]) -> Optional[str]:
@@ -185,9 +212,16 @@ class MongoDBManager:
                 "fonte_coleta": "rpa_coleta_indices"
             }
 
-            result = await self.database.indices_economicos.insert_one(documento)
-            logger.debug(f"📊 Índices salvos no MongoDB: {result.inserted_id}")
-            return str(result.inserted_id)
+            def _save_indices():
+                result = self.database.indices_economicos.insert_one(documento)
+                return str(result.inserted_id)
+
+            document_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _save_indices
+            )
+            
+            logger.debug(f"📊 Índices salvos no MongoDB: {document_id}")
+            return document_id
 
         except Exception as e:
             logger.error(f"❌ Erro ao salvar índices no MongoDB: {str(e)}")
@@ -218,14 +252,19 @@ class MongoDBManager:
                 "dados_completos": contrato_data
             }
 
-            # Upsert baseado no número do título
-            result = await self.database.contratos_processados.replace_one(
-                {"numero_titulo": documento["numero_titulo"]},
-                documento,
-                upsert=True
-            )
+            def _save_contract():
+                # Upsert baseado no número do título
+                result = self.database.contratos_processados.replace_one(
+                    {"numero_titulo": documento["numero_titulo"]},
+                    documento,
+                    upsert=True
+                )
+                return str(result.upserted_id) if result.upserted_id else "updated"
 
-            document_id = str(result.upserted_id) if result.upserted_id else "updated"
+            document_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _save_contract
+            )
+            
             logger.debug(f"📊 Contrato {documento['numero_titulo']} salvo no MongoDB: {document_id}")
             return document_id
 
@@ -241,18 +280,25 @@ class MongoDBManager:
             return []
 
         try:
-            cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(limite)
-            execucoes = await cursor.to_list(length=limite)
-            
-            # Converte ObjectId para string
-            for execucao in execucoes:
-                if "_id" in execucao:
-                    execucao["_id"] = str(execucao["_id"])
-                # Converte datetime para ISO string para compatibilidade JSON
-                for campo in ["timestamp_inicio", "timestamp_fim"]:
-                    if campo in execucao and execucao[campo]:
-                        execucao[campo] = execucao[campo].isoformat()
+            def _get_executions():
+                cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(limite)
+                execucoes = list(cursor)
+                
+                # Converte ObjectId para string
+                for execucao in execucoes:
+                    if "_id" in execucao:
+                        execucao["_id"] = str(execucao["_id"])
+                    # Converte datetime para ISO string para compatibilidade JSON
+                    for campo in ["timestamp_inicio", "timestamp_fim"]:
+                        if campo in execucao and execucao[campo]:
+                            execucao[campo] = execucao[campo].isoformat()
 
+                return execucoes
+
+            execucoes = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_executions
+            )
+            
             return execucoes
 
         except Exception as e:
@@ -267,39 +313,46 @@ class MongoDBManager:
             return {}
 
         try:
-            # Execuções hoje
-            hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            execucoes_hoje = await self.database.execucoes_rpa.count_documents({
-                "timestamp_inicio": {"$gte": hoje}
-            })
+            def _get_stats():
+                # Execuções hoje
+                hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                execucoes_hoje = self.database.execucoes_rpa.count_documents({
+                    "timestamp_inicio": {"$gte": hoje}
+                })
 
-            # Taxa de sucesso (últimas 30 execuções)
-            cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(30)
-            execucoes_recentes = await cursor.to_list(length=30)
+                # Taxa de sucesso (últimas 30 execuções)
+                cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(30)
+                execucoes_recentes = list(cursor)
+                
+                if execucoes_recentes:
+                    sucessos = sum(1 for e in execucoes_recentes if e.get("sucesso", False))
+                    taxa_sucesso = (sucessos / len(execucoes_recentes)) * 100
+                else:
+                    taxa_sucesso = 0
+
+                # Total de execuções
+                total_execucoes = self.database.execucoes_rpa.count_documents({})
+
+                # Contratos processados este mês
+                inicio_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                contratos_mes = self.database.contratos_processados.count_documents({
+                    "data_processamento": {"$gte": inicio_mes}
+                })
+
+                return {
+                    "total_execucoes": total_execucoes,
+                    "execucoes_hoje": execucoes_hoje,
+                    "taxa_sucesso": round(taxa_sucesso, 1),
+                    "contratos_processados_mes": contratos_mes,
+                    "ultima_atualizacao": datetime.now().isoformat(),
+                    "fonte_dados": "mongodb"
+                }
+
+            stats = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_stats
+            )
             
-            if execucoes_recentes:
-                sucessos = sum(1 for e in execucoes_recentes if e.get("sucesso", False))
-                taxa_sucesso = (sucessos / len(execucoes_recentes)) * 100
-            else:
-                taxa_sucesso = 0
-
-            # Total de execuções
-            total_execucoes = await self.database.execucoes_rpa.count_documents({})
-
-            # Contratos processados este mês
-            inicio_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            contratos_mes = await self.database.contratos_processados.count_documents({
-                "data_processamento": {"$gte": inicio_mes}
-            })
-
-            return {
-                "total_execucoes": total_execucoes,
-                "execucoes_hoje": execucoes_hoje,
-                "taxa_sucesso": round(taxa_sucesso, 1),
-                "contratos_processados_mes": contratos_mes,
-                "ultima_atualizacao": datetime.now().isoformat(),
-                "fonte_dados": "mongodb"
-            }
+            return stats
 
         except Exception as e:
             logger.error(f"❌ Erro ao calcular estatísticas MongoDB: {str(e)}")
@@ -316,19 +369,26 @@ class MongoDBManager:
                     "erro": "Cliente não conectado"
                 }
 
-            # Testa comando ping
-            await self.client.admin.command('ping')
+            def _check_health():
+                # Testa comando ping
+                self.client.admin.command('ping')
+                
+                # Conta documentos para verificar acesso
+                total_execucoes = self.database.execucoes_rpa.count_documents({})
+                
+                return {
+                    "status": "conectado",
+                    "url": self._url_conexao.split('@')[-1] if self._url_conexao else "unknown",
+                    "database": self.database.name if self.database is not None else "none",
+                    "total_execucoes": total_execucoes,
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            health = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _check_health
+            )
             
-            # Conta documentos para verificar acesso
-            total_execucoes = await self.database.execucoes_rpa.count_documents({})
-            
-            return {
-                "status": "conectado",
-                "url": self._url_conexao.split('@')[-1] if self._url_conexao else "unknown",
-                "database": self.database.name if self.database is not None else "none",
-                "total_execucoes": total_execucoes,
-                "timestamp": datetime.now().isoformat()
-            }
+            return health
 
         except Exception as e:
             return {
@@ -343,7 +403,13 @@ class MongoDBManager:
         """
         try:
             if self.client:
-                self.client.close()
+                def _close_client():
+                    self.client.close()
+                
+                await asyncio.get_event_loop().run_in_executor(
+                    self.executor, _close_client
+                )
+                
                 self.conectado = False
                 logger.info("✅ MongoDB desconectado")
         except Exception as e:
