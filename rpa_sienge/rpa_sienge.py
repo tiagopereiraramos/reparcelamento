@@ -425,7 +425,82 @@ class RPASienge(BaseRPA):
            └── Botão: //button[normalize-space(text())='CONTINUAR']
 
         4️⃣ TERCEIRA TELA - SENHA FINAL:
-           └── Campo senha: input#signup-password
+           └── Campo senha final e confirmação de acesso
+        """
+        try:
+            if self.logado_sienge:
+                self.log_progresso("✅ Já logado no Sienge")
+                return
+
+            url = self.credenciais_sienge.get("url", "")
+            usuario = self.credenciais_sienge.get("usuario", "")
+            senha = self.credenciais_sienge.get("senha", "")
+
+            if not all([url, usuario, senha]):
+                raise Exception("Credenciais do Sienge incompletas")
+
+            self.log_progresso(f"🔐 Fazendo login no Sienge: {url}")
+            self.log_progresso(f"👤 Usuário: {usuario}")
+
+            # 1️⃣ ACESSO INICIAL
+            await self.browser.get(url)
+            await asyncio.sleep(3)
+
+            # 2️⃣ PRIMEIRA TELA - CREDENCIAIS BÁSICAS
+            self.log_progresso("📝 Preenchendo credenciais...")
+            
+            # Campo usuário
+            campo_usuario = await self.browser.find_element(By.CSS_SELECTOR, "input#username")
+            await campo_usuario.clear()
+            await campo_usuario.send_keys(usuario)
+            
+            # Campo senha
+            campo_senha = await self.browser.find_element(By.CSS_SELECTOR, "input#password")
+            await campo_senha.clear()
+            await campo_senha.send_keys(senha)
+            
+            # Botão entrar
+            btn_entrar = await self.browser.find_element(By.CSS_SELECTOR, "#btnEntrarComSiengeID")
+            await btn_entrar.click()
+            
+            await asyncio.sleep(4)
+
+            # 3️⃣ SEGUNDA TELA - CONFIRMAÇÃO EMAIL (se aparecer)
+            try:
+                campo_email = await self.browser.find_element(
+                    By.XPATH, 
+                    "//label[text()='Seu e-mail']/following-sibling::div//input"
+                )
+                if campo_email:
+                    self.log_progresso("📧 Confirmando email...")
+                    await campo_email.clear()
+                    await campo_email.send_keys(usuario)
+                    
+                    btn_continuar = await self.browser.find_element(
+                        By.XPATH, 
+                        "//button[normalize-space(text())='CONTINUAR']"
+                    )
+                    await btn_continuar.click()
+                    await asyncio.sleep(3)
+            except:
+                pass  # Tela de email não apareceu
+
+            # 4️⃣ VERIFICAR SE LOGIN FOI BEM-SUCEDIDO
+            try:
+                # Aguardar elemento que indica login bem-sucedido
+                WebDriverWait(self.browser, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'Financeiro')]"))
+                )
+                self.logado_sienge = True
+                self.log_progresso("✅ Login realizado com sucesso!")
+                
+            except Exception as e:
+                raise Exception(f"Falha no login - elemento esperado não encontrado: {str(e)}")
+
+        except Exception as e:
+            erro_msg = f"Erro no login Sienge: {str(e)}"
+            self.log_erro(erro_msg, e)
+            raise Exception(erro_msg)ampo senha: input#signup-password
            └── Botão final: //button[normalize-space(text())='ENTRAR']
 
         5️⃣ VALIDAÇÃO LOGIN:
