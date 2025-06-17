@@ -9,9 +9,9 @@ Desenvolvido em Português Brasileiro
 import asyncio
 import json
 import os
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
 import logging
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 # Importa MongoDB manager
@@ -91,17 +91,21 @@ class DataManagerUnificado:
 
                     # Teste prático de inserção
                     try:
-                        test_doc = {
-                            "teste": True,
-                            "timestamp": datetime.now().isoformat(),
-                            "origem": "debug_inicializacao"
-                        }
-                        result = await mongodb_manager.database.teste_conexao.insert_one(test_doc)
-                        logger.info(f"✅ Teste inserção MongoDB: {result.inserted_id}")
+                        def _test_insert():
+                            # Teste direto no MongoDB
+                            test_collection = mongodb_manager.database.teste_conexao
+                            test_doc = {"teste": True, "timestamp": datetime.now()}
+                            result = test_collection.insert_one(test_doc)
+                            # Remove documento de teste
+                            test_collection.delete_one({"_id": result.inserted_id})
+                            return str(result.inserted_id)
 
-                        # Remove documento de teste
-                        await mongodb_manager.database.teste_conexao.delete_one({"_id": result.inserted_id})
-                        logger.info("🧹 Documento de teste removido")
+                        test_id = await asyncio.get_event_loop().run_in_executor(
+                            None, _test_insert
+                        )
+
+                        logger.info(f"✅ Teste inserção MongoDB: {test_id}")
+
 
                     except Exception as test_e:
                         logger.error(f"❌ Falha no teste de inserção: {str(test_e)}")
@@ -173,83 +177,43 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. MongoDB (principal) - COM TENTATIVA DE RECONEXÃO E DEBUG DETALHADO
+        # Debug do estado MongoDB
         logger.info(f"🔍 Estado MongoDB antes do salvamento:")
         logger.info(f"   MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
         logger.info(f"   self.mongodb_ativo: {self.mongodb_ativo}")
         logger.info(f"   mongodb_manager existe: {mongodb_manager is not None}")
-        if MONGODB_DISPONIVEL:
-            logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado}")
-            logger.info(f"   mongodb_manager.database: {'SET' if mongodb_manager.database is not None else 'NOT SET'}")
+        logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado if mongodb_manager else 'N/A'}")
+        logger.info(f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
 
-        if MONGODB_DISPONIVEL and self.mongodb_ativo and mongodb_manager.conectado:
+        # Tentar MongoDB primeiro - usar conectado ao invés de mongodb_ativo
+        if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
             try:
-                logger.info(f"🔄 Tentando salvar execução {nome_rpa} no MongoDB...")
+                resultado_mongodb = await mongodb_manager.salvar_execucao_rpa(
+                    nome_rpa, parametros, resultado
+                )
 
-                # Verifica se database está acessível
-                if not mongodb_manager.database:
-                    logger.error("❌ mongodb_manager.database não está configurado")
-                    resultados["mongodb"] = "database_not_configured"
+                if resultado_mongodb:
+                    resultados["mongodb"] = "sucesso"
+                    dados_execucao["_id_mongodb"] = resultado_mongodb
+                    logger.info(f"📊 [MongoDB] Execução {nome_rpa} salva: {resultado_mongodb}")
                 else:
-                    # Primeiro tenta salvar
-                    mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
-                    logger.info(f"🔍 Resultado MongoDB save: {mongo_id}")
-
-                    if mongo_id:
-                        resultados["mongodb"] = "sucesso"
-                        dados_execucao["_id_mongodb"] = mongo_id
-                        logger.info(f"✅ Execução {nome_rpa} salva no MongoDB: {mongo_id}")
-                    else:
-                        logger.warning("⚠️ MongoDB retornou None, tentando reconectar...")
-                        # Se falhou, tenta reconectar uma vez
-                        reconectado = await mongodb_manager.conectar()
-                        logger.info(f"🔍 Reconexão result: {reconectado}")
-
-                        if reconectado:
-                            mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
-                            logger.info(f"🔍 MongoDB save após reconexão: {mongo_id}")
-
-                            if mongo_id:
-                                resultados["mongodb"] = "sucesso"
-                                dados_execucao["_id_mongodb"] = mongo_id
-                                logger.info(f"✅ Execução {nome_rpa} salva no MongoDB após reconexão: {mongo_id}")
-                            else:
-                                resultados["mongodb"] = "falhou_apos_reconexao"
-                                logger.warning("❌ Falha mesmo após reconexão")
-                        else:
-                            resultados["mongodb"] = "reconexao_falhou"
-                            self.mongodb_ativo = False
-                            logger.error("❌ Reconexão MongoDB falhou")
+                    resultados["mongodb"] = "falha: retorno None"
+                    logger.warning(f"⚠️ [MongoDB] Falha no salvamento de {nome_rpa}")
 
             except Exception as e:
-                logger.error(f"❌ Exceção no salvamento MongoDB: {str(e)}")
-                logger.error(f"   Tipo do erro: {type(e).__name__}")
-                import traceback
-                logger.error(f"   Traceback completo: {traceback.format_exc()}")
                 resultados["mongodb"] = f"erro: {str(e)}"
-
-                # Tenta reconectar em caso de erro
-                try:
-                    logger.info("🔄 Tentando reconectar após erro...")
-                    reconectou = await mongodb_manager.conectar()
-                    logger.info(f"🔍 Tentativa reconexão após erro: {reconectou}")
-                    if reconectou:
-                        self.mongodb_ativo = True
-                except Exception as reconnect_error:
-                    logger.error(f"❌ Erro na reconexão: {str(reconnect_error)}")
-                    self.mongodb_ativo = False
+                logger.error(f"❌ [MongoDB] Erro ao salvar {nome_rpa}: {str(e)}")
         else:
-            # Debug do motivo por não tentar MongoDB
             motivo = []
             if not MONGODB_DISPONIVEL:
                 motivo.append("MONGODB_DISPONIVEL=False")
-            if not self.mongodb_ativo:
-                motivo.append("mongodb_ativo=False")
-            if MONGODB_DISPONIVEL and not mongodb_manager.conectado:
+            if not mongodb_manager:
+                motivo.append("mongodb_manager=None")
+            elif not mongodb_manager.conectado:
                 motivo.append("mongodb_manager.conectado=False")
 
-            logger.warning(f"⚠️ MongoDB não tentado: {', '.join(motivo)}")
             resultados["mongodb"] = f"nao_tentado: {', '.join(motivo)}"
+            logger.warning(f"⚠️ MongoDB não tentado: {', '.join(motivo)}")
 
         # 2. SEMPRE salvar JSON (fallback garantido) - FORÇA SUCESSO
         logger.info(f"📄 Salvando JSON para {nome_rpa}...")
