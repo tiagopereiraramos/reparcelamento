@@ -8,7 +8,7 @@ Baseado no PDD seção 7.3 - Processamento no sistema Sienge
 
 VERSÃO PRODUÇÃO - Apenas código para ambiente real
 """
-
+a
 from platformdirs import user_downloads_dir
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
