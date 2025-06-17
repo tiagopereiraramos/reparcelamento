@@ -325,15 +325,12 @@ class RPASienge(BaseRPA):
             
             # APLICAR VALIDAÇÃO PDD RIGOROSA
             validador = ValidadorInadimplenciaPDD()
-            resultado_validacao = validador.processar_planilha_completa(df, {
-                "cliente": cliente,
-                "numero_titulo": numero_titulo
-            })
+            resultado_validacao = validador.validar_cliente(df, cliente, numero_titulo)
             
             self.log_progresso(f"Validação PDD concluída:")
-            self.log_progresso(f"  Status: {resultado_validacao['status_cliente']}")
-            self.log_progresso(f"  Parcelas CT vencidas: {resultado_validacao['detalhes']['qtd_ct_vencidas']}")
-            self.log_progresso(f"  Pode reparcelar: {resultado_validacao['pode_reparcelar']}")
+            self.log_progresso(f"  Status: {resultado_validacao.get('status_cliente', 'N/A')}")
+            self.log_progresso(f"  Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}")
+            self.log_progresso(f"  Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}")
             
             return {
                 "sucesso": True,
@@ -347,6 +344,101 @@ class RPASienge(BaseRPA):
             
         except Exception as e:
             erro_msg = f"Erro no processamento da planilha: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {"sucesso": False, "erro": erro_msg}
+
+    async def _executar_etapa_consulta(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Executa etapa de consulta de relatórios financeiros
+        """
+        try:
+            self.log_progresso("🔍 Executando APENAS consulta de relatórios...")
+            return await self._consultar_relatorios_financeiros(contrato)
+        except Exception as e:
+            erro_msg = f"Erro na etapa de consulta: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {"sucesso": False, "erro": erro_msg}
+
+    async def _executar_etapa_reparcelamento(self, contrato: Dict[str, Any], 
+                                           indices: Dict[str, Any],
+                                           dados_financeiros: Dict[str, Any],
+                                           autorizar_reparcelamento: bool,
+                                           notificar_analista: bool) -> ResultadoRPA:
+        """
+        Executa etapa de processamento de reparcelamento
+        """
+        try:
+            self.log_progresso("🔄 Executando processamento de reparcelamento...")
+            
+            # Verificar se pode reparcelar com base na validação PDD
+            dados_validacao = dados_financeiros.get("dados_validacao", {})
+            pode_reparcelar = dados_validacao.get("pode_reparcelar", False)
+            
+            if not pode_reparcelar and not autorizar_reparcelamento:
+                motivo = dados_validacao.get("motivo_classificacao", "Cliente não pode reparcelar")
+                return ResultadoRPA(
+                    sucesso=False,
+                    mensagem=f"Reparcelamento não autorizado: {motivo}",
+                    dados={
+                        "contrato": contrato,
+                        "validacao_pdd": dados_validacao,
+                        "autorizado": False,
+                        "motivo_recusa": motivo
+                    }
+                )
+            
+            # Se chegou aqui, pode prosseguir com o reparcelamento
+            self.log_progresso("✅ Cliente aprovado para reparcelamento")
+            
+            # Simular processamento de reparcelamento (TODO: implementar webscraping real)
+            resultado_reparcelamento = {
+                "sucesso": True,
+                "novo_titulo_gerado": f"REP_{contrato.get('numero_titulo', '')}_2025",
+                "valor_corrigido": dados_validacao.get("saldo_total", 0),
+                "parcelas_processadas": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
+                "indices_aplicados": indices,
+                "timestamp_reparcelamento": datetime.now().isoformat()
+            }
+            
+            return ResultadoRPA(
+                sucesso=True,
+                mensagem="Reparcelamento processado com sucesso",
+                dados={
+                    "contrato": contrato,
+                    "reparcelamento": resultado_reparcelamento,
+                    "validacao_pdd": dados_validacao
+                }
+            )
+            
+        except Exception as e:
+            erro_msg = f"Erro na etapa de reparcelamento: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return ResultadoRPA(
+                sucesso=False,
+                mensagem="Falha no processamento de reparcelamento",
+                erro=erro_msg
+            )
+
+    async def _gerar_carne_sienge(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Gera carnê atualizado no Sienge (placeholder)
+        """
+        try:
+            self.log_progresso("📄 Gerando carnê atualizado...")
+            
+            # TODO: Implementar webscraping para geração de carnê
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            nome_arquivo = f"carne_{contrato.get('numero_titulo', 'indefinido')}_{timestamp}.pdf"
+            
+            return {
+                "sucesso": True,
+                "nome_arquivo": nome_arquivo,
+                "caminho_arquivo": f"outputs/carnes/{nome_arquivo}",
+                "timestamp_geracao": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            erro_msg = f"Erro na geração do carnê: {str(e)}"
             self.log_erro(erro_msg, e)
             return {"sucesso": False, "erro": erro_msg}
 
