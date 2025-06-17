@@ -763,4 +763,174 @@ class RPAColetaIndices(BaseRPA):
 
             # Carrega dados existentes ou cria lista vazia
             dados_existentes = []
-            if os.path.exists
+            if os.path.exists(arquivo_indices):
+                with open(arquivo_indices, 'r', encoding='utf-8') as f:
+                    dados_existentes = json.load(f)
+
+            # Adiciona nova execução
+            nova_execucao = {
+                "timestamp": datetime.now().isoformat(),
+                "ipca": dados_ipca,
+                "igpm": dados_igpm,
+                "planilha_id": planilha_id,
+                "tipo": "coleta_indices"
+            }
+            dados_existentes.append(nova_execucao)
+
+            # Mantém apenas os últimos 100 registros para evitar arquivo muito grande
+            if len(dados_existentes) > 100:
+                dados_existentes = dados_existentes[-100:]
+
+            # Salva dados atualizados
+            with open(arquivo_indices, 'w', encoding='utf-8') as f:
+                json.dump(dados_existentes, f, indent=2, ensure_ascii=False, default=str)
+
+            self.log_progresso(f"✅ Índices salvos localmente em {arquivo_indices}")
+
+        except Exception as e:
+            self.log_progresso(f"⚠️ Erro ao salvar índices localmente: {str(e)}")
+
+    async def verificar_saude(self) -> Dict[str, Any]:
+        """
+        Verifica a saúde do RPA e seus componentes
+
+        Returns:
+            Dicionário com status de saúde detalhado
+        """
+        try:
+            saude = {
+                "status": "saudavel",
+                "timestamp": datetime.now().isoformat(),
+                "detalhes": {}
+            }
+
+            # Verifica browser
+            try:
+                if self.browser:
+                    saude["detalhes"]["browser"] = "conectado"
+                else:
+                    saude["detalhes"]["browser"] = "desconectado"
+                    saude["status"] = "atencao"
+            except Exception:
+                saude["detalhes"]["browser"] = "erro"
+                saude["status"] = "critico"
+
+            # Verifica Google Sheets
+            try:
+                if self.cliente_sheets:
+                    saude["detalhes"]["google_sheets"] = "conectado"
+                else:
+                    saude["detalhes"]["google_sheets"] = "desconectado"
+            except Exception:
+                saude["detalhes"]["google_sheets"] = "erro"
+
+            # Verifica MongoDB
+            try:
+                if self.mongo_manager and self.mongo_manager.conectado:
+                    saude["detalhes"]["mongodb"] = "conectado"
+                else:
+                    saude["detalhes"]["mongodb"] = "desconectado"
+            except Exception:
+                saude["detalhes"]["mongodb"] = "erro"
+
+            # Verifica APIs externas
+            try:
+                async with aiohttp.ClientSession() as session:
+                    # Testa API BCB
+                    async with session.get(
+                        "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json",
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
+                        if response.status == 200:
+                            saude["detalhes"]["api_bcb"] = "disponivel"
+                        else:
+                            saude["detalhes"]["api_bcb"] = "indisponivel"
+                            saude["status"] = "atencao"
+            except Exception:
+                saude["detalhes"]["api_bcb"] = "erro"
+                saude["status"] = "atencao"
+
+            return saude
+
+        except Exception as e:
+            return {
+                "status": "critico",
+                "timestamp": datetime.now().isoformat(),
+                "erro": str(e),
+                "detalhes": {}
+            }
+
+    async def finalizar(self):
+        """Limpa recursos do RPA"""
+        try:
+            # Fecha conexão Google Sheets
+            if self.cliente_sheets:
+                self.cliente_sheets = None
+
+            # Chama finalização da classe pai
+            await super().finalizar()
+
+            self.log_progresso("✅ RPA Coleta de Índices finalizado com sucesso")
+
+        except Exception as e:
+            self.log_erro("Erro ao finalizar RPA", e)
+
+
+# Função auxiliar para execução independente
+async def executar_coleta_indices(
+    planilha_id: str, 
+    credenciais_google: Optional[str] = None
+) -> ResultadoRPA:
+    """
+    Função auxiliar para executar coleta de índices de forma independente
+
+    Args:
+        planilha_id: ID da planilha Google Sheets
+        credenciais_google: Caminho para credenciais (opcional)
+
+    Returns:
+        ResultadoRPA com resultado da execução
+    """
+    rpa = None
+    try:
+        # Inicializa sistema de dados híbrido
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+
+        # Cria e executa RPA
+        rpa = RPAColetaIndices()
+        
+        parametros = {
+            "planilha_id": planilha_id,
+            "credenciais_google": credenciais_google
+        }
+        
+        resultado = await rpa.executar_com_monitoramento(parametros)
+        
+        # Notificações automáticas
+        if resultado.sucesso:
+            await notificar_sucesso(
+                "RPA Coleta de Índices",
+                f"Índices coletados com sucesso: IPCA {resultado.dados.get('ipca', {}).get('valor', 'N/A')}%, IGPM {resultado.dados.get('igpm', {}).get('valor', 'N/A')}%"
+            )
+        else:
+            await notificar_erro(
+                "RPA Coleta de Índices",
+                f"Falha na coleta: {resultado.mensagem}"
+            )
+        
+        return resultado
+
+    except Exception as e:
+        erro_msg = f"Erro crítico na execução: {str(e)}"
+        await notificar_erro("RPA Coleta de Índices", erro_msg)
+        
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem=erro_msg,
+            erro=str(e)
+        )
+    
+    finally:
+        if rpa:
+            await rpa.finalizar()
