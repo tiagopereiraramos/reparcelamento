@@ -742,54 +742,8 @@ class RPAColetaIndices(BaseRPA):
                 self.log_progresso("⚠️ Falha ao salvar índices")
 
         except Exception as e:
-            self.log_progresso(f"❌ Erro ao salvar índices: {str(e)}")
-            # Fallback de emergência
-            await self._salvar_indices_local(dados_ipca, dados_igpm, planilha_id)
-
-    async def _salvar_indices_local(self, dados_ipca: Dict[str, Any], dados_igpm: Dict[str, Any], planilha_id: str):
-        """
-        Salva índices localmente em JSON como fallback de emergência
-
-        Args:
-            dados_ipca: Dados do IPCA
-            dados_igpm: Dados do IGPM
-            planilha_id: ID da planilha
-        """
-        try:
-            # Garante que o diretório existe
-            os.makedirs("dados_processamento", exist_ok=True)
-
-            # Nome único do arquivo
-            arquivo_indices = "dados_processamento/indices_coletados.json"
-
-            # Carrega dados existentes ou cria lista vazia
-            dados_existentes = []
-            if os.path.exists(arquivo_indices):
-                with open(arquivo_indices, 'r', encoding='utf-8') as f:
-                    dados_existentes = json.load(f)
-
-            # Adiciona nova execução
-            nova_execucao = {
-                "timestamp": datetime.now().isoformat(),
-                "ipca": dados_ipca,
-                "igpm": dados_igpm,
-                "planilha_id": planilha_id,
-                "tipo": "coleta_indices"
-            }
-            dados_existentes.append(nova_execucao)
-
-            # Mantém apenas os últimos 100 registros para evitar arquivo muito grande
-            if len(dados_existentes) > 100:
-                dados_existentes = dados_existentes[-100:]
-
-            # Salva dados atualizados
-            with open(arquivo_indices, 'w', encoding='utf-8') as f:
-                json.dump(dados_existentes, f, indent=2, ensure_ascii=False, default=str)
-
-            self.log_progresso(f"✅ Índices salvos localmente em {arquivo_indices}")
-
-        except Exception as e:
-            self.log_progresso(f"⚠️ Erro ao salvar índices localmente: {str(e)}")
+            self.log_progresso(f"❌ Erro crítico ao salvar índices: {str(e)}")
+            # Log de erro mas não tenta fallback local que cria arquivo errado
 
     async def verificar_saude(self) -> Dict[str, Any]:
         """

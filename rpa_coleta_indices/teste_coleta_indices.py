@@ -275,23 +275,27 @@ async def main():
                 print(f"\n🔍 Verificando persistência dos dados...")
                 try:
                     from core.data_manager import data_manager
-                    
+
                     # Debug detalhado
                     debug_info = await data_manager.debug_verificar_indices_salvos()
                     print(f"📈 Total de execuções registradas: {debug_info.get('total_execucoes', 0)}")
                     print(f"📊 Total de índices salvos: {debug_info.get('total_indices_salvos', 0)}")
                     print(f"📄 Arquivo índices existe: {debug_info.get('arquivo_indices_existe', False)}")
                     print(f"📄 Arquivo execuções existe: {debug_info.get('arquivo_execucoes_existe', False)}")
-                    
+
+                    # Verificar se arquivo errado foi criado
+                    arquivo_errado = "dados_processamento/indices_coletados.json"
+                    if os.path.exists(arquivo_errado):
+                        print(f"⚠️ ATENÇÃO: Arquivo incorreto encontrado: {arquivo_errado}")
+                        print("   Este arquivo deveria ser 'indices_economicos.json'")
+
+                    # Debug adicional se necessário
                     if debug_info.get('ultimo_indice'):
-                        ultimo_indice = debug_info['ultimo_indice']
-                        print(f"🔍 Último índice salvo: {ultimo_indice.get('timestamp_coleta', 'N/A')}")
-                        if 'indices' in ultimo_indice:
-                            indices = ultimo_indice['indices']
-                            ipca_val = indices.get('ipca', {}).get('valor', 'N/A')
-                            igpm_val = indices.get('igpm', {}).get('valor', 'N/A')
-                            print(f"   IPCA: {ipca_val}% | IGPM: {igpm_val}%")
-                    
+                        print(f"🔍 Último índice salvo: {debug_info['ultimo_indice'].get('timestamp', 'N/A')}")
+
+                    if debug_info.get('ultima_execucao'):
+                        print(f"🔍 Última execução: {debug_info['ultima_execucao'].get('nome_rpa', 'N/A')}")
+
                 except Exception as e:
                     print(f"⚠️ Erro ao verificar persistência: {e}")
         else:

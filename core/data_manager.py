@@ -58,6 +58,7 @@ class DataManagerUnificado:
     async def inicializar(self):
         """Inicializa sistema híbrido"""
         self.mongodb_ativo = False
+        self._garantir_estrutura_dados()  # Garante que arquivos existem
         logger.info("📄 Sistema Profissional: JSON com estrutura preparada para MongoDB futuro")
 
     async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any], 
