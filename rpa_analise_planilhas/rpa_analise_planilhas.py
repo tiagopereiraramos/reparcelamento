@@ -650,8 +650,14 @@ class RPAAnalisePlanilhas(BaseRPA):
                                 # Garante que campos essenciais estejam presentes
                                 contrato_processado['cliente'] = cliente or contrato_processado.get(
                                     'Cliente', 'N/A')
-                                contrato_processado['numero_titulo'] = numero_titulo or contrato_processado.get(
-                                    'numero_titulo', 'N/A')
+                                
+                                # ✅ CORRIGIDO: Garante que numero_titulo seja extraído corretamente
+                                titulo_final = (numero_titulo or 
+                                              contrato_processado.get('numero_titulo') or 
+                                              contrato_processado.get('Titulo') or 
+                                              contrato_processado.get('Título') or
+                                              'N/A')
+                                contrato_processado['numero_titulo'] = titulo_final
 
                                 # Atualiza coluna "Último reajuste" conforme PDD
                                 await self._atualizar_ultimo_reajuste(aba_base_calculo, linha, contrato_processado)
@@ -714,13 +720,21 @@ class RPAAnalisePlanilhas(BaseRPA):
             fila_processamento = []
 
             for contrato in contratos_reajuste:
-                # Cria item da fila com dados necessários para os próximos RPAs
-                numero_titulo = contrato.get(
-                    'numero_titulo') or contrato.get('Titulo') or 'N/A'
-                cliente_nome = contrato.get(
-                    'cliente') or contrato.get('Cliente') or 'N/A'
-                ultimo_reajuste = contrato.get(
-                    'Último reajuste') or contrato.get('ultimo_reajuste') or 'N/A'
+                # ✅ CORRIGIDO: Extrai número do título com múltiplas tentativas
+                numero_titulo = (contrato.get('numero_titulo') or 
+                               contrato.get('Titulo') or 
+                               contrato.get('Título') or
+                               contrato.get('Número do título') or
+                               contrato.get('titulo') or
+                               'N/A')
+                
+                cliente_nome = (contrato.get('cliente') or 
+                              contrato.get('Cliente') or 
+                              'N/A')
+                
+                ultimo_reajuste = (contrato.get('Último reajuste') or 
+                                 contrato.get('ultimo_reajuste') or 
+                                 'N/A')
 
                 item_fila = {
                     "id_fila": f"reajuste_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -791,63 +805,43 @@ class RPAAnalisePlanilhas(BaseRPA):
 
     async def _salvar_fila_mongodb(self, fila_processamento: List[Dict[str, Any]]):
         """
-        Salva fila de processamento no MongoDB para os próximos RPAs
+        Salva fila usando sistema unificado (MongoDB + JSON simultâneo)
 
         Args:
             fila_processamento: Lista de itens da fila
         """
         try:
-            if not self.mongo_manager:
-                self.log_progresso(
-                    "⚠️ MongoDB Manager não disponível - salvando fila localmente")
-                await self._salvar_fila_local(fila_processamento)
-                return
-
-            # Conecta se necessário
-            if not self.mongo_manager.conectado:
-                await self.mongo_manager.conectar()
-
-            if not self.mongo_manager.conectado:
-                self.log_progresso(
-                    "⚠️ MongoDB não conectado - salvando fila localmente")
-                await self._salvar_fila_local(fila_processamento)
-                return
-
-            # Usa estrutura correta do MongoDB Manager
-            collection = self.mongo_manager.database.fila_processamento_sienge
-
-            # Remove fila anterior (se existir)
-            deleted_result = await collection.delete_many({"status_processamento": "pendente"})
-            self.log_progresso(
-                f"🗑️ Removidos {deleted_result.deleted_count} itens antigos da fila")
-
-            # Insere nova fila no formato esperado pelo RPA Sienge
+            from core.data_manager import data_manager
+            
+            # Prepara estrutura da fila para o RPA Sienge
             if fila_processamento:
-                # Cria estrutura da fila com contratos
-                estrutura_fila = {
-                    "timestamp_criacao": datetime.now().isoformat(),
-                    "total_contratos": len(fila_processamento),
-                    "status_geral": "ativo",
-                    "contratos": []
-                }
-
                 for contrato in fila_processamento:
                     contrato["status_processamento"] = "pendente"
                     contrato["timestamp_identificacao"] = datetime.now().isoformat()
                     contrato["processado_em"] = None
                     contrato["erro_processamento"] = None
-                    estrutura_fila["contratos"].append(contrato)
 
-                # Substitui documento existente
-                result = await collection.replace_one({}, estrutura_fila, upsert=True)
-                self.log_progresso(
-                    f"✅ Fila salva no MongoDB: {len(fila_processamento)} itens inseridos")
+                estrutura_fila = {
+                    "total_contratos": len(fila_processamento),
+                    "status_geral": "ativo",
+                    "contratos": fila_processamento
+                }
+
+                # ✅ USA SISTEMA UNIFICADO - MongoDB + JSON simultâneo
+                resultados = await data_manager.salvar_fila_sienge(estrutura_fila)
+                
+                if resultados["mongodb"] == "sucesso" and resultados["json"] == "sucesso":
+                    self.log_progresso(f"✅ Fila salva em MongoDB + JSON: {len(fila_processamento)} contratos")
+                elif resultados["json"] == "sucesso":
+                    self.log_progresso(f"📄 Fila salva em JSON: {len(fila_processamento)} contratos (MongoDB indisponível)")
+                else:
+                    self.log_progresso(f"⚠️ Problemas ao salvar fila: {resultados}")
             else:
                 self.log_progresso("⚠️ Nenhum item para salvar na fila")
 
         except Exception as e:
-            self.log_progresso(f"❌ Erro ao salvar fila no MongoDB: {str(e)}")
-            # Fallback para arquivo local
+            self.log_progresso(f"❌ Erro ao salvar fila: {str(e)}")
+            # Último fallback para método local
             await self._salvar_fila_local(fila_processamento)
 
     async def _atualizar_ultimo_reajuste(self, aba_base_calculo, linha: int, contrato: Dict[str, Any]):
