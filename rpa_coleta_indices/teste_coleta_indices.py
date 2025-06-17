@@ -233,46 +233,68 @@ def menu_interativo():
 
 async def main():
     """
-    Função principal do teste
+    Teste completo do RPA Coleta de Índices
     """
-    print("🤖 SISTEMA DE TESTES RPA - COLETA DE ÍNDICES")
-    print("Desenvolvido em Python")
-    print("Permite testar RPA independente da orquestração Temporal")
+    print("🚀 Iniciando teste RPA Coleta de Índices")
+    print("=" * 60)
 
-    # Verifica se é execução direta ou interativa
-    if len(sys.argv) > 1:
-        # Execução direta com parâmetros
-        comando = sys.argv[1].lower()
+    # Inicializar sistema de dados híbrido ANTES do RPA
+    try:
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+        print("🗄️ Sistema de dados híbrido inicializado")
+    except Exception as e:
+        print(f"⚠️ Aviso: Falha ao inicializar dados híbridos: {e}")
 
-        if comando == "completo":
-            sucesso = await teste_completo()
-        elif comando == "conexao":
-            sucesso = await teste_conexao_google_sheets()
-        elif comando == "apis":
-            sucesso = await teste_coleta_apis()
-        elif comando == "saude":
-            sucesso = await verificar_saude_rpa()
+    rpa = RPAColetaIndices()
+
+    # Parâmetros de teste
+    parametros_teste = {
+        "planilha_id": "1ULrNsRwLXzWGHOjJqeJ7TnTUyS1Y5OPCKbGLhK4kWmk",
+        "credenciais_google": "./.credentials/gspread-459713-aab8a657f9b0.json"
+    }
+
+    try:
+        # Executa RPA
+        resultado = await rpa.executar_com_monitoramento(parametros_teste)
+
+        # Processa resultado
+        if resultado.sucesso:
+            print(f"\n✅ SUCESSO: {resultado.mensagem}")
+            print(f"⏱️ Tempo: {resultado.tempo_execucao:.1f}s")
+
+            if resultado.dados:
+                ipca = resultado.dados.get("ipca", {})
+                igpm = resultado.dados.get("igpm", {})
+
+                print(f"\n📊 IPCA: {ipca.get('valor', 'N/A')}% ({ipca.get('mes', 'N/A')})")
+                print(f"📊 IGPM: {igpm.get('valor', 'N/A')}% ({igpm.get('mes', 'N/A')})")
+                print(f"📋 Planilha: {resultado.dados.get('planilha_atualizada', 'N/A')}")
+
+                # Verificar se dados foram salvos
+                print(f"\n🔍 Verificando persistência dos dados...")
+                try:
+                    from core.data_manager import data_manager
+                    estatisticas = await data_manager.obter_estatisticas_dashboard()
+                    print(f"📈 Total de execuções registradas: {estatisticas.get('total_execucoes', 0)}")
+                except Exception as e:
+                    print(f"⚠️ Erro ao verificar persistência: {e}")
         else:
-            print(f"❌ Comando inválido: {comando}")
-            print("Comandos disponíveis: completo, conexao, apis, saude")
-            return False
+            print(f"\n❌ FALHA: {resultado.mensagem}")
+            if resultado.erro:
+                print(f"🔍 Erro: {resultado.erro}")
 
-        return sucesso
+    except Exception as e:
+        print(f"\n💥 ERRO DURANTE EXECUÇÃO: {str(e)}")
 
-    else:
-        # Menu interativo
-        teste_escolhido = menu_interativo()
-        if teste_escolhido:
-            sucesso = await teste_escolhido
+    finally:
+        # Cleanup
+        if hasattr(rpa, 'browser') and rpa.browser:
+            rpa.browser.fechar()
+        print("\n🔄 Cleanup concluído")
 
-            if sucesso:
-                print("\n🎉 TESTE CONCLUÍDO COM SUCESSO!")
-            else:
-                print("\n❌ TESTE FALHOU!")
-
-            return sucesso
-
-        return True
+    print("=" * 60)
+    print("✅ Teste RPA Coleta de Índices finalizado")
 
 
 if __name__ == "__main__":
