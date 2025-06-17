@@ -275,8 +275,23 @@ async def main():
                 print(f"\n🔍 Verificando persistência dos dados...")
                 try:
                     from core.data_manager import data_manager
-                    estatisticas = await data_manager.obter_estatisticas_dashboard()
-                    print(f"📈 Total de execuções registradas: {estatisticas.get('total_execucoes', 0)}")
+                    
+                    # Debug detalhado
+                    debug_info = await data_manager.debug_verificar_indices_salvos()
+                    print(f"📈 Total de execuções registradas: {debug_info.get('total_execucoes', 0)}")
+                    print(f"📊 Total de índices salvos: {debug_info.get('total_indices_salvos', 0)}")
+                    print(f"📄 Arquivo índices existe: {debug_info.get('arquivo_indices_existe', False)}")
+                    print(f"📄 Arquivo execuções existe: {debug_info.get('arquivo_execucoes_existe', False)}")
+                    
+                    if debug_info.get('ultimo_indice'):
+                        ultimo_indice = debug_info['ultimo_indice']
+                        print(f"🔍 Último índice salvo: {ultimo_indice.get('timestamp_coleta', 'N/A')}")
+                        if 'indices' in ultimo_indice:
+                            indices = ultimo_indice['indices']
+                            ipca_val = indices.get('ipca', {}).get('valor', 'N/A')
+                            igpm_val = indices.get('igpm', {}).get('valor', 'N/A')
+                            print(f"   IPCA: {ipca_val}% | IGPM: {igpm_val}%")
+                    
                 except Exception as e:
                     print(f"⚠️ Erro ao verificar persistência: {e}")
         else:

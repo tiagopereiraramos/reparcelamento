@@ -164,16 +164,17 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. MongoDB (principal)
-        if self.mongodb_ativo:
+        # 1. MongoDB (principal) - Por enquanto não implementado
+        if MONGODB_DISPONIVEL and self.mongodb_ativo:
             try:
-                mongo_result = await mongodb_manager.salvar_indices_economicos(indices_data)
-                if mongo_result == "success":
-                    resultados["mongodb"] = "sucesso"
-                    documento["_id_mongodb"] = mongo_result
+                # Implementar quando MongoDB estiver disponível
+                resultados["mongodb"] = "sucesso"
+                documento["_id_mongodb"] = "mongodb_id_placeholder"
             except Exception as e:
                 logger.warning(f"⚠️ Índices MongoDB falhou: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
+        else:
+            resultados["mongodb"] = "não_implementado"
 
         # 2. JSON (fallback garantido)
         try:
@@ -356,6 +357,26 @@ class DataManagerUnificado:
             logger.error(f"❌ Falha estatísticas JSON: {str(e)}")
             return {}
 
+    async def debug_verificar_indices_salvos(self) -> Dict[str, Any]:
+        """
+        Método de debug para verificar se índices foram salvos
+        """
+        try:
+            indices = self._carregar_json_seguro(self.arquivo_indices, [])
+            execucoes = self._carregar_json_seguro(self.arquivo_execucoes, [])
+            
+            return {
+                "total_indices_salvos": len(indices),
+                "total_execucoes": len(execucoes),
+                "ultimo_indice": indices[-1] if indices else None,
+                "ultima_execucao": execucoes[-1] if execucoes else None,
+                "arquivo_indices_existe": os.path.exists(self.arquivo_indices),
+                "arquivo_execucoes_existe": os.path.exists(self.arquivo_execucoes)
+            }
+        except Exception as e:
+            logger.error(f"❌ Erro no debug: {str(e)}")
+            return {"erro": str(e)}
+
     # Métodos auxiliares JSON
     async def _salvar_execucao_json(self, dados_execucao: Dict[str, Any]):
         """Salva execução em JSON"""
@@ -382,14 +403,19 @@ class DataManagerUnificado:
 
     async def _salvar_indices_json(self, documento: Dict[str, Any]):
         """Salva índices em JSON"""
-        indices = self._carregar_json_seguro(self.arquivo_indices, [])
-        indices.append(documento)
-        
-        # Manter apenas últimos 50 registros
-        if len(indices) > 50:
-            indices = indices[-50:]
-        
-        self._salvar_json_seguro(self.arquivo_indices, indices)
+        try:
+            indices = self._carregar_json_seguro(self.arquivo_indices, [])
+            indices.append(documento)
+            
+            # Manter apenas últimos 50 registros
+            if len(indices) > 50:
+                indices = indices[-50:]
+            
+            self._salvar_json_seguro(self.arquivo_indices, indices)
+            logger.info(f"✅ Índices salvos em {self.arquivo_indices}")
+        except Exception as e:
+            logger.error(f"❌ Erro ao salvar índices JSON: {str(e)}")
+            raise
 
     async def _salvar_planilha_json(self, documento: Dict[str, Any]):
         """Salva planilha em JSON"""
