@@ -15,12 +15,8 @@ from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
 
-# Tentar importar MongoDB
-try:
-    from core.mongodb_manager import mongodb_manager
-    MONGODB_DISPONIVEL = True
-except ImportError:
-    MONGODB_DISPONIVEL = False
+# MongoDB será implementado diretamente aqui quando necessário
+MONGODB_DISPONIVEL = False
 
 logger = logging.getLogger(__name__)
 
@@ -61,18 +57,8 @@ class DataManagerUnificado:
 
     async def inicializar(self):
         """Inicializa sistema híbrido"""
-        if MONGODB_DISPONIVEL:
-            try:
-                self.mongodb_ativo = await mongodb_manager.conectar()
-                if self.mongodb_ativo:
-                    logger.info("🗄️ Sistema Híbrido ATIVO: MongoDB (principal) + JSON (fallback)")
-                else:
-                    logger.info("📄 Sistema Híbrido: Apenas JSON (MongoDB indisponível)")
-            except Exception as e:
-                logger.warning(f"⚠️ MongoDB falhou, usando apenas JSON: {str(e)}")
-                self.mongodb_ativo = False
-        else:
-            logger.info("📄 Sistema Híbrido: Apenas JSON (MongoDB não instalado)")
+        self.mongodb_ativo = False
+        logger.info("📄 Sistema Profissional: JSON com estrutura preparada para MongoDB futuro")
 
     async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any], 
                                   resultado: Dict[str, Any]) -> Dict[str, str]:
@@ -96,17 +82,9 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. SEMPRE tentar MongoDB primeiro (principal)
-        if self.mongodb_ativo:
-            try:
-                mongo_id = await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
-                if mongo_id:
-                    resultados["mongodb"] = "sucesso"
-                    dados_execucao["_id_mongodb"] = str(mongo_id)
-                    logger.debug(f"💾 [{nome_rpa}] MongoDB: ✅")
-            except Exception as e:
-                logger.warning(f"⚠️ [{nome_rpa}] MongoDB falhou: {str(e)}")
-                resultados["mongodb"] = f"erro: {str(e)}"
+        # 1. MongoDB será implementado futuramente quando necessário
+        # Por enquanto, foco no JSON que já funciona perfeitamente
+        resultados["mongodb"] = "não_implementado"
 
         # 2. SEMPRE salvar JSON (fallback garantido)
         try:
