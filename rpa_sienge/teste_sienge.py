@@ -113,7 +113,9 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
 
 
 async def processar_contrato_individual(contrato_dados: Dict[str, Any],
-                                        indices: Dict[str, Any], indice: int):
+                                        indices: Dict[str, Any], indice: int,
+                                        etapa: str = "completa",
+                                        autorizar_reparcelamento: bool = False):
     """
     Processa um contrato individual do Sienge
     """
@@ -133,7 +135,10 @@ async def processar_contrato_individual(contrato_dados: Dict[str, Any],
         resultado = await executar_processamento_sienge(
             contrato=contrato_dados,
             indices_economicos=indices,
-            credenciais_sienge=credenciais_teste)
+            credenciais_sienge=credenciais_teste,
+            etapa=etapa,
+            autorizar_reparcelamento=autorizar_reparcelamento,
+            notificar_analista=False)  # False em testes para evitar notificações
 
         # Atualizar status na fila
         await atualizar_status_contrato(
@@ -273,11 +278,109 @@ async def teste_completo():
     return sucessos > 0
 
 
+async def teste_etapa_consulta():
+    """
+    Testa apenas a etapa de consulta (ETAPA 1)
+    """
+    print("🧪 TESTE ETAPA 1 - CONSULTA DE RELATÓRIOS")
+    print("=" * 50)
+
+    contrato_teste = {
+        "numero_titulo": "TEST123456789",
+        "cliente": "CLIENTE TESTE LTDA",
+        "empreendimento": "EMPREENDIMENTO TESTE",
+        "cnpj_unidade": "12.345.678/0001-90",
+        "indexador": "IPCA",
+        "ultimo_reajuste": "01/01/2023"
+    }
+
+    indices_economicos = await carregar_indices_economicos()
+    credenciais_sienge = {
+        "url": os.getenv("SIENGE_URL", "https://sienge-teste.com"),
+        "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+        "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+    }
+
+    try:
+        print("🔍 Executando APENAS consulta de relatórios...")
+        resultado = await executar_processamento_sienge(
+            contrato=contrato_teste,
+            indices_economicos=indices_economicos,
+            credenciais_sienge=credenciais_sienge,
+            etapa="consulta"
+        )
+
+        print(f"\n📋 RESULTADO ETAPA 1:")
+        print(f"✅ Sucesso: {resultado.sucesso}")
+        print(f"📄 Mensagem: {resultado.mensagem}")
+        
+        if resultado.dados:
+            dados_financeiros = resultado.dados.get("dados_financeiros", {})
+            print(f"💰 Saldo total: R$ {dados_financeiros.get('saldo_total', 0):,.2f}")
+            print(f"📊 Parcelas CT: {dados_financeiros.get('qtd_parcelas_ct_a_vencer', 0)}")
+            print(f"🚨 CT vencidas: {dados_financeiros.get('qtd_ct_vencidas', 0)}")
+
+        return resultado.sucesso
+
+    except Exception as e:
+        print(f"❌ Erro: {str(e)}")
+        return False
+
+async def teste_etapa_reparcelamento():
+    """
+    Testa apenas a etapa de reparcelamento (ETAPA 2) com autorização automática
+    """
+    print("🧪 TESTE ETAPA 2 - REPARCELAMENTO (COM AUTORIZAÇÃO)")
+    print("=" * 60)
+
+    contrato_teste = {
+        "numero_titulo": "TEST123456789",
+        "cliente": "CLIENTE TESTE LTDA",
+        "empreendimento": "EMPREENDIMENTO TESTE",
+        "cnpj_unidade": "12.345.678/0001-90",
+        "indexador": "IPCA",
+        "ultimo_reajuste": "01/01/2023",
+        "tipo_reajuste": "anual",
+        "mes_base_reparcelamento": "06/2025"
+    }
+
+    indices_economicos = await carregar_indices_economicos()
+    credenciais_sienge = {
+        "url": os.getenv("SIENGE_URL", "https://sienge-teste.com"),
+        "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+        "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+    }
+
+    try:
+        print("🔄 Executando reparcelamento com autorização automática...")
+        resultado = await executar_processamento_sienge(
+            contrato=contrato_teste,
+            indices_economicos=indices_economicos,
+            credenciais_sienge=credenciais_sienge,
+            etapa="reparcelamento",
+            autorizar_reparcelamento=True  # Pula validação de autorização
+        )
+
+        print(f"\n📋 RESULTADO ETAPA 2:")
+        print(f"✅ Sucesso: {resultado.sucesso}")
+        print(f"📄 Mensagem: {resultado.mensagem}")
+        
+        if resultado.dados:
+            reparcelamento = resultado.dados.get("reparcelamento", {})
+            print(f"🔄 Processado: {reparcelamento.get('sucesso', False)}")
+            print(f"📋 Novo título: {reparcelamento.get('novo_titulo_gerado', 'N/A')}")
+
+        return resultado.sucesso
+
+    except Exception as e:
+        print(f"❌ Erro: {str(e)}")
+        return False
+
 async def teste_contrato_unico():
     """
-    Testa processamento de um contrato único
+    Testa processamento completo de um contrato único
     """
-    print("🧪 TESTE CONTRATO ÚNICO")
+    print("🧪 TESTE CONTRATO ÚNICO - COMPLETO")
     print("=" * 40)
 
     # Dados de teste para contrato
@@ -311,7 +414,10 @@ async def teste_contrato_unico():
         resultado = await executar_processamento_sienge(
             contrato=contrato_teste,
             indices_economicos=indices_economicos,
-            credenciais_sienge=credenciais_sienge)
+            credenciais_sienge=credenciais_sienge,
+            etapa="completa",
+            autorizar_reparcelamento=True,  # Para teste
+            notificar_analista=False)
 
         # Mostra resultado
         print("\n📋 RESULTADO DA EXECUÇÃO:")
@@ -511,10 +617,12 @@ def menu_interativo():
     print("=" * 50)
     print("1. 🚀 Teste Completo (Processamento Fila)")
     print("2. 🏢 Teste Contrato Único")
-    print("3. 🔍 Teste Validação de Contrato")
-    print("4. 🧮 Teste Cálculo Reparcelamento")
-    print("5. 🏥 Verificação de Saúde")
-    print("6. ❌ Sair")
+    print("3. 🔍 Teste Etapa 1 - Consulta")
+    print("4. 🔄 Teste Etapa 2 - Reparcelamento")
+    print("5. 🧪 Teste Validação de Contrato")
+    print("6. 🧮 Teste Cálculo Reparcelamento")
+    print("7. 🏥 Verificação de Saúde")
+    print("8. ❌ Sair")
     print("=" * 50)
 
     while True:
@@ -526,16 +634,20 @@ def menu_interativo():
             elif opcao == "2":
                 return teste_contrato_unico()
             elif opcao == "3":
-                return teste_validacao_contrato()
+                return teste_etapa_consulta()
             elif opcao == "4":
-                return teste_calculo_reparcelamento()
+                return teste_etapa_reparcelamento()
             elif opcao == "5":
-                return verificar_saude_rpa()
+                return teste_validacao_contrato()
             elif opcao == "6":
+                return teste_calculo_reparcelamento()
+            elif opcao == "7":
+                return verificar_saude_rpa()
+            elif opcao == "8":
                 print("👋 Encerrando testes...")
                 return None
             else:
-                print("❌ Opção inválida! Escolha entre 1-6.")
+                print("❌ Opção inválida! Escolha entre 1-8.")
 
         except KeyboardInterrupt:
             print("\n👋 Teste interrompido pelo usuário")
@@ -559,6 +671,10 @@ async def main():
             sucesso = await teste_completo()
         elif comando == "unico":
             sucesso = await teste_contrato_unico()
+        elif comando == "consulta":
+            sucesso = await teste_etapa_consulta()
+        elif comando == "reparcelamento":
+            sucesso = await teste_etapa_reparcelamento()
         elif comando == "validacao":
             sucesso = await teste_validacao_contrato()
         elif comando == "calculo":
@@ -568,7 +684,7 @@ async def main():
         else:
             print(f"❌ Comando inválido: {comando}")
             print(
-                "Comandos disponíveis: completo, unico, validacao, calculo, saude"
+                "Comandos disponíveis: completo, unico, consulta, reparcelamento, validacao, calculo, saude"
             )
             return False
 

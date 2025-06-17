@@ -60,20 +60,27 @@ class RPASienge(BaseRPA):
     async def executar(self,
                        contrato: Dict[str, Any],
                        credenciais_sienge: Dict[str, str],
-                       indices: Dict[str, Any] = None) -> ResultadoRPA:
+                       indices: Dict[str, Any] = None,
+                       etapa: str = "completa",
+                       autorizar_reparcelamento: bool = False,
+                       notificar_analista: bool = True) -> ResultadoRPA:
         """
-        Executa processamento completo do RPA Sienge
+        Executa processamento do RPA Sienge em etapas segregadas
 
         Args:
             contrato: Dados do contrato (número_titulo, cliente, etc.)
             credenciais_sienge: Credenciais de acesso ao Sienge
             indices: Índices econômicos (IPCA/IGPM)
+            etapa: "consulta", "reparcelamento" ou "completa"
+            autorizar_reparcelamento: True para pular validação de autorização
+            notificar_analista: False para ignorar notificações de validação
         """
         try:
-            self.log_progresso("🚀 INICIANDO RPA SIENGE")
+            self.log_progresso(f"🚀 INICIANDO RPA SIENGE - ETAPA: {etapa.upper()}")
             self.log_progresso(
                 f"   📋 Contrato: {contrato.get('numero_titulo', '')}")
             self.log_progresso(f"   👤 Cliente: {contrato.get('cliente', '')}")
+            self.log_progresso(f"   🔐 Autorização automática: {autorizar_reparcelamento}")
 
             if not contrato or not credenciais_sienge:
                 return ResultadoRPA(
@@ -90,54 +97,53 @@ class RPASienge(BaseRPA):
             # Faz login no Sienge
             await self._fazer_login_sienge()
 
-            # Consulta relatórios financeiros do cliente
-            self.log_progresso(
-                f"Consultando relatórios do cliente: {contrato.get('cliente', '')}"
-            )
-            dados_financeiros = await self._consultar_relatorios_financeiros(
-                contrato)
-
-            # Valida se contrato pode ser reparcelado
-            pode_reparcelar = await self._validar_contrato_reparcelamento(
-                dados_financeiros)
-
-            if not pode_reparcelar["pode_reparcelar"]:
+            # ETAPA 1: CONSULTA DE RELATÓRIOS (sempre executada)
+            dados_financeiros = await self._executar_etapa_consulta(contrato)
+            
+            if etapa == "consulta":
                 return ResultadoRPA(
-                    sucesso=False,
-                    mensagem=
-                    f"Contrato não pode ser reparcelado: {pode_reparcelar['motivo']}",
+                    sucesso=dados_financeiros.get("sucesso", False),
+                    mensagem=f"Consulta realizada - Cliente: {contrato.get('cliente', '')}",
                     dados={
+                        "etapa_executada": "consulta",
                         "contrato": contrato,
-                        "validacao": pode_reparcelar,
-                        "dados_financeiros": dados_financeiros
+                        "dados_financeiros": dados_financeiros,
+                        "timestamp_processamento": datetime.now().isoformat()
                     })
 
-            # Processa reparcelamento
-            self.log_progresso("Processando reparcelamento no Sienge")
-            indices = indices or {}
-            resultado_reparcelamento = await self._processar_reparcelamento(
-                contrato, indices, dados_financeiros)
+            # ETAPA 2: PROCESSAMENTO DE REPARCELAMENTO
+            if etapa in ["reparcelamento", "completa"]:
+                resultado_reparcelamento = await self._executar_etapa_reparcelamento(
+                    contrato, indices or {}, dados_financeiros, 
+                    autorizar_reparcelamento, notificar_analista
+                )
+                
+                if etapa == "reparcelamento":
+                    return resultado_reparcelamento
 
-            # Gera carnê se processamento foi bem-sucedido
-            carne_gerado = None
-            if resultado_reparcelamento["sucesso"]:
-                self.log_progresso("Gerando carnê atualizado")
-                carne_gerado = await self._gerar_carne_sienge(contrato)
+            # ETAPA COMPLETA: COMBINAR RESULTADOS
+            if etapa == "completa":
+                # Gera carnê se processamento foi bem-sucedido
+                carne_gerado = None
+                if dados_financeiros.get("sucesso") and resultado_reparcelamento.sucesso:
+                    self.log_progresso("Gerando carnê atualizado")
+                    carne_gerado = await self._gerar_carne_sienge(contrato)
 
-            # Monta resultado final
-            resultado_dados = {
-                "contrato_processado": contrato,
-                "dados_financeiros": dados_financeiros,
-                "reparcelamento": resultado_reparcelamento,
-                "carne_gerado": carne_gerado,
-                "timestamp_processamento": datetime.now().isoformat()
-            }
+                # Monta resultado final
+                resultado_dados = {
+                    "etapa_executada": "completa",
+                    "contrato_processado": contrato,
+                    "dados_financeiros": dados_financeiros,
+                    "reparcelamento": resultado_reparcelamento.dados if resultado_reparcelamento.dados else {},
+                    "carne_gerado": carne_gerado,
+                    "timestamp_processamento": datetime.now().isoformat()
+                }
 
-            return ResultadoRPA(
-                sucesso=resultado_reparcelamento["sucesso"],
-                mensagem=
-                f"Reparcelamento processado - Cliente: {contrato.get('cliente', '')}",
-                dados=resultado_dados)
+                return ResultadoRPA(
+                    sucesso=resultado_reparcelamento.sucesso,
+                    mensagem=
+                    f"Processamento completo - Cliente: {contrato.get('cliente', '')}",
+                    dados=resultado_dados)
 
         except Exception as e:
             erro_msg = f"Erro na execução do RPA Sienge: {str(e)}"
@@ -145,6 +151,115 @@ class RPASienge(BaseRPA):
             return ResultadoRPA(sucesso=False,
                                 mensagem="Falha na execução do RPA Sienge",
                                 erro=erro_msg)
+
+    async def _executar_etapa_consulta(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        ETAPA 1: Executa apenas consulta de relatórios financeiros
+        
+        Conforme PDD seção 9.1.1 - Leitura e extração de dados do relatório
+        """
+        try:
+            self.log_progresso("📊 ETAPA 1: CONSULTA DE RELATÓRIOS FINANCEIROS")
+            
+            # Consulta relatórios financeiros do cliente
+            self.log_progresso(
+                f"Consultando relatórios do cliente: {contrato.get('cliente', '')}"
+            )
+            dados_financeiros = await self._consultar_relatorios_financeiros(contrato)
+
+            # Aplicar regras PDD para extrair informações obrigatórias
+            if dados_financeiros.get("sucesso"):
+                # Processar regras de negócio conforme PDD
+                dados_processados = await self._aplicar_regras_negocio_pdd(
+                    dados_financeiros, contrato
+                )
+                dados_financeiros.update(dados_processados)
+
+            self.log_progresso("✅ ETAPA 1 CONCLUÍDA: Consulta de relatórios")
+            return dados_financeiros
+
+        except Exception as e:
+            erro_msg = f"Erro na etapa de consulta: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "etapa": "consulta"
+            }
+
+    async def _executar_etapa_reparcelamento(self, 
+                                           contrato: Dict[str, Any], 
+                                           indices: Dict[str, Any],
+                                           dados_financeiros: Dict[str, Any],
+                                           autorizar_reparcelamento: bool = False,
+                                           notificar_analista: bool = True) -> ResultadoRPA:
+        """
+        ETAPA 2: Executa processamento de reparcelamento no Sienge
+        
+        Conforme PDD seção 7.3.3 - Processamento no sistema Sienge
+        
+        Args:
+            autorizar_reparcelamento: True para pular validação de autorização
+            notificar_analista: False para ignorar notificações
+        """
+        try:
+            self.log_progresso("🔄 ETAPA 2: PROCESSAMENTO DE REPARCELAMENTO")
+            
+            # Valida se contrato pode ser reparcelado
+            pode_reparcelar = await self._validar_contrato_reparcelamento(dados_financeiros)
+
+            if not pode_reparcelar["pode_reparcelar"]:
+                return ResultadoRPA(
+                    sucesso=False,
+                    mensagem=f"Contrato não pode ser reparcelado: {pode_reparcelar['motivo']}",
+                    dados={
+                        "etapa_executada": "reparcelamento",
+                        "contrato": contrato,
+                        "validacao": pode_reparcelar,
+                        "dados_financeiros": dados_financeiros
+                    })
+
+            # Verificar autorização para reparcelamento
+            if not autorizar_reparcelamento:
+                resultado_autorizacao = await self._verificar_autorizacao_reparcelamento(
+                    contrato, dados_financeiros, notificar_analista
+                )
+                
+                if not resultado_autorizacao["autorizado"]:
+                    return ResultadoRPA(
+                        sucesso=False,
+                        mensagem=f"Reparcelamento não autorizado: {resultado_autorizacao['motivo']}",
+                        dados={
+                            "etapa_executada": "reparcelamento",
+                            "contrato": contrato,
+                            "autorizacao": resultado_autorizacao,
+                            "aguardando_aprovacao": True
+                        })
+
+            # Processa reparcelamento no Sienge
+            self.log_progresso("Processando reparcelamento no Sienge")
+            resultado_reparcelamento = await self._processar_reparcelamento(
+                contrato, indices, dados_financeiros)
+
+            self.log_progresso("✅ ETAPA 2 CONCLUÍDA: Reparcelamento processado")
+            
+            return ResultadoRPA(
+                sucesso=resultado_reparcelamento["sucesso"],
+                mensagem=f"Reparcelamento processado - Cliente: {contrato.get('cliente', '')}",
+                dados={
+                    "etapa_executada": "reparcelamento",
+                    "contrato": contrato,
+                    "reparcelamento": resultado_reparcelamento,
+                    "timestamp_processamento": datetime.now().isoformat()
+                })
+
+        except Exception as e:
+            erro_msg = f"Erro na etapa de reparcelamento: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return ResultadoRPA(
+                sucesso=False,
+                mensagem="Falha na etapa de reparcelamento",
+                erro=erro_msg)
 
     async def finalizar(self):
         """Finaliza RPA e limpa recursos"""
@@ -1868,6 +1983,356 @@ class RPASienge(BaseRPA):
         except:
             return "unknown"
 
+    async def _aplicar_regras_negocio_pdd(self, dados_financeiros: Dict[str, Any], contrato: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Aplica regras de negócio conforme PDD após consulta dos relatórios
+        
+        Conforme documentação PDD - Regras de Negócio para Reparcelamento:
+        1. Identificação do Dia de Vencimento das Parcelas
+        2. Cálculo do 1º Vencimento do Novo Carnê
+        3. Valor da Parcela Atual
+        4. Verificação de Parcelas Abertas Irregulares
+        5. Quantidade de Parcelas a Vencer
+        6. Quantidade de Parcelas Vencidas
+        """
+        try:
+            self.log_progresso("📋 Aplicando regras de negócio PDD...")
+            
+            if not dados_financeiros.get("sucesso"):
+                return {"regras_aplicadas": False, "erro": "Dados financeiros inválidos"}
+
+            # Extrair dados básicos
+            df_dados = dados_financeiros.get("dados_brutos")
+            if df_dados is None or df_dados.empty:
+                return {"regras_aplicadas": False, "erro": "DataFrame vazio"}
+
+            # REGRA 1: Identificação do Dia de Vencimento das Parcelas
+            dia_vencimento = self._identificar_dia_vencimento_parcelas(df_dados)
+            
+            # REGRA 2: Cálculo do 1º Vencimento do Novo Carnê
+            tipo_reajuste = contrato.get("tipo_reajuste", "anual")  # anual ou aniversario
+            mes_base = contrato.get("mes_base_reparcelamento")  # Ex: "05/2025"
+            dia_aniversario = contrato.get("dia_aniversario_contrato")  # Para tipo aniversário
+            
+            primeiro_vencimento = self._calcular_primeiro_vencimento_carne(
+                dia_vencimento, tipo_reajuste, mes_base, dia_aniversario
+            )
+
+            # REGRA 3: Valor da Parcela Atual
+            valor_parcela_atual = self._determinar_valor_parcela_atual(df_dados, contrato)
+
+            # REGRA 4: Verificação de Parcelas Abertas Irregulares  
+            parcelas_irregulares = self._verificar_parcelas_irregulares(df_dados, valor_parcela_atual)
+
+            # REGRA 5: Quantidade de Parcelas a Vencer
+            qtd_parcelas_vencer = self._contar_parcelas_a_vencer(df_dados, tipo_reajuste, mes_base, dia_aniversario)
+
+            # REGRA 6: Quantidade de Parcelas Vencidas
+            parcelas_vencidas = self._analisar_parcelas_vencidas(df_dados, primeiro_vencimento)
+
+            # Consolidar resultados
+            regras_aplicadas = {
+                "regras_aplicadas": True,
+                "dia_vencimento_parcelas": dia_vencimento,
+                "primeiro_vencimento_carne": primeiro_vencimento,
+                "valor_parcela_atual": valor_parcela_atual,
+                "parcelas_irregulares": parcelas_irregulares,
+                "qtd_parcelas_a_vencer": qtd_parcelas_vencer,
+                "parcelas_vencidas": parcelas_vencidas,
+                "timestamp_regras": datetime.now().isoformat()
+            }
+
+            self.log_progresso("✅ Regras de negócio PDD aplicadas com sucesso")
+            return regras_aplicadas
+
+        except Exception as e:
+            erro_msg = f"Erro ao aplicar regras de negócio: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {"regras_aplicadas": False, "erro": erro_msg}
+
+    def _identificar_dia_vencimento_parcelas(self, df_dados: pd.DataFrame) -> int:
+        """
+        REGRA 1 PDD: Identificação do Dia de Vencimento das Parcelas
+        
+        Filtro: Status da parcela = "a vencer"
+        Extração: Dia do mês da coluna "Data vencimento"
+        """
+        try:
+            # Filtrar apenas parcelas "a vencer"
+            parcelas_a_vencer = df_dados[
+                df_dados["Status da parcela"].str.upper().str.strip() == "A VENCER"
+            ]
+            
+            if len(parcelas_a_vencer) == 0:
+                return None
+
+            # Extrair dias de vencimento
+            dias_vencimento = []
+            for _, row in parcelas_a_vencer.iterrows():
+                data_vencimento = row.get("Data vencimento")
+                if pd.notna(data_vencimento):
+                    try:
+                        if isinstance(data_vencimento, str):
+                            data_obj = datetime.strptime(data_vencimento, "%d/%m/%Y").date()
+                        else:
+                            data_obj = data_vencimento.date() if hasattr(data_vencimento, 'date') else data_vencimento
+                        dias_vencimento.append(data_obj.day)
+                    except:
+                        continue
+
+            # Retornar dia mais comum
+            if dias_vencimento:
+                return max(set(dias_vencimento), key=dias_vencimento.count)
+            
+            return None
+
+        except Exception as e:
+            self.log_erro("Erro ao identificar dia de vencimento", e)
+            return None
+
+    def _determinar_valor_parcela_atual(self, df_dados: pd.DataFrame, contrato: Dict[str, Any]) -> float:
+        """
+        REGRA 3 PDD: Valor da Parcela Atual
+        
+        Consultar planilha base para determinar se usar "Valor original" ou "Valor corrigido"
+        """
+        try:
+            # TODO: Implementar consulta à planilha base para determinar coluna
+            # Por enquanto, usar "Valor a receber" como padrão
+            
+            parcelas_ct_a_vencer = df_dados[
+                (df_dados["Status da parcela"].str.upper().str.strip() == "A VENCER") &
+                (df_dados["Documento"].str.contains("CT", case=False, na=False))
+            ]
+            
+            if len(parcelas_ct_a_vencer) > 0:
+                primeiro_registro = parcelas_ct_a_vencer.iloc[0]
+                return self._converter_valor_monetario(primeiro_registro["Valor a receber"])
+            
+            return 0.0
+
+        except Exception as e:
+            self.log_erro("Erro ao determinar valor da parcela", e)
+            return 0.0
+
+    def _verificar_parcelas_irregulares(self, df_dados: pd.DataFrame, valor_parcela_base: float) -> List[Dict]:
+        """
+        REGRA 4 PDD: Verificação de Parcelas Abertas Irregulares
+        
+        Filtro: Status = "a vencer", Documento = "CT", 
+                Valor original ≠ valor parcela atual, Tipo condição ≠ "Parcela Mensal"
+        """
+        try:
+            parcelas_irregulares = []
+            
+            if valor_parcela_base <= 0:
+                return parcelas_irregulares
+
+            parcelas_ct_a_vencer = df_dados[
+                (df_dados["Status da parcela"].str.upper().str.strip() == "A VENCER") &
+                (df_dados["Documento"].str.contains("CT", case=False, na=False))
+            ]
+
+            for _, row in parcelas_ct_a_vencer.iterrows():
+                valor_original = self._converter_valor_monetario(row.get("Valor original", 0))
+                tipo_condicao = str(row.get("Tipo condição", "")).strip()
+                
+                if (abs(valor_original - valor_parcela_base) > 0.01 and 
+                    tipo_condicao.upper() != "PARCELA MENSAL"):
+                    
+                    parcelas_irregulares.append({
+                        "documento": row.get("Documento"),
+                        "data_vencimento": row.get("Data vencimento"),
+                        "valor_original": valor_original,
+                        "valor_base": valor_parcela_base,
+                        "tipo_condicao": tipo_condicao,
+                        "diferenca": valor_original - valor_parcela_base
+                    })
+
+            return parcelas_irregulares
+
+        except Exception as e:
+            self.log_erro("Erro ao verificar parcelas irregulares", e)
+            return []
+
+    def _contar_parcelas_a_vencer(self, df_dados: pd.DataFrame, tipo_reajuste: str, 
+                                 mes_base: str = None, dia_aniversario: int = None) -> int:
+        """
+        REGRA 5 PDD: Quantidade de Parcelas a Vencer
+        
+        Regras específicas por tipo de contrato (Reajuste Anual vs Aniversário)
+        """
+        try:
+            parcelas_ct_a_vencer = df_dados[
+                (df_dados["Status da parcela"].str.upper().str.strip() == "A VENCER") &
+                (df_dados["Documento"].str.contains("CT", case=False, na=False))
+            ]
+
+            # TODO: Implementar regras específicas para tipo aniversário
+            # Por enquanto, contagem simples
+            return len(parcelas_ct_a_vencer)
+
+        except Exception as e:
+            self.log_erro("Erro ao contar parcelas a vencer", e)
+            return 0
+
+    def _analisar_parcelas_vencidas(self, df_dados: pd.DataFrame, primeiro_vencimento: Dict) -> Dict[str, Any]:
+        """
+        REGRA 6 PDD: Quantidade de Parcelas Vencidas
+        
+        Incluindo verificação de inadimplência (60 dias antes do 1º vencimento)
+        """
+        try:
+            hoje = date.today()
+            
+            # Contar parcelas CT vencidas
+            todas_parcelas_ct = df_dados[
+                df_dados["Documento"].str.contains("CT", case=False, na=False)
+            ]
+            
+            parcelas_ct_vencidas = []
+            for _, row in todas_parcelas_ct.iterrows():
+                data_vencimento = row.get("Data vencimento")
+                status = str(row.get("Status da parcela", "")).strip().upper()
+                
+                try:
+                    if isinstance(data_vencimento, str):
+                        data_obj = datetime.strptime(data_vencimento, "%d/%m/%Y").date()
+                    else:
+                        data_obj = data_vencimento.date() if hasattr(data_vencimento, 'date') else data_vencimento
+                        
+                    if data_obj < hoje and status != "QUITADA":
+                        parcelas_ct_vencidas.append({
+                            "documento": row.get("Documento"),
+                            "data_vencimento": data_obj,
+                            "status": status,
+                            "valor": self._converter_valor_monetario(row.get("Valor a receber", 0)),
+                            "dias_atraso": (hoje - data_obj).days
+                        })
+                except:
+                    continue
+
+            # Verificar pendências REC/FAT
+            parcelas_rec_fat_vencidas = []
+            todas_parcelas_rec_fat = df_dados[
+                df_dados["Documento"].str.contains("REC|FAT", case=False, na=False)
+            ]
+            
+            for _, row in todas_parcelas_rec_fat.iterrows():
+                data_vencimento = row.get("Data vencimento")
+                status = str(row.get("Status da parcela", "")).strip().upper()
+                
+                try:
+                    if isinstance(data_vencimento, str):
+                        data_obj = datetime.strptime(data_vencimento, "%d/%m/%Y").date()
+                    else:
+                        data_obj = data_vencimento.date() if hasattr(data_vencimento, 'date') else data_vencimento
+                        
+                    if data_obj < hoje and status != "QUITADA":
+                        parcelas_rec_fat_vencidas.append({
+                            "documento": row.get("Documento"),
+                            "data_vencimento": data_obj,
+                            "status": status,
+                            "valor": self._converter_valor_monetario(row.get("Valor a receber", 0))
+                        })
+                except:
+                    continue
+
+            # Verificar inadimplência 60 dias
+            inadimplencia_60_dias = None
+            if primeiro_vencimento and primeiro_vencimento.get("sucesso"):
+                data_primeiro_venc = primeiro_vencimento.get("primeiro_vencimento")
+                if data_primeiro_venc:
+                    inadimplencia_60_dias = self._verificar_inadimplencia_60_dias(
+                        parcelas_ct_vencidas, data_primeiro_venc
+                    )
+
+            return {
+                "qtd_ct_vencidas": len(parcelas_ct_vencidas),
+                "qtd_rec_fat_vencidas": len(parcelas_rec_fat_vencidas),
+                "parcelas_ct_vencidas": parcelas_ct_vencidas,
+                "parcelas_rec_fat_vencidas": parcelas_rec_fat_vencidas,
+                "inadimplencia_60_dias": inadimplencia_60_dias
+            }
+
+        except Exception as e:
+            self.log_erro("Erro ao analisar parcelas vencidas", e)
+            return {"qtd_ct_vencidas": 0, "qtd_rec_fat_vencidas": 0}
+
+    async def _verificar_autorizacao_reparcelamento(self, contrato: Dict[str, Any], 
+                                                   dados_financeiros: Dict[str, Any],
+                                                   notificar_analista: bool = True) -> Dict[str, Any]:
+        """
+        Verifica autorização para processamento de reparcelamento
+        
+        Args:
+            notificar_analista: False para ignorar notificações (usado em testes)
+        """
+        try:
+            self.log_progresso("🔐 Verificando autorização para reparcelamento...")
+            
+            cliente = contrato.get("cliente", "")
+            numero_titulo = contrato.get("numero_titulo", "")
+            
+            # Verificar se há parcelas irregulares que exigem aprovação
+            parcelas_irregulares = dados_financeiros.get("parcelas_irregulares", [])
+            qtd_ct_vencidas = dados_financeiros.get("qtd_ct_vencidas", 0)
+            
+            # Critérios que exigem autorização prévia
+            exige_autorizacao = False
+            motivos_autorizacao = []
+            
+            if len(parcelas_irregulares) > 0:
+                exige_autorizacao = True
+                motivos_autorizacao.append(f"{len(parcelas_irregulares)} parcela(s) irregular(es)")
+            
+            if qtd_ct_vencidas >= 2:  # Limite próximo ao crítico
+                exige_autorizacao = True
+                motivos_autorizacao.append(f"{qtd_ct_vencidas} parcela(s) CT vencida(s)")
+
+            # Se não exige autorização, liberar automaticamente
+            if not exige_autorizacao:
+                return {
+                    "autorizado": True,
+                    "motivo": "Reparcelamento dentro dos critérios automáticos",
+                    "tipo_autorizacao": "automatica"
+                }
+
+            # TODO: Implementar sistema de notificações por e-mail
+            # TODO: Implementar verificação de resposta do analista
+            
+            if not notificar_analista:
+                # Modo teste: simular autorização
+                self.log_progresso("   ⚠️ Modo teste: simulando autorização automática")
+                return {
+                    "autorizado": True,
+                    "motivo": "Autorização simulada para teste",
+                    "tipo_autorizacao": "teste_simulado",
+                    "motivos_originais": motivos_autorizacao
+                }
+
+            # Em produção: enviar notificação e aguardar resposta
+            self.log_progresso(f"   📧 Enviando notificação para analista: {motivos_autorizacao}")
+            
+            # TODO: Implementar envio de e-mail e verificação de resposta
+            return {
+                "autorizado": False,
+                "motivo": f"Aguardando autorização do analista: {', '.join(motivos_autorizacao)}",
+                "tipo_autorizacao": "manual_pendente",
+                "motivos_autorizacao": motivos_autorizacao,
+                "cliente": cliente,
+                "numero_titulo": numero_titulo
+            }
+
+        except Exception as e:
+            erro_msg = f"Erro na verificação de autorização: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "autorizado": False,
+                "motivo": erro_msg,
+                "tipo_autorizacao": "erro"
+            }
+
     async def _atualizar_planilha_base_calculo(self, dados_processados: Dict[str, Any], contrato: Dict[str, Any]):
         """
         Atualiza planilha "BASE DE CÁLCULO REPARCELAMENTO 2025" conforme PDD seção 9.1.2
@@ -2122,8 +2587,12 @@ class RPASienge(BaseRPA):
 
 # Função auxiliar para uso direto
 async def executar_processamento_sienge(
-        contrato: Dict[str, Any], indices_economicos: Dict[str, Any],
-        credenciais_sienge: Dict[str, str]) -> ResultadoRPA:
+        contrato: Dict[str, Any], 
+        indices_economicos: Dict[str, Any],
+        credenciais_sienge: Dict[str, str],
+        etapa: str = "completa",
+        autorizar_reparcelamento: bool = False,
+        notificar_analista: bool = True) -> ResultadoRPA:
     """
     Função auxiliar para executar processamento Sienge diretamente
 
@@ -2144,7 +2613,10 @@ async def executar_processamento_sienge(
         # Executa processamento
         resultado = await rpa.executar(contrato=contrato,
                                        credenciais_sienge=credenciais_sienge,
-                                       indices=indices_economicos)
+                                       indices=indices_economicos,
+                                       etapa=etapa,
+                                       autorizar_reparcelamento=autorizar_reparcelamento,
+                                       notificar_analista=notificar_analista)
 
         return resultado
 
