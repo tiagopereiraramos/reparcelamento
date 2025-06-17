@@ -33,16 +33,37 @@ class MongoDBManager:
         Conecta ao MongoDB usando variáveis de ambiente do Replit
         """
         try:
+            logger.info("🔧 Iniciando conexão MongoDB...")
+            
             # Tenta variáveis do Replit Database primeiro
             mongodb_uri = os.getenv('DATABASE_URL') or os.getenv('MONGODB_URI') or os.getenv('MONGO_URL')
+            database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
+            
+            logger.info(f"🔍 Variáveis de ambiente:")
+            logger.info(f"   DATABASE_URL: {'SET' if os.getenv('DATABASE_URL') else 'NOT SET'}")
+            logger.info(f"   MONGODB_URI: {'SET' if os.getenv('MONGODB_URI') else 'NOT SET'}")
+            logger.info(f"   MONGO_URL: {'SET' if os.getenv('MONGO_URL') else 'NOT SET'}")
+            logger.info(f"   DATABASE_NAME: {database_name}")
             
             if not mongodb_uri:
                 # Fallback para conexão local se não tiver Replit Database
                 mongodb_uri = "mongodb://localhost:27017"
                 logger.warning("⚠️ Usando MongoDB local - configure DATABASE_URL para produção")
+            else:
+                # Log da URI mascarada (sem senha)
+                uri_masked = mongodb_uri
+                if '@' in uri_masked:
+                    parts = uri_masked.split('@')
+                    if len(parts) > 1:
+                        credentials = parts[0].split('//')[-1]
+                        if ':' in credentials:
+                            user = credentials.split(':')[0]
+                            uri_masked = uri_masked.replace(credentials, f"{user}:***")
+                logger.info(f"   URI: {uri_masked}")
 
             self._url_conexao = mongodb_uri
             
+            logger.info("🔌 Criando cliente MongoDB...")
             # Configura cliente com timeout menor para falhar rápido
             self.client = AsyncIOMotorClient(
                 mongodb_uri,
@@ -51,27 +72,45 @@ class MongoDBManager:
                 socketTimeoutMS=10000
             )
 
+            logger.info("🏓 Testando conexão com ping...")
             # Testa conexão
-            await self.client.admin.command('ping')
+            ping_result = await self.client.admin.command('ping')
+            logger.info(f"✅ Ping successful: {ping_result}")
             
+            logger.info(f"🗄️ Configurando database: {database_name}")
             # Define database
-            database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
             self.database = self.client[database_name]
+            
+            # Teste prático com a database
+            logger.info("🧪 Testando operação na database...")
+            test_collection = self.database.teste_conexao_inicial
+            test_doc = {"teste": True, "timestamp": datetime.now()}
+            result = await test_collection.insert_one(test_doc)
+            logger.info(f"✅ Teste inserção: {result.inserted_id}")
+            
+            # Remove documento de teste
+            await test_collection.delete_one({"_id": result.inserted_id})
+            logger.info("🧹 Documento de teste removido")
             
             self.conectado = True
             logger.info(f"✅ MongoDB conectado com sucesso: {database_name}")
             
             # Cria índices necessários
+            logger.info("📊 Criando índices...")
             await self._criar_indices()
             
+            logger.info("🎉 MongoDB totalmente inicializado!")
             return True
 
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.warning(f"⚠️ MongoDB não disponível: {str(e)}")
+            logger.warning(f"⚠️ MongoDB não disponível (timeout): {str(e)}")
             self.conectado = False
             return False
         except Exception as e:
             logger.error(f"❌ Erro ao conectar MongoDB: {str(e)}")
+            logger.error(f"   Tipo do erro: {type(e).__name__}")
+            import traceback
+            logger.error(f"   Traceback completo: {traceback.format_exc()}")
             self.conectado = False
             return False
 
