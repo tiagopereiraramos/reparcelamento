@@ -140,27 +140,89 @@ class RPASienge(BaseRPA):
 
     async def _fazer_login_sienge(self):
         """
-        USUÁRIO: Implementar login no Sienge
+        LOGIN NO SISTEMA SIENGE - WEBSCRAPING FUNCIONAL
         
-        URL: https://jmservicos.sienge.com.br/sienge
-        Campos: usuario e senha
-        Validação: chegada no dashboard principal
+        SEQUÊNCIA IMPLEMENTADA conforme PDD seção 7.3:
+        
+        1. ACESSO INICIAL: https://jmservicos.sienge.com.br/sienge/8/index.html
+        2. PRIMEIRA TELA - CREDENCIAIS BÁSICAS: input#username, input#password, #btnEntrarComSiengeID
+        3. SEGUNDA TELA - CONFIRMAÇÃO EMAIL: //label[text()="Seu e-mail"]/following-sibling::div//input
+        4. VERIFICAÇÃO: Aguardar elemento //a[contains(text(), 'Financeiro')]
         """
         try:
-            url_sienge = self.credenciais_sienge.get("url", "https://jmservicos.sienge.com.br/sienge")
+            if self.logado_sienge:
+                self.log_progresso("Já logado no Sienge")
+                return
+
+            url = self.credenciais_sienge.get("url", "https://jmservicos.sienge.com.br/sienge/8/index.html")
             usuario = self.credenciais_sienge.get("usuario", "")
             senha = self.credenciais_sienge.get("senha", "")
+
+            if not all([url, usuario, senha]):
+                raise Exception("Credenciais do Sienge incompletas")
+
+            self.log_progresso(f"Fazendo login no Sienge: {url}")
+            self.log_progresso(f"Usuário: {usuario}")
+
+            # 1. ACESSO INICIAL
+            await self.browser.get(url)
+            await asyncio.sleep(3)
+
+            # 2. PRIMEIRA TELA - CREDENCIAIS BÁSICAS
+            self.log_progresso("Preenchendo credenciais...")
             
-            self.log_progresso(f"Fazendo login no Sienge: {url_sienge}")
+            # Campo usuário
+            campo_usuario = await self.browser.find_element(By.CSS_SELECTOR, "input#username")
+            await campo_usuario.clear()
+            await campo_usuario.send_keys(usuario)
             
-            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING COMPLETO
-            # Sequência: acessar URL, preencher campos, clicar entrar, validar login
+            # Campo senha
+            campo_senha = await self.browser.find_element(By.CSS_SELECTOR, "input#password")
+            await campo_senha.clear()
+            await campo_senha.send_keys(senha)
             
-            self.logado_sienge = True
-            self.log_sucesso("Login realizado com sucesso")
+            # Botão entrar
+            btn_entrar = await self.browser.find_element(By.CSS_SELECTOR, "#btnEntrarComSiengeID")
+            await btn_entrar.click()
             
+            await asyncio.sleep(4)
+
+            # 3. SEGUNDA TELA - CONFIRMAÇÃO EMAIL (se aparecer)
+            try:
+                campo_email = await self.browser.find_element(
+                    By.XPATH, 
+                    "//label[text()='Seu e-mail']/following-sibling::div//input"
+                )
+                if campo_email:
+                    self.log_progresso("Confirmando email...")
+                    await campo_email.clear()
+                    await campo_email.send_keys(usuario)
+                    
+                    btn_continuar = await self.browser.find_element(
+                        By.XPATH, 
+                        "//button[normalize-space(text())='CONTINUAR']"
+                    )
+                    await btn_continuar.click()
+                    await asyncio.sleep(3)
+            except:
+                pass  # Tela de email não apareceu
+
+            # 4. VERIFICAR SE LOGIN FOI BEM-SUCEDIDO
+            try:
+                # Aguardar elemento que indica login bem-sucedido
+                WebDriverWait(self.browser, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'Financeiro')]"))
+                )
+                self.logado_sienge = True
+                self.log_progresso("Login realizado com sucesso!")
+                
+            except Exception as e:
+                raise Exception(f"Falha no login - elemento esperado não encontrado: {str(e)}")
+
         except Exception as e:
-            raise Exception(f"Erro no login Sienge: {str(e)}")
+            erro_msg = f"Erro no login Sienge: {str(e)}"
+            self.log_erro(erro_msg, e)
+            raise Exception(erro_msg)
 
     async def _consultar_relatorio_saldo_devedor(self, cliente: str, numero_titulo: str) -> pd.DataFrame:
         """

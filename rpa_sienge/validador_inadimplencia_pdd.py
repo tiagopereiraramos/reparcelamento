@@ -127,8 +127,10 @@ class ValidadorInadimplenciaPDD:
                     # Critério rigoroso: vencida E não quitada
                     vencida = data_venc_date < hoje
                     quitada = status in ["QUITADA", "LIQUIDADA", "PAGA", "BAIXADA"]
+                    a_vencer = status in ["A VENCER", "PENDENTE", "EM ABERTO"]
                     
-                    if vencida and not quitada:
+                    # Só conta como CT vencida se: data passou E não está quitada E não está marcada como "A VENCER"
+                    if vencida and not quitada and not a_vencer:
                         valor = 0
                         try:
                             valor_str = str(row.get("Valor a receber", "0")).replace(",", ".")
@@ -313,7 +315,6 @@ class CalculadoraReparcelamentoPDD:
         """
         try:
             hoje = date.today()
-            mes_vigente = hoje.replace(day=1)  # Primeiro dia do mês atual
             
             parcelas_desmarcar = []
             
@@ -323,7 +324,7 @@ class CalculadoraReparcelamentoPDD:
                 # Converter data se necessário
                 if isinstance(data_vencimento, str):
                     try:
-                        data_obj = pd.to_datetime(data_vencimento, errors='coerce')
+                        data_obj = pd.to_datetime(data_vencimento, dayfirst=True, errors='coerce')
                         if pd.notna(data_obj):
                             data_obj = data_obj.date()
                         else:
@@ -333,8 +334,8 @@ class CalculadoraReparcelamentoPDD:
                 else:
                     data_obj = data_vencimento
                 
-                # REGRA PDD: Vencimento <= mês vigente = DESMARCAR
-                if data_obj and data_obj <= mes_vigente:
+                # REGRA PDD: Vencimento <= hoje = DESMARCAR (parcelas já vencidas ou vencendo hoje)
+                if data_obj and data_obj <= hoje:
                     parcelas_desmarcar.append({
                         "documento": parcela.get("Documento"),
                         "data_vencimento": data_obj.strftime("%d/%m/%Y"),

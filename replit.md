@@ -10,14 +10,16 @@ Sistema completo de RPA (Robotic Process Automation) para automatizar reparcelam
 - ⏳ **RPA 4 (Sicredi)**: Aguardando finalização do RPA 3
 
 ## Progresso Atual - RPA Sienge
-**O que está pronto:**
+**✅ IMPLEMENTADO (17/06/2025):**
 - Estrutura completa do código com documentação
+- **ValidadorInadimplenciaPDD**: Regra rigorosa ≥3 CT vencidas = INADIMPLENTE
+- **CalculadoraReparcelamentoPDD**: Cálculos IGP-M e juros 8% fixos
 - Processamento de planilhas Excel do Sienge
-- Validação de inadimplência conforme regras PDD
-- Cálculos de reparcelamento (IGP-M, juros 8%)
 - Sistema de auditoria e logs
+- **Todos os testes PDD aprovados**: inadimplente/adimplente, cálculos financeiros, parcelas para desmarcar
+- Arquitetura limpa em `rpa_sienge_clean.py`
 
-**O que precisa ser implementado:**
+**🔄 AGUARDANDO USUÁRIO:**
 - Métodos de webscraping para navegação no Sienge
 - Login automático no sistema
 - Extração de relatórios financeiros

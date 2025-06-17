@@ -1,0 +1,165 @@
+{
+  "teste_inadimplente": {
+    "cliente": "CLIENTE INADIMPLENTE LTDA",
+    "numero_titulo": "12345",
+    "data_validacao": "2025-06-17T19:09:45.499196",
+    "sucesso": true,
+    "status_cliente": "INADIMPLENTE",
+    "pode_reparcelar": false,
+    "motivo_classificacao": "Cliente possui 4 parcelas CT vencidas (≥3 limite PDD)",
+    "nivel_risco": "ALTO",
+    "qtd_ct_vencidas": 4,
+    "ct_vencidas_detalhes": [
+      {
+        "documento": "CT001",
+        "data_vencimento": "2025-03-19",
+        "status": "VENCIDA",
+        "valor": 1500.0,
+        "dias_atraso": 90
+      },
+      {
+        "documento": "CT002",
+        "data_vencimento": "2025-04-18",
+        "status": "VENCIDA",
+        "valor": 1500.0,
+        "dias_atraso": 60
+      },
+      {
+        "documento": "CT003",
+        "data_vencimento": "2025-05-18",
+        "status": "VENCIDA",
+        "valor": 1500.0,
+        "dias_atraso": 30
+      },
+      {
+        "documento": "CT004",
+        "data_vencimento": "2025-02-06",
+        "status": "VENCIDA",
+        "valor": 1500.0,
+        "dias_atraso": 131
+      }
+    ],
+    "limite_pdd": 3,
+    "qtd_parcelas_ct_a_vencer": 1,
+    "qtd_parcelas_rec_fat_a_vencer": 1,
+    "valor_total_ct": 1500.0,
+    "valor_total_rec_fat": 2000.0,
+    "saldo_total": 3500.0,
+    "parcelas_ct_a_vencer": [
+      {
+        "Documento": "CT005",
+        "Status da parcela": "A VENCER",
+        "Data vencimento": "17/07/2025",
+        "Valor a receber": "1500.00"
+      }
+    ],
+    "parcelas_rec_fat_a_vencer": [
+      {
+        "Documento": "REC001",
+        "Status da parcela": "A VENCER",
+        "Data vencimento": "16/08/2025",
+        "Valor a receber": "2000.00"
+      }
+    ],
+    "regra_aplicada": "PDD_7.3.2_limite_3_CT_vencidas"
+  },
+  "teste_adimplente": {
+    "cliente": "CLIENTE ADIMPLENTE LTDA",
+    "numero_titulo": "67890",
+    "data_validacao": "2025-06-17T19:09:45.511907",
+    "sucesso": true,
+    "status_cliente": "ADIMPLENTE",
+    "pode_reparcelar": true,
+    "motivo_classificacao": "Cliente possui 2 parcelas CT vencidas (<3 limite PDD)",
+    "nivel_risco": "MEDIO",
+    "qtd_ct_vencidas": 2,
+    "ct_vencidas_detalhes": [
+      {
+        "documento": "CT001",
+        "data_vencimento": "2025-03-05",
+        "status": "VENCIDA",
+        "valor": 1200.0,
+        "dias_atraso": 104
+      },
+      {
+        "documento": "CT002",
+        "data_vencimento": "2025-02-06",
+        "status": "VENCIDA",
+        "valor": 1200.0,
+        "dias_atraso": 131
+      }
+    ],
+    "limite_pdd": 3,
+    "qtd_parcelas_ct_a_vencer": 2,
+    "qtd_parcelas_rec_fat_a_vencer": 1,
+    "valor_total_ct": 2400.0,
+    "valor_total_rec_fat": 1800.0,
+    "saldo_total": 4200.0,
+    "parcelas_ct_a_vencer": [
+      {
+        "Documento": "CT003",
+        "Status da parcela": "A VENCER",
+        "Data vencimento": "02/07/2025",
+        "Valor a receber": "1200.00"
+      },
+      {
+        "Documento": "CT004",
+        "Status da parcela": "A VENCER",
+        "Data vencimento": "01/08/2025",
+        "Valor a receber": "1200.00"
+      }
+    ],
+    "parcelas_rec_fat_a_vencer": [
+      {
+        "Documento": "REC001",
+        "Status da parcela": "A VENCER",
+        "Data vencimento": "17/07/2025",
+        "Valor a receber": "1800.00"
+      }
+    ],
+    "regra_aplicada": "PDD_7.3.2_limite_3_CT_vencidas"
+  },
+  "teste_calculo": {
+    "sucesso": true,
+    "valores_sienge": {
+      "detalhamento": "CORREÇÃO 06/25",
+      "tipo_condicao": "PM",
+      "valor_total": 10389.0,
+      "quantidade_parcelas": 8,
+      "data_primeiro_vencimento": "15/07/2025",
+      "portador": "1 Carteira",
+      "operacao_cobranca": "0 Cobrança em Carteira",
+      "indexador": "1 IGP-M",
+      "tipo_juros": "Fixo",
+      "percentual_juros": 8.0,
+      "data_base_juros": "15/07/2025"
+    },
+    "detalhes_calculo": {
+      "saldo_anterior": 10000.0,
+      "indice_igpm": 3.89,
+      "fator_correcao": 1.0389,
+      "novo_saldo": 10389.0,
+      "diferenca_correcao": 389.0,
+      "parcelas_total": 8,
+      "formula_aplicada": "10000.0 × 1.0389 = 10389.0",
+      "data_calculo": "2025-06-17"
+    },
+    "observacao": "Valores calculados conforme PDD - usar no webscraping"
+  },
+  "teste_parcelas": [
+    {
+      "documento": "CT001",
+      "data_vencimento": "12/06/2025",
+      "valor": "1000.00",
+      "motivo": "Vencimento igual ou anterior ao mês vigente (PDD)"
+    },
+    {
+      "documento": "CT002",
+      "data_vencimento": "17/06/2025",
+      "valor": "1000.00",
+      "motivo": "Vencimento igual ou anterior ao mês vigente (PDD)"
+    }
+  ],
+  "timestamp_teste": "2025-06-17T19:09:45.520853",
+  "status_geral": "SUCESSO"
+}
