@@ -65,6 +65,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from dotenv import load_dotenv
+from .validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
 
 load_dotenv()
 
@@ -110,6 +111,8 @@ class RPASienge(BaseRPA):
         self.credenciais_sienge = {}
         self.pasta_planilhas = Path("dados_extraidos/planilhas_sienge")
         self.pasta_planilhas.mkdir(parents=True, exist_ok=True)
+        self.validador_pdd = ValidadorInadimplenciaPDD()
+        self.calculadora_pdd = CalculadoraReparcelamentoPDD()
 
     def _configurar_credenciais(self, credenciais: Dict[str, str]):
         """
@@ -500,11 +503,7 @@ class RPASienge(BaseRPA):
         except Exception as e:
             erro_msg = f"Erro no login Sienge: {str(e)}"
             self.log_erro(erro_msg, e)
-            raise Exception(erro_msg)ampo senha: input#signup-password
-           └── Botão final: //button[normalize-space(text())='ENTRAR']
-
-        5️⃣ VALIDAÇÃO LOGIN:
-           └── Verificar se chegou no dashboard principal
+            raise Exception(erro_msg)
            └── Fechar modais/avisos se aparecerem
 
         RESPONSABILIDADE: 🔍 USUÁRIO (webscraping implementado)
