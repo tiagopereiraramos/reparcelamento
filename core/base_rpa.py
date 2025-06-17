@@ -489,6 +489,16 @@ class BaseRPA(ABC):
         if self.browser:
             return self.browser.send_text(xpath, text, clear, timeout, verify)
 
+    def send_text_human_like(self,
+                            xpath: str,
+                            text: str,
+                            clear: bool = False,
+                            timeout: int = 15,
+                            verify: bool = False) -> None:
+        """Envia texto simulando digitação humana (delegate para browser)"""
+        if self.browser:
+            return self.browser.send_text_human_like(xpath, text, clear, timeout, verify)
+
     def get_text(self, xpath: str, timeout: int = 10) -> str:
         """Obtém texto do elemento (delegate para browser)"""
         if self.browser:
