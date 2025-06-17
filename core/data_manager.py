@@ -401,7 +401,14 @@ class DataManagerUnificado:
                 except Exception as e:
                     mongo_stats = {"erro": str(e)}
             
+            # Estrutura correta que o teste está esperando
             return {
+                "total_execucoes": len(execucoes),
+                "total_indices_salvos": len(indices),
+                "ultimo_indice": indices[-1] if indices else None,
+                "ultima_execucao": execucoes[-1] if execucoes else None,
+                "arquivo_indices_existe": os.path.exists(self.arquivo_indices),
+                "arquivo_execucoes_existe": os.path.exists(self.arquivo_execucoes),
                 "json": {
                     "total_indices_salvos": len(indices),
                     "total_execucoes": len(execucoes),
