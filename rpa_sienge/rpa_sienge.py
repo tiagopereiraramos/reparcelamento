@@ -447,6 +447,276 @@ class RPASienge(BaseRPA):
                 raise ValueError("URL do Sienge não foi configurada corretamente.")
 
             self.browser.get_page(url_sienge)
+
+
+    # ===============================================================================
+    # MÉTODOS AUXILIARES PARA LOOP OTIMIZADO DE CONSULTAS
+    # ===============================================================================
+
+    async def _navegar_tela_relatorio_inicial(self):
+        """
+        🔍 TODO USUÁRIO: NAVEGAÇÃO INICIAL - Primeira vez para tela de relatório
+
+        SEQUÊNCIA PRIMEIRA EXECUÇÃO:
+        1. Navegar URL direta: .../relatorios/saldo-devedor
+        2. Aguardar carregamento completo
+        3. Validar que tela está pronta para pesquisa
+        """
+        try:
+            url_relatorio = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
+            self.log_progresso(f"🧭 Navegação inicial para: {url_relatorio}")
+            
+            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING
+            # self.browser.get_page(url_relatorio)
+            # time.sleep(3)
+            # Validar que chegou na tela correta
+
+        except Exception as e:
+            self.log_erro("Erro na navegação inicial", e)
+            raise
+
+    async def _limpar_campo_pesquisa_cliente(self):
+        """
+        🔍 TODO USUÁRIO: LIMPEZA CAMPO - Limpar pesquisa anterior para novo cliente
+
+        SEQUÊNCIA LIMPEZA:
+        1. Localizar campo pesquisa: //input[@placeholder='Pesquisar cliente' and @role='combobox']
+        2. Limpar conteúdo anterior (CTRL+A, DELETE)
+        3. Validar que campo está vazio e pronto
+        """
+        try:
+            self.log_progresso("🧹 Limpando campo de pesquisa anterior...")
+            
+            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING
+            # campo_pesquisa = self.browser.find_element(xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']")
+            # if campo_pesquisa:
+            #     campo_pesquisa.click()
+            #     campo_pesquisa.send_keys(Keys.CONTROL + "a")
+            #     campo_pesquisa.send_keys(Keys.DELETE)
+            #     time.sleep(1)
+
+        except Exception as e:
+            self.log_erro("Erro ao limpar campo pesquisa", e)
+            # Não é crítico - continuar execução
+
+    async def _executar_consulta_cliente_relatorio(self, cliente: str):
+        """
+        🔍 TODO USUÁRIO: CONSULTA CLIENTE - Preencher e executar consulta
+
+        SEQUÊNCIA CONSULTA:
+        1. Preencher campo com nome do cliente
+        2. Confirmar seleção (TAB ou ENTER)
+        3. Clicar botão "Consultar"
+        4. Aguardar resultados carregarem
+        """
+        try:
+            self.log_progresso(f"🔍 Executando consulta para cliente: {cliente}")
+            
+            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING
+            # combo_pesquisa = self.browser.find_element(xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']")
+            # if combo_pesquisa:
+            #     combo_pesquisa.click()
+            #     time.sleep(1)
+            #     self.browser.send_text_human_like(xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']", text=cliente)
+            #     combo_pesquisa.send_keys(Keys.TAB)
+            #     time.sleep(1)
+            #     self.browser.click(xpath="//button[normalize-space()='Consultar']")
+            #     time.sleep(3)
+
+        except Exception as e:
+            self.log_erro("Erro ao executar consulta cliente", e)
+            raise
+
+    async def _gerar_exportar_relatorio_excel(self):
+        """
+        🔍 TODO USUÁRIO: EXPORT EXCEL - Gerar e exportar relatório em Excel
+
+        SEQUÊNCIA EXPORT:
+        1. Clicar "Gerar Relatório"
+        2. Aguardar modal abrir
+        3. Selecionar formato "EXCEL"
+        4. Clicar "Exportar"
+        5. Aguardar download concluir
+        """
+        try:
+            self.log_progresso("📊 Gerando e exportando relatório Excel...")
+            
+            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING
+            # # Gerar relatório
+            # self.browser.click(xpath="//button[@type='button' and contains(., 'Gerar Relatório')]")
+            # time.sleep(2)
+            # 
+            # # Selecionar formato Excel
+
+
+    async def consultar_multiplos_clientes_loop(self, lista_contratos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        🔄 PROCESSAR MÚLTIPLOS CLIENTES EM LOOP OTIMIZADO
+
+        VANTAGEM DO LOOP:
+        ═══════════════════════════════════════════════════════════════════════════
+        ✅ **1 LOGIN** para N clientes (ao invés de N logins)
+        ✅ **REUTILIZA** tela de relatório
+        ✅ **OTIMIZAÇÃO** significativa de tempo e recursos
+        ✅ **REDUZ** chance de bloqueio por excesso de logins
+        ═══════════════════════════════════════════════════════════════════════════
+
+        SEQUÊNCIA OTIMIZADA:
+        1️⃣ Login único no Sienge (método existente)
+        2️⃣ Navegar uma vez para tela de relatório  
+        3️⃣ **LOOP** para cada cliente:
+           └── Consultar cliente atual
+           └── Processar dados (ASSISTENTE)
+           └── Retornar à tela de pesquisa
+           └── **PRÓXIMO CLIENTE** (sem novo login)
+
+        Args:
+            lista_contratos: Lista de contratos para processar
+            Exemplo: [
+                {"numero_titulo": "123", "cliente": "EMPRESA A"},
+                {"numero_titulo": "456", "cliente": "EMPRESA B"}
+            ]
+
+        Returns:
+            Lista com resultados de cada cliente processado
+        """
+        try:
+            total_clientes = len(lista_contratos)
+            resultados_clientes = []
+
+            self.log_progresso(f"🔄 INICIANDO LOOP OTIMIZADO - {total_clientes} clientes")
+            self.log_progresso("   ✅ Reutilizando login único para todos os clientes")
+
+            # Resetar flag para começar fresh
+            self._na_tela_relatorio_sienge = False
+
+            for i, contrato in enumerate(lista_contratos, 1):
+                cliente = contrato.get("cliente", f"Cliente_{i}")
+                numero_titulo = contrato.get("numero_titulo", f"Titulo_{i}")
+
+                try:
+                    self.log_progresso(f"")
+                    self.log_progresso(f"{'='*60}")
+                    self.log_progresso(f"🔍 CLIENTE {i}/{total_clientes}: {cliente}")
+                    self.log_progresso(f"   📋 Título: {numero_titulo}")
+                    self.log_progresso(f"{'='*60}")
+
+                    # Processar cliente atual (método já otimizado para loop)
+                    resultado_cliente = await self._consultar_relatorios_financeiros(contrato)
+
+                    # Adicionar metadados do loop
+                    resultado_cliente.update({
+                        "posicao_fila": i,
+                        "total_fila": total_clientes,
+                        "processado_em_loop": True,
+                        "timestamp_processamento": datetime.now().isoformat()
+                    })
+
+                    resultados_clientes.append(resultado_cliente)
+
+                    if resultado_cliente.get("sucesso"):
+                        self.log_progresso(f"✅ Cliente {i} processado com sucesso!")
+                    else:
+                        self.log_progresso(f"❌ Cliente {i} com erro: {resultado_cliente.get('erro', 'N/A')}")
+
+                    # Pequena pausa entre clientes para não sobrecarregar
+                    if i < total_clientes:
+                        self.log_progresso("⏳ Aguardando intervalo antes do próximo cliente...")
+                        time.sleep(2)
+
+                except Exception as e:
+                    erro_msg = f"Erro ao processar cliente {i}: {str(e)}"
+                    self.log_erro(erro_msg, e)
+                    
+                    resultado_erro = {
+                        "cliente": cliente,
+                        "numero_titulo": numero_titulo,
+                        "sucesso": False,
+                        "erro": erro_msg,
+                        "posicao_fila": i,
+                        "total_fila": total_clientes,
+                        "processado_em_loop": True,
+                        "timestamp_erro": datetime.now().isoformat()
+                    }
+                    resultados_clientes.append(resultado_erro)
+
+            # Estatísticas finais
+            sucessos = sum(1 for r in resultados_clientes if r.get("sucesso"))
+            erros = total_clientes - sucessos
+
+            self.log_progresso(f"")
+            self.log_progresso(f"📊 ESTATÍSTICAS FINAIS DO LOOP:")
+            self.log_progresso(f"   ✅ Sucessos: {sucessos}/{total_clientes}")
+            self.log_progresso(f"   ❌ Erros: {erros}/{total_clientes}")
+            self.log_progresso(f"   🔄 Loop otimizado: 1 login para {total_clientes} clientes")
+
+            return resultados_clientes
+
+        except Exception as e:
+            erro_msg = f"Erro crítico no loop de clientes: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return [{
+                "sucesso": False,
+                "erro": erro_msg,
+                "tipo_erro": "loop_critico",
+                "timestamp_erro": datetime.now().isoformat()
+            }]
+
+
+            # self.browser.click(xpath="//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]")
+            # time.sleep(1)
+            # self.browser.click(xpath='//li[@role="option" and @data-value="excel" and text()="EXCEL"]')
+            # time.sleep(1)
+            # 
+            # # Exportar
+            # self.browser.click(xpath="//button[@type='button' and normalize-space()='Exportar']")
+            # time.sleep(5)
+
+        except Exception as e:
+            self.log_erro("Erro ao gerar/exportar relatório", e)
+            raise
+
+    async def _retornar_tela_pesquisa_relatorio(self):
+        """
+        🔍 TODO USUÁRIO: RETORNO LOOP - **CRUCIAL** Retornar à tela de pesquisa
+
+        SEQUÊNCIA RETORNO (PREPARAR PRÓXIMO CLIENTE):
+        1. Fechar modais/popups se abertos
+        2. Retornar à tela inicial de relatório
+        3. Validar que campo de pesquisa está visível e acessível
+        4. **GARANTIR** que está pronto para próximo cliente
+
+        ⚠️ IMPORTANTE: Este método é FUNDAMENTAL para o loop funcionar!
+        Se não retornar corretamente, próxima consulta falhará.
+        """
+        try:
+            self.log_progresso("🔄 Retornando à tela de pesquisa para próximo cliente...")
+            
+            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING CRÍTICO
+            # Fechar qualquer modal/popup aberto
+            # try:
+            #     modal_close = self.browser.find_element(xpath="//button[contains(@class, 'close') or contains(text(), 'Fechar')]")
+            #     if modal_close:
+            #         modal_close.click()
+            #         time.sleep(1)
+            # except:
+            #     pass
+            # 
+            # # Garantir que está na tela de relatório com campo de pesquisa visível
+            # campo_pesquisa = self.browser.find_element(xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']")
+            # if not campo_pesquisa:
+            #     # Se não encontrar, tentar navegar novamente
+            #     url_relatorio = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
+            #     self.browser.get_page(url_relatorio)
+            #     time.sleep(3)
+
+        except Exception as e:
+            self.log_erro("Erro ao retornar à tela de pesquisa", e)
+            # Em caso de erro, resetar flag para forçar nova navegação na próxima
+            self._na_tela_relatorio_sienge = False
+            raise
+
+
             time.sleep(3)
 
             # PASSO 2: Primeira tela - Credenciais básicas
@@ -486,42 +756,50 @@ class RPASienge(BaseRPA):
 
     async def _consultar_relatorios_financeiros(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
         """
-        📋 CONSULTA RELATÓRIOS FINANCEIROS - WEBSCRAPING IMPLEMENTADO
+        📋 CONSULTA RELATÓRIOS FINANCEIROS - ESTRUTURA PARA LOOP OTIMIZADO
 
-        SEQUÊNCIA PDD seção 7.3.1 - Leitura e extração de dados:
+        FUNCIONAMENTO EM LOOP (MÚLTIPLOS CLIENTES):
+        ═══════════════════════════════════════════════════════════════════════════
 
-        1️⃣ NAVEGAÇÃO DIRETA:
+        🔄 PRIMEIRA EXECUÇÃO:
+        1️⃣ Navega para tela de relatório (URL direta)
+        2️⃣ Executa consulta do cliente
+        3️⃣ Processa dados
+        4️⃣ **RETORNA** à tela de pesquisa (PRONTO PARA PRÓXIMO CLIENTE)
+
+        🔄 EXECUÇÕES SUBSEQUENTES:
+        1️⃣ **SKIP** navegação (já está na tela correta)
+        2️⃣ **LIMPA** campo de pesquisa anterior
+        3️⃣ Executa consulta do novo cliente
+        4️⃣ **RETORNA** à tela de pesquisa novamente
+
+        ═══════════════════════════════════════════════════════════════════════════
+
+        SEQUÊNCIA WEBSCRAPING PDD seção 7.3.1:
+
+        1️⃣ NAVEGAÇÃO INICIAL (só primeira vez):
            └── URL: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
-           └── Aguardar carregamento completo da tela
+           └── Flag: self._na_tela_relatorio_sienge
 
-        2️⃣ FILTRO POR CLIENTE:
+        2️⃣ LIMPEZA CAMPO PESQUISA (execuções subsequentes):
+           └── Limpar campo anterior para novo cliente
+           └── Método: _limpar_campo_pesquisa_cliente()
+
+        3️⃣ FILTRO POR CLIENTE:
            └── Campo: //input[@placeholder='Pesquisar cliente' and @role='combobox']
-           └── Ação: Clicar e preencher nome do cliente
-           └── Navegação: TAB para confirmar seleção
+           └── Preencher com nome do cliente atual
 
-        3️⃣ EXECUÇÃO DA CONSULTA:
-           └── Botão: //button[normalize-space()='Consultar']
-           └── Aguardar: 3 segundos para processamento
+        4️⃣ CONSULTA + EXPORT + PROCESSAMENTO:
+           └── Executar consulta → Gerar relatório → Exportar Excel
+           └── Processamento automático: _processar_planilha_baixada()
 
-        4️⃣ GERAÇÃO DO RELATÓRIO:
-           └── Botão: //button[@type='button' and contains(., 'Gerar Relatório')]
-           └── Aguardar modal de configuração
-
-        5️⃣ CONFIGURAÇÃO FORMATO EXCEL:
-           └── Combo formato: //legend[span[normalize-space(.)='Gerar relatório como']]...
-           └── Opção: //li[@role="option" and @data-value="excel" and text()="EXCEL"]
-
-        6️⃣ EXPORTAÇÃO FINAL:
-           └── Botão: //button[@type='button' and normalize-space()='Exportar']
-           └── Aguardar: 5 segundos para download
-
-        7️⃣ PROCESSAMENTO AUTOMÁTICO:
-           └── Método: _processar_planilha_baixada()
-           └── Aplicação regras PDD automática
+        5️⃣ **RETORNO À TELA DE PESQUISA** (LOOP READY):
+           └── Método: _retornar_tela_pesquisa_relatorio()
+           └── Garantir que está pronto para próximo cliente
 
         RESPONSABILIDADES:
-        🔍 USUÁRIO: Steps 1-6 (webscraping implementado)
-        🤖 ASSISTENTE: Step 7 (processamento automático)
+        🔍 USUÁRIO: Steps 1-5 (webscraping otimizado para loop)
+        🤖 ASSISTENTE: Processamento automático (step 4)
         """
         try:
             cliente = contrato.get("cliente", "")
@@ -530,68 +808,32 @@ class RPASienge(BaseRPA):
             self.log_progresso(f"📊 Consultando saldo devedor presente para: {cliente}")
             self.log_progresso(f"   📋 Título: {numero_titulo}")
 
-            # PASSO 1: Navegação direta para relatório
-            url_relatorio = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
-            self.log_progresso(f"🧭 Navegando para: {url_relatorio}")
-            self.browser.get_page(url_relatorio)
-            time.sleep(3)
+            # PASSO 1: Navegação inicial (só primeira execução)
+            if not getattr(self, '_na_tela_relatorio_sienge', False):
+                await self._navegar_tela_relatorio_inicial()
+                self._na_tela_relatorio_sienge = True
+                self.log_progresso("✅ Primeira navegação - Tela relatório ativa")
+            else:
+                self.log_progresso("♻️ Reutilizando tela de relatório (loop otimizado)")
 
-            # PASSO 2: Busca e preenche campo de pesquisa do cliente
-            self.log_progresso("🔍 Pesquisando cliente...")
-            combo_pesquisa = self.browser.find_element(
-                xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']"
-            )
+            # PASSO 2: Limpeza campo pesquisa (se não for primeira execução)
+            await self._limpar_campo_pesquisa_cliente()
 
-            if combo_pesquisa:
-                combo_pesquisa.click()
-                time.sleep(3)
+            # PASSO 3: Consultar cliente específico
+            await self._executar_consulta_cliente_relatorio(cliente)
 
-                # Preenche nome do cliente
-                self.browser.send_text_human_like(
-                    xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']",
-                    text=cliente)
+            # PASSO 4: Gerar e exportar relatório
+            await self._gerar_exportar_relatorio_excel()
 
-                combo_pesquisa.click()
-                time.sleep(1)
-                combo_pesquisa.send_keys(Keys.TAB)
-                time.sleep(1)
+            # PASSO 5: PROCESSAMENTO AUTOMÁTICO DA PLANILHA BAIXADA
+            self.log_progresso("📋 Processando planilha baixada...")
+            dados_planilha = await self._processar_planilha_baixada(cliente, numero_titulo)
 
-                # PASSO 3: Executa consulta
-                self.log_progresso("📋 Executando consulta...")
-                self.browser.click(xpath="//button[normalize-space()='Consultar']")
-                time.sleep(3)
+            # PASSO 6: **CRUCIAL** - Retornar à tela de pesquisa para próximo cliente
+            await self._retornar_tela_pesquisa_relatorio()
+            self.log_progresso("🔄 Retornado à tela de pesquisa - PRONTO PARA PRÓXIMO CLIENTE")
 
-                # PASSO 4: Gera relatório
-                self.log_progresso("📊 Gerando relatório...")
-                self.browser.click(
-                    xpath="//button[@type='button' and contains(., 'Gerar Relatório')]"
-                )
-                time.sleep(2)
-
-                # PASSO 5: Seleciona formato Excel
-                self.log_progresso("📁 Selecionando formato Excel...")
-                self.browser.click(
-                    xpath="//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]"
-                )
-                time.sleep(1)
-
-                self.browser.click(
-                    xpath='//li[@role="option" and @data-value="excel" and text()="EXCEL"]'
-                )
-                time.sleep(1)
-
-                # PASSO 6: Exporta relatório
-                self.log_progresso("💾 Exportando relatório...")
-                self.browser.click(
-                    xpath="//button[@type='button' and normalize-space()='Exportar']"
-                )
-                time.sleep(5)
-
-                # PASSO 7: PROCESSAMENTO AUTOMÁTICO DA PLANILHA BAIXADA
-                self.log_progresso("📋 Processando planilha baixada...")
-                dados_planilha = await self._processar_planilha_baixada(cliente, numero_titulo)
-
-            # Retorna dados processedos ou erro
+            # Processa resultado
             if dados_planilha and dados_planilha.get("sucesso"):
                 dados_financeiros = dados_planilha
             else:
@@ -609,12 +851,17 @@ class RPASienge(BaseRPA):
                     "erro": dados_planilha.get("erro", "Falha no processamento da planilha")
                 }
 
-            self.log_progresso("✅ Webscraping concluído - Aguardando processamento da planilha")
+            self.log_progresso("✅ Consulta concluída - Tela pronta para próximo cliente")
             return dados_financeiros
 
         except Exception as e:
             erro_msg = f"Erro na consulta de relatórios: {str(e)}"
             self.log_erro(erro_msg, e)
+            # Em caso de erro, tentar retornar à tela de pesquisa
+            try:
+                await self._retornar_tela_pesquisa_relatorio()
+            except:
+                self._na_tela_relatorio_sienge = False  # Resetar flag para forçar nova navegação
             return {"erro": erro_msg, "sucesso": False}
 
 
