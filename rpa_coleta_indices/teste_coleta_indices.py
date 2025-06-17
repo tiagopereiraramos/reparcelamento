@@ -37,10 +37,11 @@ async def teste_completo():
 
     # Configurações de teste
     # IDs das planilhas para teste (configurar com suas planilhas)
-    PLANILHA_TESTE_ID = os.getenv("PLANILHA_INDICES_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
-    CREDENCIAIS_GOOGLE = os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
+    PLANILHA_CALCULO_ID = os.getenv("PLANILHA_CALCULO_ID", "")
+    CREDENCIAIS_GOOGLE = os.getenv("GOOGLE_CREDENTIALS_PATH",
+                                   "./gspread-credentials.json")
 
-    print(f"📊 Planilha de Teste: {PLANILHA_TESTE_ID}")
+    print(f"📊 Planilha de Teste: {PLANILHA_CALCULO_ID}")
     print(f"🔐 Credenciais: {CREDENCIAIS_GOOGLE}")
     print()
 
@@ -48,9 +49,8 @@ async def teste_completo():
         # Executa RPA usando função auxiliar
         print("🚀 Iniciando execução do RPA...")
         resultado = await executar_coleta_indices(
-            planilha_id=PLANILHA_TESTE_ID,
-            credenciais_google=CREDENCIAIS_GOOGLE
-        )
+            planilha_id=PLANILHA_CALCULO_ID,
+            credenciais_google=CREDENCIAIS_GOOGLE)
 
         # Mostra resultado
         print("\n📋 RESULTADO DA EXECUÇÃO:")
@@ -85,7 +85,8 @@ async def teste_completo():
 
         print("\n🔗 LINKS ÚTEIS:")
         print(
-            f"   Planilha: https://docs.google.com/spreadsheets/d/{PLANILHA_TESTE_ID}")
+            f"   Planilha: https://docs.google.com/spreadsheets/d/{PLANILHA_TESTE_ID}"
+        )
 
         return resultado.sucesso
 
@@ -116,7 +117,9 @@ async def teste_conexao_google_sheets():
             print("✅ Conexão Google Sheets estabelecida")
 
             # Testa acesso à planilha
-            PLANILHA_ID = os.getenv("PLANILHA_INDICES_ID", "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
+            PLANILHA_ID = os.getenv(
+                "PLANILHA_INDICES_ID",
+                "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
             planilha = rpa.cliente_sheets.open_by_key(PLANILHA_ID)
             print(f"✅ Planilha acessada: {planilha.title}")
 
@@ -270,6 +273,7 @@ async def main():
             return sucesso
 
         return True
+
 
 if __name__ == "__main__":
     # Configura event loop para Windows se necessário
