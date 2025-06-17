@@ -83,26 +83,22 @@ class DataManagerUnificado:
                     await mongodb_manager.desconectar()
 
                 self.mongodb_ativo = await mongodb_manager.conectar()
-                logger.info(f"🔍 Resultado conexão MongoDB: {self.mongodb_ativo}")
-                logger.info(f"🔍 mongodb_manager.conectado: {mongodb_manager.conectado}")
 
                 if self.mongodb_ativo and mongodb_manager.conectado:
                     logger.info("✅ Sistema Híbrido: MongoDB + JSON ativo")
 
                     # Teste prático de inserção
                     try:
-                        def _test_insert():
+                        async def _test_insert():
                             # Teste direto no MongoDB
                             test_collection = mongodb_manager.database.teste_conexao
                             test_doc = {"teste": True, "timestamp": datetime.now()}
-                            result = test_collection.insert_one(test_doc)
+                            result = await test_collection.insert_one(test_doc)
                             # Remove documento de teste
-                            test_collection.delete_one({"_id": result.inserted_id})
+                            await test_collection.delete_one({"_id": result.inserted_id})
                             return str(result.inserted_id)
 
-                        test_id = await asyncio.get_event_loop().run_in_executor(
-                            None, _test_insert
-                        )
+                        test_id = await _test_insert()
 
                         logger.info(f"✅ Teste inserção MongoDB: {test_id}")
 
