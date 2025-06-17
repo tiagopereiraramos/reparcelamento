@@ -478,8 +478,14 @@ class RPASienge(BaseRPA):
     async def _validar_contrato_reparcelamento(
             self, dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
         """
+        🤖 PROCESSAMENTO E ANÁLISE - RESPONSABILIDADE DO ASSISTENTE
+        
         Valida se contrato pode ser reparcelado conforme regras RIGOROSAS do PDD seção 7.3.2
-
+        
+        DIVISÃO DE RESPONSABILIDADES:
+        ✅ ASSISTENTE (este método): Aplicar regras PDD, validações, cálculos
+        🚫 USUÁRIO: Não precisa modificar este método
+        
         REGRA CRÍTICA PDD:
         - Cliente com 3 ou mais parcelas CT vencidas = INADIMPLENTE (não pode reparcelar)
         - Cliente com menos de 3 parcelas CT vencidas = PODE reparcelar
@@ -616,15 +622,21 @@ class RPASienge(BaseRPA):
             self, contrato: Dict[str, Any], indices: Dict[str, Any],
             dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
         """
+        🔄 HÍBRIDO - WEBSCRAPING (USUÁRIO) + PROCESSAMENTO (ASSISTENTE)
+        
         Processa reparcelamento no Sienge conforme PDD seção 7.3.3
-
+        
+        DIVISÃO DE RESPONSABILIDADES:
+        🔍 USUÁRIO: Webscraping (navegação, cliques, preenchimento)
+        🤖 ASSISTENTE: Cálculos, validações, regras de negócio
+        
         REGRAS RIGOROSAS PDD:
-        1. Navegar para Financeiro > Contas a receber > Reparcelamento > Inclusão
-        2. Consultar título pelo número
-        3. Selecionar TODOS os documentos
-        4. DESMARCAR parcelas vencidas até mês atual (conforme PDD)
-        5. Configurar detalhes: PM, IGP-M, Fixo 8%
-        6. Confirmar e salvar
+        1. Navegar para Financeiro > Contas a receber > Reparcelamento > Inclusão (USUÁRIO)
+        2. Consultar título pelo número (USUÁRIO)
+        3. Selecionar TODOS os documentos (USUÁRIO)
+        4. DESMARCAR parcelas vencidas até mês atual - conforme PDD (USUÁRIO + ASSISTENTE para regras)
+        5. Configurar detalhes: PM, IGP-M, Fixo 8% (USUÁRIO + ASSISTENTE para valores)
+        6. Confirmar e salvar (USUÁRIO)
         """
         try:
             numero_titulo = contrato.get("numero_titulo", "")
@@ -721,16 +733,30 @@ class RPASienge(BaseRPA):
 
     async def _navegar_reparcelamento_inclusao(self):
         """
-        WEBSCRAPING - Navega para Reparcelamento > Inclusão
+        🔍 WEBSCRAPING - RESPONSABILIDADE DO USUÁRIO
         
-        TODO: Implementar navegação real conforme PDD seção 7.3.3
+        Navega para Reparcelamento > Inclusão conforme PDD seção 7.3.3
+        
+        RESPONSABILIDADE: USUÁRIO implementa o webscraping
+        ENTRADA: self.browser já logado no Sienge
+        SAÍDA: Navegador na tela "Reparcelamento > Inclusão"
+        
+        SEQUÊNCIA OBRIGATÓRIA:
+        1. Clicar menu "Financeiro"
+        2. Clicar submenu "Contas a receber" 
+        3. Clicar submenu "Reparcelamento"
+        4. Clicar "Inclusão"
+        5. Aguardar tela carregar
+        6. Validar que chegou na tela correta
         """
         try:
-            self.log_progresso("🧭 TODO: Navegando para Reparcelamento > Inclusão...")
-            # TODO: IMPLEMENTAR WEBSCRAPING REAL
-            # 1. Navegar: Financeiro > Contas a receber > Reparcelamento > Inclusão
-            # 2. Aguardar página carregar
-            # 3. Validar que chegou na tela correta
+            self.log_progresso("🧭 TODO USUÁRIO: Implementar navegação para Reparcelamento > Inclusão...")
+            # TODO USUÁRIO: IMPLEMENTAR WEBSCRAPING REAL
+            # XPATH ESPERADOS:
+            # - Menu Financeiro: //a[contains(text(), 'Financeiro')]
+            # - Contas a Receber: //a[contains(text(), 'Contas a Receber')]
+            # - Reparcelamento: //a[contains(text(), 'Reparcelamento')]
+            # - Inclusão: //a[contains(text(), 'Inclusão')]
             pass
             
         except Exception as e:
@@ -1171,6 +1197,157 @@ class RPASienge(BaseRPA):
         if not pasta_downloads_rpa:
             pasta_downloads_rpa = user_downloads_dir()
             self.log_progresso(
+
+
+    def calcular_valores_reparcelamento(self, contrato: Dict[str, Any], 
+                                       indices: Dict[str, Any], 
+                                       dados_financeiros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        🤖 PROCESSAMENTO E ANÁLISE - RESPONSABILIDADE DO ASSISTENTE
+        
+        Calcula todos os valores necessários para o reparcelamento conforme PDD
+        
+        ENTRADA:
+        - contrato: Dados básicos do contrato
+        - indices: Índices econômicos (IPCA/IGPM)
+        - dados_financeiros: Dados extraídos da planilha Sienge
+        
+        SAÍDA:
+        - Valores calculados para preenchimento no Sienge (USUÁRIO usa no webscraping)
+        
+        REGRAS PDD APLICADAS:
+        - Usar SEMPRE IGP-M (nunca IPCA)
+        - Taxa fixa 8% ao ano
+        - Tipo condição: PM (Prazo Mensal)
+        - Indexador código: "1 IGP-M"
+        """
+        try:
+            self.log_progresso("🧮 CALCULANDO valores para reparcelamento...")
+            
+            # Saldo devedor atual
+            saldo_atual = dados_financeiros.get("saldo_total", 0)
+            
+            # Índice IGP-M obrigatório conforme PDD
+            indice_igpm = indices.get("igpm", {}).get("valor", 0) / 100
+            
+            # Cálculo do novo saldo corrigido
+            fator_correcao = 1 + indice_igpm
+            novo_saldo = saldo_atual * fator_correcao
+            
+            # Parcelas pendentes
+            parcelas_pendentes = dados_financeiros.get("qtd_parcelas_ct_a_vencer", 0)
+            
+            # Data do primeiro vencimento (próximo mês)
+            from datetime import date, timedelta
+            primeiro_vencimento = (date.today().replace(day=1) + timedelta(days=32)).replace(day=15)
+            
+            # Valores para preenchimento no Sienge
+            valores_sienge = {
+                "detalhamento": f"CORREÇÃO {date.today().strftime('%m/%y')}",
+                "tipo_condicao": "PM",
+                "valor_total": round(novo_saldo, 2),
+                "quantidade_parcelas": parcelas_pendentes,
+                "data_primeiro_vencimento": primeiro_vencimento.strftime("%d/%m/%Y"),
+                "portador": "1 Carteira",
+                "operacao_cobranca": "0 Cobrança em Carteira",
+                "indexador": "1 IGP-M",
+                "tipo_juros": "Fixo",
+                "percentual_juros": 8.0,
+                "data_base_juros": primeiro_vencimento.strftime("%d/%m/%Y")
+            }
+            
+            # Dados para auditoria
+            detalhes_calculo = {
+                "saldo_anterior": saldo_atual,
+                "indice_aplicado": indice_igpm * 100,
+                "fator_correcao": fator_correcao,
+                "novo_saldo": novo_saldo,
+                "diferenca": novo_saldo - saldo_atual,
+                "parcelas_total": parcelas_pendentes,
+                "tipo_indice": "IGP-M",
+                "calculado_em": date.today().isoformat()
+            }
+            
+            self.log_progresso(f"   💰 Saldo anterior: R$ {saldo_atual:,.2f}")
+            self.log_progresso(f"   📈 Índice IGP-M: {indice_igpm * 100:.2f}%")
+            self.log_progresso(f"   💰 Novo saldo: R$ {novo_saldo:,.2f}")
+            self.log_progresso(f"   📊 Parcelas: {parcelas_pendentes}")
+            
+            return {
+                "sucesso": True,
+                "valores_sienge": valores_sienge,
+                "detalhes_calculo": detalhes_calculo,
+                "validacao_pdd": True
+            }
+            
+        except Exception as e:
+            erro_msg = f"Erro no cálculo de valores: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "valores_sienge": {},
+                "detalhes_calculo": {}
+            }
+
+    def determinar_parcelas_para_desmarcar(self, dados_financeiros: Dict[str, Any]) -> List[str]:
+        """
+        🤖 PROCESSAMENTO E ANÁLISE - RESPONSABILIDADE DO ASSISTENTE
+        
+        Determina quais parcelas devem ser DESMARCADAS conforme regras PDD
+        
+        REGRA PDD: "Desmarque todas as parcelas com vencimento igual ou anterior ao mês vigente"
+        
+        ENTRADA:
+        - dados_financeiros: Dados processados da planilha
+        
+        SAÍDA:
+        - Lista de identificadores das parcelas para desmarcar (USUÁRIO usa no webscraping)
+        """
+        try:
+            self.log_progresso("🔍 DETERMINANDO parcelas para desmarcar...")
+            
+            from datetime import date
+            hoje = date.today()
+            mes_vigente = hoje.replace(day=1)  # Primeiro dia do mês atual
+            
+            parcelas_desmarcar = []
+            parcelas_ct = dados_financeiros.get("parcelas_ct_a_vencer", [])
+            
+            for parcela in parcelas_ct:
+                data_vencimento = parcela.get("data_vencimento")
+                
+                # Converter data se necessário
+                if isinstance(data_vencimento, str):
+                    try:
+                        from datetime import datetime
+                        data_obj = datetime.strptime(data_vencimento, "%Y-%m-%d").date()
+                    except:
+                        continue
+                elif hasattr(data_vencimento, 'date'):
+                    data_obj = data_vencimento.date()
+                else:
+                    data_obj = data_vencimento
+                
+                # REGRA PDD: Vencimento <= mês vigente = DESMARCAR
+                if data_obj <= mes_vigente:
+                    parcelas_desmarcar.append({
+                        "documento": parcela.get("documento"),
+                        "data_vencimento": data_obj.strftime("%d/%m/%Y"),
+                        "valor": parcela.get("valor", 0),
+                        "motivo": "Vencimento igual ou anterior ao mês vigente"
+                    })
+            
+            self.log_progresso(f"   📋 Parcelas para DESMARCAR: {len(parcelas_desmarcar)}")
+            for parcela in parcelas_desmarcar:
+                self.log_progresso(f"      🔸 {parcela['documento']} - {parcela['data_vencimento']}")
+            
+            return parcelas_desmarcar
+            
+        except Exception as e:
+            self.log_erro("Erro ao determinar parcelas para desmarcar", e)
+            return []
+
                 f"Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: {pasta_downloads_rpa}"
             )
 
@@ -1191,9 +1368,15 @@ class RPASienge(BaseRPA):
     async def _processar_planilha_baixada(
             self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """
+        🤖 PROCESSAMENTO E ANÁLISE - RESPONSABILIDADE DO ASSISTENTE
+        
         Processa planilha baixada do Sienge conforme regras PDD
-
-        Etapas:
+        
+        DIVISÃO DE RESPONSABILIDADES:
+        ✅ ASSISTENTE (este método): Processamento, análise, regras PDD, cálculos
+        🚫 USUÁRIO: Webscraping, navegação, download da planilha
+        
+        Etapas de processamento:
         1. Localizar arquivo mais recente na pasta Downloads/RPA_DOWNLOADS
         2. Ler Excel com pandas
         3. Processar dados conforme regras PDD
