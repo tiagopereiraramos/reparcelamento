@@ -542,6 +542,44 @@ class BaseRPA(ABC):
             return self.browser.on_iframe(xpath)
         return None
 
+    def on_window(self, has_element: str, retry: int = 10):
+        """Context manager para janela com elemento específico (delegate para browser)"""
+        if self.browser:
+            return self.browser.on_window(has_element, retry)
+        return None
+
+    def select_option(self,
+                      xpath: str,
+                      option: str,
+                      timeout: int = 10,
+                      verify: bool = False) -> None:
+        """Seleciona opção em select (delegate para browser)"""
+        if self.browser:
+            return self.browser.select_option(xpath, option, timeout, verify)
+
+    def get_texts_from_select(self, xpath: str) -> List[str]:
+        """Obtém textos de todas as opções de um select (delegate para browser)"""
+        if self.browser:
+            return self.browser.get_texts_from_select(xpath)
+        return []
+
+    def select_option_by_similarity(self,
+                                   xpath: str,
+                                   option: str,
+                                   similarity_threshold: float = 0.6,
+                                   timeout: int = 10,
+                                   verify: bool = False) -> None:
+        """Seleciona opção por similaridade (delegate para browser)"""
+        if self.browser:
+            return self.browser.select_option_by_similarity(
+                xpath, option, similarity_threshold, timeout, verify
+            )
+
+    def close(self):
+        """Fecha o browser (delegate para browser)"""
+        if self.browser:
+            return self.browser.close()
+
     async def __aenter__(self):
         """Context manager entry"""
         # Garantir que data_manager esteja inicializado
