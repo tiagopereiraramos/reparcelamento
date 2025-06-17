@@ -228,13 +228,17 @@ class RPASienge(BaseRPA):
             )
 
             if combo_pesquisa:
+                # Limpar campo antes de preencher (importante para loop)
                 combo_pesquisa.click()
-                time.sleep(3)
+                time.sleep(1)
+                combo_pesquisa.clear()
+                time.sleep(1)
 
                 # Preenche nome do cliente
                 self.send_text(
                     xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']",
                     text=cliente)
+                time.sleep(2)
 
                 combo_pesquisa.click()
                 time.sleep(1)
@@ -269,6 +273,11 @@ class RPASienge(BaseRPA):
                 # PROCESSAMENTO DA PLANILHA BAIXADA
                 self.log_progresso("Processando planilha baixada...")
                 dados_planilha = await self._processar_planilha_baixada(cliente, numero_titulo)
+
+                # NAVEGAR DE VOLTA À TELA DE CONSULTA PARA PRÓXIMO CONTRATO
+                self.log_progresso("Voltando à tela de consulta para próximo contrato...")
+                self.get_page("https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor")
+                time.sleep(2)
 
             # DADOS PROCESSADOS DA PLANILHA REAL
             if dados_planilha and dados_planilha.get("sucesso"):

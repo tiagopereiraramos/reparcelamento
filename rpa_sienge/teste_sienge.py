@@ -345,50 +345,126 @@ async def teste_completo():
 
 async def teste_etapa_consulta():
     """
-    Testa apenas a etapa de consulta (ETAPA 1)
+    Testa apenas a etapa de consulta (ETAPA 1) usando FILA REAL em LOOP
     """
-    print("🧪 TESTE ETAPA 1 - CONSULTA DE RELATÓRIOS")
-    print("=" * 50)
+    print("🧪 TESTE ETAPA 1 - CONSULTA DE RELATÓRIOS (FILA REAL)")
+    print("=" * 60)
 
-    contrato_teste = {
-        "numero_titulo": "TEST123456789",
-        "cliente": "CLIENTE TESTE LTDA",
-        "empreendimento": "EMPREENDIMENTO TESTE",
-        "cnpj_unidade": "12.345.678/0001-90",
-        "indexador": "IPCA",
-        "ultimo_reajuste": "01/01/2023"
-    }
+    # CARREGAR FILA REAL DE CONTRATOS
+    print("📋 Carregando fila real de contratos...")
+    contratos_fila = await carregar_fila_contratos()
+
+    if not contratos_fila:
+        print("❌ Nenhum contrato encontrado na fila real.")
+        print("💡 Execute primeiro: python rpa_analise_planilhas/teste_analise_planilhas.py")
+        return False
+
+    print(f"✅ Encontrados {len(contratos_fila)} contratos na fila real")
+    
+    # Mostra primeiros contratos
+    print("📋 Contratos que serão processados:")
+    for i, contrato in enumerate(contratos_fila[:5]):  # Mostra primeiros 5
+        titulo = contrato.get("numero_titulo", "N/A")
+        cliente = contrato.get("cliente", "N/A")
+        status = contrato.get("status_processamento", "N/A")
+        print(f"   {i+1}. {titulo} - {cliente} [{status}]")
+    if len(contratos_fila) > 5:
+        print(f"   ... e mais {len(contratos_fila)-5} contratos")
 
     indices_economicos = await carregar_indices_economicos()
     credenciais_sienge = {
-        "url": os.getenv("SIENGE_URL", "https://sienge-teste.com"),
+        "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/"),
         "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
         "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
     }
 
     try:
-        print("🔍 Executando APENAS consulta de relatórios...")
-        resultado = await executar_processamento_sienge(
-            contrato=contrato_teste,
-            indices_economicos=indices_economicos,
-            credenciais_sienge=credenciais_sienge,
-            etapa="consulta"
-        )
-
-        print(f"\n📋 RESULTADO ETAPA 1:")
-        print(f"✅ Sucesso: {resultado.sucesso}")
-        print(f"📄 Mensagem: {resultado.mensagem}")
+        print(f"\n🔄 Processando {len(contratos_fila)} contratos em LOOP com login único...")
         
-        if resultado.dados:
-            dados_financeiros = resultado.dados.get("dados_financeiros", {})
-            print(f"💰 Saldo total: R$ {dados_financeiros.get('saldo_total', 0):,.2f}")
-            print(f"📊 Parcelas CT: {dados_financeiros.get('qtd_parcelas_ct_a_vencer', 0)}")
-            print(f"🚨 CT vencidas: {dados_financeiros.get('qtd_ct_vencidas', 0)}")
+        # CRIAR RPA UMA VEZ PARA REUSAR LOGIN
+        rpa = RPASienge()
+        await rpa.inicializar()
+        
+        # Configura credenciais e faz login UMA VEZ
+        rpa._configurar_credenciais(credenciais_sienge)
+        await rpa._fazer_login_sienge()
+        print("✅ Login único realizado - processando fila...")
 
-        return resultado.sucesso
+        sucessos = 0
+        falhas = 0
+
+        # LOOP PARA PROCESSAR CADA CONTRATO DA FILA
+        for i, contrato_fila in enumerate(contratos_fila):
+            print(f"\n📄 [{i+1}/{len(contratos_fila)}] Processando: {contrato_fila.get('numero_titulo', 'N/A')}")
+            print(f"   👤 Cliente: {contrato_fila.get('cliente', 'N/A')}")
+            
+            try:
+                # CONSULTA RELATÓRIOS PARA ESTE CONTRATO
+                dados_financeiros = await rpa._consultar_relatorios_financeiros(contrato_fila)
+                
+                if dados_financeiros.get("sucesso"):
+                    sucessos += 1
+                    print(f"   ✅ Sucesso - Planilha processada")
+                    
+                    # Mostra resumo dos dados
+                    dados_validacao = dados_financeiros.get("dados_validacao", {})
+                    if dados_validacao:
+                        print(f"   💰 Saldo total: R$ {dados_validacao.get('saldo_total', 0):,.2f}")
+                        print(f"   📊 Parcelas CT: {dados_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
+                        print(f"   🚨 CT vencidas: {dados_validacao.get('qtd_ct_vencidas', 0)}")
+                        print(f"   🎯 Pode reparcelar: {dados_validacao.get('pode_reparcelar', False)}")
+                    
+                    # Atualizar status como processado
+                    await atualizar_status_contrato(
+                        contrato_fila.get("numero_titulo"),
+                        "consulta_realizada",
+                        None
+                    )
+                else:
+                    falhas += 1
+                    erro = dados_financeiros.get("erro", "Erro desconhecido")
+                    print(f"   ❌ Falha: {erro}")
+                    
+                    # Atualizar status como erro
+                    await atualizar_status_contrato(
+                        contrato_fila.get("numero_titulo"),
+                        "erro_consulta",
+                        erro
+                    )
+
+                # Intervalo entre contratos para não sobrecarregar o sistema
+                if i < len(contratos_fila) - 1:
+                    print("   ⏳ Aguardando 3 segundos...")
+                    await asyncio.sleep(3)
+
+            except Exception as e:
+                falhas += 1
+                erro_msg = str(e)
+                print(f"   ❌ Erro inesperado: {erro_msg}")
+                
+                # Atualizar status como erro
+                await atualizar_status_contrato(
+                    contrato_fila.get("numero_titulo"),
+                    "erro_execucao",
+                    erro_msg
+                )
+
+        # Finalizar RPA
+        await rpa.finalizar()
+
+        # RESUMO FINAL
+        print(f"\n📈 RESUMO DO PROCESSAMENTO:")
+        print(f"   ✅ Sucessos: {sucessos}")
+        print(f"   ❌ Falhas: {falhas}")
+        print(f"   📋 Total processado: {len(contratos_fila)}")
+        print(f"   🎯 Taxa de sucesso: {(sucessos/len(contratos_fila)*100):.1f}%")
+
+        return sucessos > 0
 
     except Exception as e:
-        print(f"❌ Erro: {str(e)}")
+        print(f"❌ Erro geral: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
         return False
 
 async def teste_etapa_reparcelamento():
