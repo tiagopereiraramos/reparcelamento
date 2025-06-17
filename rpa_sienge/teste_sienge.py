@@ -54,69 +54,81 @@ async def executar_processamento_sienge(contrato: Dict[str, Any],
 
 async def carregar_fila_contratos() -> List[Dict[str, Any]]:
     """
-    Carrega a fila de contratos da análise de planilhas
-    Tenta MongoDB primeiro, depois fallback para JSON
+    Carrega a fila de contratos usando o data_manager unificado
+    SEMPRE tenta MongoDB primeiro, depois fallback para JSON
     """
     try:
-        # Tentar MongoDB primeiro
-        try:
-            from core.mongodb_manager import mongodb_manager
-            conectado = await mongodb_manager.conectar()
-            if conectado:
-                fila_doc = await mongodb_manager.database.fila_processamento_sienge.find_one({})
-                if fila_doc and fila_doc.get("contratos"):
-                    print("📊 Fila carregada do MongoDB")
-                    return fila_doc.get("contratos", [])
-                else:
-                    print("⚠️ Fila vazia no MongoDB")
-        except Exception as e:
-            print(f"⚠️ MongoDB indisponível: {str(e)}")
-
-        # Fallback para arquivo JSON
-        arquivo_fila = os.path.join("dados_processamento",
-                                    "fila_contratos_sienge.json")
-
-        if not os.path.exists(arquivo_fila):
-            print(
-                "⚠️ Arquivo de fila não encontrado. Execute primeiro o RPA de Análise de Planilhas."
-            )
+        # Inicializa o data_manager (garante conexão MongoDB se disponível)
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+        
+        print("🔍 Carregando fila de contratos...")
+        print(f"   MongoDB ativo: {data_manager.mongodb_ativo}")
+        
+        # Usa o método unificado do data_manager
+        fila_dados = await data_manager.obter_fila_sienge()
+        
+        if fila_dados and fila_dados.get("contratos"):
+            contratos = fila_dados.get("contratos", [])
+            total = len(contratos)
+            
+            if data_manager.mongodb_ativo:
+                print(f"📊 Fila carregada do MongoDB: {total} contratos")
+            else:
+                print(f"📄 Fila carregada do JSON: {total} contratos")
+                
+            # Debug: mostra alguns contratos
+            if total > 0:
+                print("📋 Primeiros contratos na fila:")
+                for i, contrato in enumerate(contratos[:3]):
+                    titulo = contrato.get("numero_titulo", "N/A")
+                    cliente = contrato.get("cliente", "N/A")
+                    status = contrato.get("status_processamento", "N/A")
+                    print(f"   {i+1}. {titulo} - {cliente} [{status}]")
+                if total > 3:
+                    print(f"   ... e mais {total-3} contratos")
+            
+            return contratos
+        else:
+            print("⚠️ Fila vazia ou não encontrada")
+            print("💡 Execute primeiro: python rpa_analise_planilhas/teste_analise_planilhas.py")
             return []
-
-        with open(arquivo_fila, 'r', encoding='utf-8') as f:
-            dados_fila = json.load(f)
-
-        contratos = dados_fila.get("contratos", [])
-        print(f"📄 Fila carregada do JSON: {len(contratos)} contratos")
-        return contratos
 
     except Exception as e:
         print(f"❌ Erro ao carregar fila: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
         return []
 
 
 async def carregar_indices_economicos() -> Dict[str, Any]:
     """
-    Carrega os índices econômicos mais recentes
+    Carrega os índices econômicos mais recentes usando data_manager
     """
     try:
-        # Tentar MongoDB primeiro
-        try:
-            from core.mongodb_manager import mongodb_manager
-            conectado = await mongodb_manager.conectar()
-            if conectado:
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+        
+        print("📈 Carregando índices econômicos...")
+        
+        # Tenta carregar do MongoDB se disponível
+        if data_manager.mongodb_ativo:
+            try:
+                from core.mongodb_manager import mongodb_manager
                 indices_doc = await mongodb_manager.database.indices_economicos.find_one(
-                    {}, sort=[("timestamp", -1)]  # Mais recente
+                    {}, sort=[("timestamp_coleta", -1)]  # Mais recente
                 )
-                if indices_doc:
+                if indices_doc and indices_doc.get("indices"):
                     print("📊 Índices carregados do MongoDB")
+                    indices_data = indices_doc.get("indices", {})
                     return {
-                        "ipca": indices_doc.get("ipca", {}),
-                        "igpm": indices_doc.get("igpm", {})
+                        "ipca": indices_data.get("ipca", {"valor": 4.62, "tipo": "IPCA", "periodo": "Dezembro/2024"}),
+                        "igpm": indices_data.get("igpm", {"valor": 3.89, "tipo": "IGPM", "periodo": "Dezembro/2024"})
                     }
-        except Exception as e:
-            print(f"⚠️ MongoDB indisponível para índices: {str(e)}")
+            except Exception as e:
+                print(f"⚠️ Erro ao acessar MongoDB para índices: {str(e)}")
 
-        # Fallback para valores simulados
+        # Fallback para valores simulados  
         print("📊 Usando índices simulados")
         return {
             "ipca": {
@@ -214,49 +226,66 @@ async def atualizar_status_contrato(numero_titulo: str,
                                     status: str,
                                     erro: str = None):
     """
-    Atualiza o status de processamento de um contrato
+    Atualiza o status de processamento de um contrato usando data_manager
     """
     try:
-        # Tentar MongoDB primeiro
-        try:
-            from core.mongodb_manager import mongodb_manager
-            conectado = await mongodb_manager.conectar()
-            if conectado:
-                await mongodb_manager.database.fila_processamento_sienge.update_one(
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+        
+        print(f"📝 Atualizando status {numero_titulo}: {status}")
+        
+        # Tentar MongoDB primeiro se disponível
+        if data_manager.mongodb_ativo:
+            try:
+                from core.mongodb_manager import mongodb_manager
+                result = await mongodb_manager.database.fila_processamento_sienge.update_one(
                     {"contratos.numero_titulo": numero_titulo}, {
                         "$set": {
                             "contratos.$.status_processamento": status,
-                            "contratos.$.processado_em":
-                            datetime.now().isoformat(),
+                            "contratos.$.processado_em": datetime.now().isoformat(),
                             "contratos.$.erro_processamento": erro
                         }
                     })
-                return
-        except Exception:
-            pass
+                
+                if result.modified_count > 0:
+                    print(f"✅ Status atualizado no MongoDB: {numero_titulo}")
+                    return
+                else:
+                    print(f"⚠️ Contrato não encontrado no MongoDB: {numero_titulo}")
+            except Exception as e:
+                print(f"⚠️ Erro ao atualizar MongoDB: {str(e)}")
 
         # Fallback JSON
-        arquivo_fila = os.path.join("dados_processamento",
-                                    "fila_contratos_sienge.json")
+        arquivo_fila = os.path.join("dados_processamento", "fila_contratos_sienge.json")
 
         if os.path.exists(arquivo_fila):
             with open(arquivo_fila, 'r', encoding='utf-8') as f:
                 dados_fila = json.load(f)
 
             # Atualizar contrato específico
+            contrato_encontrado = False
             for contrato in dados_fila.get("contratos", []):
                 if contrato.get("numero_titulo") == numero_titulo:
                     contrato["status_processamento"] = status
                     contrato["processado_em"] = datetime.now().isoformat()
                     if erro:
                         contrato["erro_processamento"] = erro
+                    contrato_encontrado = True
                     break
 
-            with open(arquivo_fila, 'w', encoding='utf-8') as f:
-                json.dump(dados_fila, f, indent=2, ensure_ascii=False)
+            if contrato_encontrado:
+                with open(arquivo_fila, 'w', encoding='utf-8') as f:
+                    json.dump(dados_fila, f, indent=2, ensure_ascii=False)
+                print(f"✅ Status atualizado no JSON: {numero_titulo}")
+            else:
+                print(f"⚠️ Contrato não encontrado no JSON: {numero_titulo}")
+        else:
+            print(f"⚠️ Arquivo de fila não encontrado: {arquivo_fila}")
 
     except Exception as e:
-        print(f"⚠️ Erro ao atualizar status: {str(e)}")
+        print(f"❌ Erro ao atualizar status: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
 
 
 async def teste_completo():
