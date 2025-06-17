@@ -716,7 +716,7 @@ class RPAColetaIndices(BaseRPA):
 
     async def _salvar_indices_coletados(self, dados_ipca: Dict[str, Any], dados_igpm: Dict[str, Any], planilha_id: str):
         """
-        Salva índices coletados no MongoDB ou fallback para JSON local
+        Salva índices coletados usando data_manager unificado (MongoDB + JSON)
 
         Args:
             dados_ipca: Dados do IPCA coletado
@@ -724,25 +724,26 @@ class RPAColetaIndices(BaseRPA):
             planilha_id: ID da planilha atualizada
         """
         try:
-            if self.mongo_manager and self.mongo_manager.conectado:
-                # Salva no MongoDB
-                collection = self.mongo_manager.database.indices_economicos
-                documento = {
-                    "timestamp": datetime.now(),
-                    "ipca": dados_ipca,
-                    "igpm": dados_igpm,
-                    "planilha_id": planilha_id,
-                    "tipo": "coleta_indices"
-                }
-                await collection.insert_one(documento)
-                self.log_progresso("✅ Índices salvos no MongoDB")
+            # Usa data_manager unificado que SEMPRE salva em MongoDB + JSON
+            from core.data_manager import data_manager
+            
+            indices_data = {
+                "ipca": dados_ipca,
+                "igpm": dados_igpm,
+                "planilha_id": planilha_id
+            }
+            
+            resultados_salvamento = await data_manager.salvar_indices_economicos(indices_data)
+            
+            # Log do resultado
+            if resultados_salvamento.get("json") == "sucesso":
+                self.log_progresso("✅ Índices salvos com sucesso (sistema híbrido)")
             else:
-                # Fallback para JSON local
-                await self._salvar_indices_local(dados_ipca, dados_igpm, planilha_id)
+                self.log_progresso("⚠️ Falha ao salvar índices")
 
         except Exception as e:
-            self.log_progresso(
-                f"⚠️ Erro ao salvar no MongoDB: {str(e)} - usando fallback local")
+            self.log_progresso(f"❌ Erro ao salvar índices: {str(e)}")
+            # Fallback de emergência
             await self._salvar_indices_local(dados_ipca, dados_igpm, planilha_id)
 
     async def _salvar_indices_local(self, dados_ipca: Dict[str, Any], dados_igpm: Dict[str, Any], planilha_id: str):

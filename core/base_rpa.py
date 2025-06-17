@@ -248,36 +248,30 @@ class BaseRPA(ABC):
     async def _salvar_execucao(self, parametros: Dict[str, Any],
                                resultado: ResultadoRPA):
         """
-        Salva execução no MongoDB para auditoria
+        Salva execução usando data_manager unificado (MongoDB + JSON)
 
         Args:
             parametros: Parâmetros de entrada
             resultado: Resultado da execução
         """
         try:
-            if not self.mongo_manager or not self.mongo_manager.conectado:
-                return
+            # Usa data_manager unificado que SEMPRE salva em MongoDB + JSON
+            from core.data_manager import data_manager
+            
+            resultados_salvamento = await data_manager.salvar_execucao_rpa(
+                nome_rpa=self.nome_rpa,
+                parametros=parametros,
+                resultado=resultado.para_dict()
+            )
 
-            # Usa a estrutura correta do MongoDB Manager
-            collection = self.mongo_manager.database.execucoes_rpa
-
-            documento = {
-                "nome_rpa": self.nome_rpa,
-                "timestamp_inicio": self.inicio_execucao,
-                "timestamp_fim": datetime.now(),
-                "parametros_entrada": parametros,
-                "resultado": resultado.para_dict(),
-                "sucesso": resultado.sucesso,
-                "tempo_execucao_segundos": resultado.tempo_execucao,
-                "mensagem": resultado.mensagem,
-                "erro": resultado.erro
-            }
-
-            await collection.insert_one(documento)
-            self.logger.info("💾 Execução salva no MongoDB para auditoria")
+            # Log do resultado
+            if resultados_salvamento.get("json") == "sucesso":
+                self.logger.info("💾 Execução salva com sucesso (sistema híbrido)")
+            else:
+                self.logger.warning("⚠️ Falha ao salvar execução")
 
         except Exception as e:
-            self.logger.error(f"⚠️ Erro ao salvar execução: {str(e)}")
+            self.logger.error(f"❌ Erro ao salvar execução: {str(e)}")
 
     def log_progresso(self,
                       mensagem: str,
