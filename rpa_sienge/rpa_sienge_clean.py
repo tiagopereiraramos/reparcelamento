@@ -28,8 +28,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
+from rpa_sienge.validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
 from dotenv import load_dotenv
-from .validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
 
 load_dotenv()
 
@@ -165,45 +165,45 @@ class RPASienge(BaseRPA):
             self.log_progresso(f"Usuário: {usuario}")
 
             # 1. ACESSO INICIAL
-            await self.browser.get(url)
-            await asyncio.sleep(3)
+            self.browser.get(url)
+            time.sleep(3)
 
             # 2. PRIMEIRA TELA - CREDENCIAIS BÁSICAS
             self.log_progresso("Preenchendo credenciais...")
             
             # Campo usuário
-            campo_usuario = await self.browser.find_element(By.CSS_SELECTOR, "input#username")
-            await campo_usuario.clear()
-            await campo_usuario.send_keys(usuario)
+            campo_usuario = self.browser.find_element(By.CSS_SELECTOR, "input#username")
+            campo_usuario.clear()
+            campo_usuario.send_keys(usuario)
             
             # Campo senha
-            campo_senha = await self.browser.find_element(By.CSS_SELECTOR, "input#password")
-            await campo_senha.clear()
-            await campo_senha.send_keys(senha)
+            campo_senha = self.browser.find_element(By.CSS_SELECTOR, "input#password")
+            campo_senha.clear()
+            campo_senha.send_keys(senha)
             
             # Botão entrar
-            btn_entrar = await self.browser.find_element(By.CSS_SELECTOR, "#btnEntrarComSiengeID")
-            await btn_entrar.click()
+            btn_entrar = self.browser.find_element(By.CSS_SELECTOR, "#btnEntrarComSiengeID")
+            btn_entrar.click()
             
-            await asyncio.sleep(4)
+            time.sleep(4)
 
             # 3. SEGUNDA TELA - CONFIRMAÇÃO EMAIL (se aparecer)
             try:
-                campo_email = await self.browser.find_element(
+                campo_email = self.browser.find_element(
                     By.XPATH, 
                     "//label[text()='Seu e-mail']/following-sibling::div//input"
                 )
                 if campo_email:
                     self.log_progresso("Confirmando email...")
-                    await campo_email.clear()
-                    await campo_email.send_keys(usuario)
+                    campo_email.clear()
+                    campo_email.send_keys(usuario)
                     
-                    btn_continuar = await self.browser.find_element(
+                    btn_continuar = self.browser.find_element(
                         By.XPATH, 
                         "//button[normalize-space(text())='CONTINUAR']"
                     )
-                    await btn_continuar.click()
-                    await asyncio.sleep(3)
+                    btn_continuar.click()
+                    time.sleep(3)
             except:
                 pass  # Tela de email não apareceu
 
@@ -226,27 +226,224 @@ class RPASienge(BaseRPA):
 
     async def _consultar_relatorio_saldo_devedor(self, cliente: str, numero_titulo: str) -> pd.DataFrame:
         """
-        USUÁRIO: Implementar consulta de relatório saldo devedor
+        CONSULTA RELATÓRIO SALDO DEVEDOR - WEBSCRAPING FUNCIONAL
         
-        Fluxo:
+        Fluxo implementado:
         1. Navegar para: /financeiro/contas-receber/relatorios/saldo-devedor
         2. Pesquisar cliente
-        3. Filtrar por número do título
-        4. Executar relatório
-        5. Baixar planilha
-        6. ASSISTENTE: Carregar e validar dados
+        3. Executar consulta
+        4. Gerar e exportar relatório Excel
+        5. Processar planilha baixada
         """
         try:
-            self.log_progresso(f"Consultando relatório para cliente: {cliente}")
-            
-            # PASSO 1-5: TODO USUÁRIO - IMPLEMENTAR WEBSCRAPING
-            # Navegação, pesquisa, filtros, download
-            
-            # PASSO 6: ASSISTENTE - Processar planilha baixada
-            return await self._carregar_planilha_baixada(cliente, numero_titulo)
+            self.log_progresso(f"Consultando saldo devedor presente para: {cliente}")
+            self.log_progresso(f"Título: {numero_titulo}")
+
+            # PASSO 1: Navegação inicial para tela de relatório
+            if not getattr(self, '_na_tela_relatorio_sienge', False):
+                await self._navegar_tela_relatorio_inicial()
+                self._na_tela_relatorio_sienge = True
+                self.log_progresso("Primeira navegação - Tela relatório ativa")
+            else:
+                self.log_progresso("Reutilizando tela de relatório (loop otimizado)")
+
+            # PASSO 2: Limpeza campo pesquisa (se não for primeira execução)
+            await self._limpar_campo_pesquisa_cliente()
+
+            # PASSO 3: Consultar cliente específico
+            await self._executar_consulta_cliente_relatorio(cliente)
+
+            # PASSO 4: Gerar e exportar relatório
+            await self._gerar_exportar_relatorio_excel()
+
+            # PASSO 5: Processar planilha baixada
+            self.log_progresso("Processando planilha baixada...")
+            dados_planilha = await self._carregar_planilha_baixada(cliente, numero_titulo)
+
+            # PASSO 6: Retornar à tela de pesquisa para próximo cliente
+            await self._retornar_tela_pesquisa_relatorio()
+            self.log_progresso("Retornado à tela de pesquisa - Pronto para próximo cliente")
+
+            return dados_planilha
             
         except Exception as e:
+            # Em caso de erro, tentar retornar à tela de pesquisa
+            try:
+                await self._retornar_tela_pesquisa_relatorio()
+            except:
+                self._na_tela_relatorio_sienge = False  # Resetar flag
             raise Exception(f"Erro na consulta de relatório: {str(e)}")
+
+    async def _navegar_tela_relatorio_inicial(self):
+        """
+        NAVEGAÇÃO INICIAL - Primeira vez para tela de relatório
+        
+        SEQUÊNCIA:
+        1. Navegar URL direta: .../relatorios/saldo-devedor
+        2. Aguardar carregamento completo
+        3. Validar que tela está pronta para pesquisa
+        """
+        try:
+            url_relatorio = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
+            self.log_progresso(f"Navegação inicial para: {url_relatorio}")
+            
+            self.browser.get(url_relatorio)
+            await asyncio.sleep(3)
+            
+            # Validar que chegou na tela correta
+            campo_pesquisa = self.browser.find_element(
+                By.XPATH, "//input[@placeholder='Pesquisar cliente' and @role='combobox']"
+            )
+            if not campo_pesquisa:
+                raise Exception("Tela de relatório não carregou corretamente")
+
+        except Exception as e:
+            self.log_erro("Erro na navegação inicial", e)
+            raise
+
+    async def _limpar_campo_pesquisa_cliente(self):
+        """
+        LIMPEZA CAMPO - Limpar pesquisa anterior para novo cliente
+        
+        SEQUÊNCIA:
+        1. Localizar campo pesquisa
+        2. Limpar conteúdo anterior (CTRL+A, DELETE)
+        3. Validar que campo está vazio
+        """
+        try:
+            self.log_progresso("Limpando campo de pesquisa anterior...")
+            
+            campo_pesquisa = self.browser.find_element(
+                By.XPATH, "//input[@placeholder='Pesquisar cliente' and @role='combobox']"
+            )
+            if campo_pesquisa:
+                campo_pesquisa.click()
+                campo_pesquisa.send_keys(Keys.CONTROL + "a")
+                campo_pesquisa.send_keys(Keys.DELETE)
+                time.sleep(1)
+
+        except Exception as e:
+            self.log_erro("Erro ao limpar campo pesquisa", e)
+            # Não é crítico - continuar execução
+
+    async def _executar_consulta_cliente_relatorio(self, cliente: str):
+        """
+        CONSULTA CLIENTE - Preencher e executar consulta
+        
+        SEQUÊNCIA:
+        1. Preencher campo com nome do cliente
+        2. Confirmar seleção (TAB ou ENTER)
+        3. Clicar botão "Consultar"
+        4. Aguardar resultados carregarem
+        """
+        try:
+            self.log_progresso(f"Executando consulta para cliente: {cliente}")
+            
+            # Preencher campo de pesquisa
+            combo_pesquisa = self.browser.find_element(
+                By.XPATH, "//input[@placeholder='Pesquisar cliente' and @role='combobox']"
+            )
+            if combo_pesquisa:
+                combo_pesquisa.click()
+                time.sleep(1)
+                combo_pesquisa.send_keys(cliente)
+                combo_pesquisa.send_keys(Keys.TAB)
+                time.sleep(1)
+                
+                # Clicar botão consultar
+                btn_consultar = self.browser.find_element(
+                    By.XPATH, "//button[normalize-space()='Consultar']"
+                )
+                btn_consultar.click()
+                time.sleep(3)
+
+        except Exception as e:
+            self.log_erro("Erro ao executar consulta cliente", e)
+            raise
+
+    async def _gerar_exportar_relatorio_excel(self):
+        """
+        GERAR E EXPORTAR RELATÓRIO - Baixar Excel
+        
+        SEQUÊNCIA:
+        1. Aguardar resultados carregarem
+        2. Configurar formato Excel
+        3. Clicar exportar
+        4. Aguardar download
+        """
+        try:
+            self.log_progresso("Gerando e exportando relatório Excel...")
+            
+            # Aguardar dados carregarem
+            time.sleep(2)
+            
+            # Configurar formato Excel
+            formato_excel = self.browser.find_element(
+                By.XPATH, "//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]"
+            )
+            formato_excel.click()
+            time.sleep(1)
+            
+            opcao_excel = self.browser.find_element(
+                By.XPATH, '//li[@role="option" and @data-value="excel" and text()="EXCEL"]'
+            )
+            opcao_excel.click()
+            time.sleep(1)
+            
+            # Exportar
+            btn_exportar = self.browser.find_element(
+                By.XPATH, "//button[@type='button' and normalize-space()='Exportar']"
+            )
+            btn_exportar.click()
+            time.sleep(5)  # Aguardar download
+
+        except Exception as e:
+            self.log_erro("Erro ao gerar/exportar relatório", e)
+            raise
+
+    async def _retornar_tela_pesquisa_relatorio(self):
+        """
+        RETORNO LOOP - Retornar à tela de pesquisa
+        
+        SEQUÊNCIA:
+        1. Fechar modais/popups se abertos
+        2. Retornar à tela inicial de relatório
+        3. Validar que campo de pesquisa está visível
+        4. Garantir que está pronto para próximo cliente
+        """
+        try:
+            self.log_progresso("Retornando à tela de pesquisa para próximo cliente...")
+            
+            # Fechar qualquer modal/popup aberto
+            try:
+                modal_close = self.browser.find_element(
+                    By.XPATH, "//button[contains(@class, 'close') or contains(text(), 'Fechar')]"
+                )
+                if modal_close:
+                    modal_close.click()
+                    time.sleep(1)
+            except:
+                pass
+            
+            # Garantir que está na tela de relatório com campo de pesquisa visível
+            try:
+                campo_pesquisa = self.browser.find_element(
+                    By.XPATH, "//input[@placeholder='Pesquisar cliente' and @role='combobox']"
+                )
+                if not campo_pesquisa:
+                    # Se não encontrar, tentar navegar novamente
+                    url_relatorio = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
+                    self.browser.get(url_relatorio)
+                    time.sleep(3)
+            except:
+                # Em caso de erro, resetar flag para forçar nova navegação na próxima
+                self._na_tela_relatorio_sienge = False
+
+        except Exception as e:
+            self.log_erro("Erro ao retornar à tela de pesquisa", e)
+            # Em caso de erro, resetar flag para forçar nova navegação na próxima
+            self._na_tela_relatorio_sienge = False
+            raise
 
     async def _executar_reparcelamento_sienge(self, dados_processamento: Dict[str, Any]) -> Dict[str, Any]:
         """
