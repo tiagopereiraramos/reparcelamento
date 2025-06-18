@@ -1,4 +1,3 @@
-
 """
 MongoDB Manager - Sistema RPA v2.0
 Gerenciador de conexão e operações MongoDB usando PyMongo com executor assíncrono
@@ -36,18 +35,18 @@ class MongoDBManager:
         Conecta ao MongoDB usando variáveis de ambiente do Replit
         """
         try:
-            logger.info("🔧 Iniciando conexão MongoDB...")
-            
+            logger.info("Conectando ao MongoDB...")
+
             # Tenta variáveis do Replit Database primeiro
             mongodb_uri = os.getenv('DATABASE_URL') or os.getenv('MONGODB_URI') or os.getenv('MONGO_URL')
             database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
-            
+
             logger.info(f"🔍 Variáveis de ambiente:")
             logger.info(f"   DATABASE_URL: {'SET' if os.getenv('DATABASE_URL') else 'NOT SET'}")
             logger.info(f"   MONGODB_URI: {'SET' if os.getenv('MONGODB_URI') else 'NOT SET'}")
             logger.info(f"   MONGO_URL: {'SET' if os.getenv('MONGO_URL') else 'NOT SET'}")
             logger.info(f"   DATABASE_NAME: {database_name}")
-            
+
             if not mongodb_uri:
                 # Fallback para conexão local se não tiver Replit Database
                 mongodb_uri = "mongodb://localhost:27017"
@@ -65,7 +64,7 @@ class MongoDBManager:
                 logger.info(f"   URI: {uri_masked}")
 
             self._url_conexao = mongodb_uri
-            
+
             logger.info("🔌 Criando cliente MongoDB...")
             # Configura cliente com timeout menor para falhar rápido
             self.client = MongoClient(
@@ -80,16 +79,16 @@ class MongoDBManager:
             def _test_connection():
                 ping_result = self.client.admin.command('ping')
                 return ping_result
-            
+
             ping_result = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _test_connection
             )
             logger.info(f"✅ Ping successful: {ping_result}")
-            
+
             logger.info(f"🗄️ Configurando database: {database_name}")
             # Define database
             self.database = self.client[database_name]
-            
+
             # Teste prático com a database
             logger.info("🧪 Testando operação na database...")
             def _test_database():
@@ -99,20 +98,20 @@ class MongoDBManager:
                 # Remove documento de teste
                 test_collection.delete_one({"_id": result.inserted_id})
                 return result.inserted_id
-            
+
             test_id = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _test_database
             )
             logger.info(f"✅ Teste inserção: {test_id}")
             logger.info("🧹 Documento de teste removido")
-            
+
             self.conectado = True
             logger.info(f"✅ MongoDB conectado com sucesso: {database_name}")
-            
+
             # Cria índices necessários
             logger.info("📊 Criando índices...")
             await self._criar_indices()
-            
+
             logger.info("🎉 MongoDB totalmente inicializado!")
             return True
 
@@ -158,7 +157,7 @@ class MongoDBManager:
                                   resultado: Dict[str, Any]) -> Optional[str]:
         """
         Salva execução de RPA no MongoDB
-        
+
         Returns:
             ID do documento inserido ou None se falhou
         """
@@ -186,7 +185,7 @@ class MongoDBManager:
             document_id = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _save_execution
             )
-            
+
             logger.info(f"📊 Execução {nome_rpa} salva no MongoDB: {document_id}")
             return document_id
 
@@ -199,7 +198,7 @@ class MongoDBManager:
     async def salvar_indices_economicos(self, indices_data: Dict[str, Any]) -> Optional[str]:
         """
         Salva índices econômicos no MongoDB
-        
+
         Returns:
             ID do documento inserido ou None se falhou
         """
@@ -211,13 +210,13 @@ class MongoDBManager:
         try:
             logger.info(f"🔍 Preparando documento para MongoDB...")
             logger.info(f"   Dados recebidos: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
-            
+
             documento = {
                 "timestamp_coleta": datetime.now(),
                 "indices": indices_data,
                 "fonte_coleta": "rpa_coleta_indices"
             }
-            
+
             logger.info(f"📄 Documento preparado: {json.dumps(documento, indent=2, ensure_ascii=False, default=str)}")
             logger.info(f"🗄️ Collection alvo: indices_economicos")
             logger.info(f"🔗 Database: {self.database.name}")
@@ -232,20 +231,20 @@ class MongoDBManager:
             document_id = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _save_indices
             )
-            
+
             logger.info(f"📊 Índices econômicos salvos no MongoDB: {document_id}")
-            
+
             # Verificação adicional
             def _verify_save():
                 count = self.database.indices_economicos.count_documents({})
                 last_doc = self.database.indices_economicos.find_one(sort=[("timestamp_coleta", -1)])
                 return count, last_doc
-                
+
             count, last_doc = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _verify_save
             )
             logger.info(f"🔍 Verificação: {count} documentos na collection, último: {last_doc['_id'] if last_doc else 'None'}")
-            
+
             return document_id
 
         except Exception as e:
@@ -257,7 +256,7 @@ class MongoDBManager:
     async def salvar_contrato_processado(self, contrato_data: Dict[str, Any]) -> Optional[str]:
         """
         Salva contrato processado no MongoDB
-        
+
         Returns:
             ID do documento inserido ou None se falhou
         """
@@ -291,7 +290,7 @@ class MongoDBManager:
             document_id = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _save_contract
             )
-            
+
             logger.debug(f"📊 Contrato {documento['numero_titulo']} salvo no MongoDB: {document_id}")
             return document_id
 
@@ -310,7 +309,7 @@ class MongoDBManager:
             def _get_executions():
                 cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(limite)
                 execucoes = list(cursor)
-                
+
                 # Converte ObjectId para string
                 for execucao in execucoes:
                     if "_id" in execucao:
@@ -325,7 +324,7 @@ class MongoDBManager:
             execucoes = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _get_executions
             )
-            
+
             return execucoes
 
         except Exception as e:
@@ -350,7 +349,7 @@ class MongoDBManager:
                 # Taxa de sucesso (últimas 30 execuções)
                 cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(30)
                 execucoes_recentes = list(cursor)
-                
+
                 if execucoes_recentes:
                     sucessos = sum(1 for e in execucoes_recentes if e.get("sucesso", False))
                     taxa_sucesso = (sucessos / len(execucoes_recentes)) * 100
@@ -378,7 +377,7 @@ class MongoDBManager:
             stats = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _get_stats
             )
-            
+
             return stats
 
         except Exception as e:
@@ -399,10 +398,10 @@ class MongoDBManager:
             def _check_health():
                 # Testa comando ping
                 self.client.admin.command('ping')
-                
+
                 # Conta documentos para verificar acesso
                 total_execucoes = self.database.execucoes_rpa.count_documents({})
-                
+
                 return {
                     "status": "conectado",
                     "url": self._url_conexao.split('@')[-1] if self._url_conexao else "unknown",
@@ -414,7 +413,7 @@ class MongoDBManager:
             health = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _check_health
             )
-            
+
             return health
 
         except Exception as e:
@@ -427,10 +426,10 @@ class MongoDBManager:
     async def obter_indice_mais_recente(self, tipo_indice: str = "igpm") -> Optional[float]:
         """
         Obtém índice econômico mais recente do MongoDB
-        
+
         Args:
             tipo_indice: "igpm" ou "ipca"
-            
+
         Returns:
             Valor do índice como float ou None se não encontrado
         """
@@ -444,12 +443,12 @@ class MongoDBManager:
                     {f"indices.{tipo_indice.lower()}": {"$exists": True}},
                     sort=[("timestamp_coleta", -1)]
                 ).limit(1)
-                
+
                 resultado = list(cursor)
                 if resultado:
                     indice_data = resultado[0].get("indices", {}).get(tipo_indice.lower(), {})
                     valor_str = indice_data.get("valor", "")
-                    
+
                     # Converter valor string para float
                     if isinstance(valor_str, str):
                         # Remove % e converte vírgula para ponto
@@ -457,13 +456,13 @@ class MongoDBManager:
                         return float(valor_limpo)
                     elif isinstance(valor_str, (int, float)):
                         return float(valor_str)
-                
+
                 return None
 
             indice_valor = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _get_latest_index
             )
-            
+
             return indice_valor
 
         except Exception as e:
@@ -474,12 +473,12 @@ class MongoDBManager:
                                           campo_ordenacao: str = "timestamp_coleta") -> Optional[Dict[str, Any]]:
         """
         Obtém documento mais recente de uma collection
-        
+
         Args:
             collection_name: Nome da collection
             filtro: Filtro para a busca (opcional)
             campo_ordenacao: Campo para ordenação descendente
-            
+
         Returns:
             Documento mais recente ou None se não encontrado
         """
@@ -490,7 +489,7 @@ class MongoDBManager:
             def _get_latest_document():
                 collection = self.database[collection_name]
                 cursor = collection.find(filtro or {}).sort(campo_ordenacao, -1).limit(1)
-                
+
                 resultado = list(cursor)
                 if resultado:
                     documento = resultado[0]
@@ -502,13 +501,13 @@ class MongoDBManager:
                         if hasattr(valor, 'isoformat'):
                             documento[campo] = valor.isoformat()
                     return documento
-                
+
                 return None
 
             documento = await asyncio.get_event_loop().run_in_executor(
                 self.executor, _get_latest_document
             )
-            
+
             return documento
 
         except Exception as e:
@@ -523,11 +522,11 @@ class MongoDBManager:
             if self.client:
                 def _close_client():
                     self.client.close()
-                
+
                 await asyncio.get_event_loop().run_in_executor(
                     self.executor, _close_client
                 )
-                
+
                 self.conectado = False
                 logger.info("✅ MongoDB desconectado")
         except Exception as e:

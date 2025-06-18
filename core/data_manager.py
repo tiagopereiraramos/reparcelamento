@@ -60,53 +60,42 @@ class DataManagerUnificado:
 
     async def inicializar(self):
         """Inicializa sistema híbrido com debug detalhado"""
-        logger.info("🔧 Inicializando data_manager...")
+        self.logger = logger
+        self.logger.info("Inicializando sistema de dados...")
 
-        # Debug das variáveis de ambiente
-        logger.info("🔍 Verificando variáveis de ambiente MongoDB...")
-        db_url = os.getenv('DATABASE_URL') or os.getenv('MONGODB_URI') or os.getenv('MONGO_URL')
-        db_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
-        logger.info(f"   DATABASE_URL: {'SET' if db_url else 'NOT SET'}")
-        logger.info(f"   DATABASE_NAME: {db_name}")
+        # Verificação silenciosa das variáveis
+        database_url = os.getenv('DATABASE_URL')
+        database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
+
+        if database_url:
+            self.logger.info(f"Conectando ao MongoDB: {database_name}")
 
         self._garantir_estrutura_dados()  # Garante que arquivos existem
 
         # Tenta conectar MongoDB
         if MONGODB_DISPONIVEL:
             try:
-                logger.info("🔄 Tentando conectar ao MongoDB...")
-                logger.info(f"   Usando URL: {db_url[:20] + '...' if db_url else 'localhost:27017'}")
-
                 # Força reconexão se já estava conectado
-                if mongodb_manager.conectado:
-                    logger.info("♻️ Desconectando MongoDB anterior...")
+                if MONGODB_DISPONIVEL and mongodb_manager.conectado:
                     await mongodb_manager.desconectar()
 
                 self.mongodb_ativo = await mongodb_manager.conectar()
 
                 if self.mongodb_ativo and mongodb_manager.conectado:
-                    logger.info("✅ Sistema Híbrido: MongoDB + JSON ativo")
+                    self.logger.info("Sistema híbrido MongoDB + JSON ativo")
 
-                    # Teste prático de inserção
-                    try:
-                        def _test_insert():
-                            # Teste direto no MongoDB - PyMongo é síncrono
-                            test_collection = mongodb_manager.database.teste_conexao
-                            test_doc = {"teste": True, "timestamp": datetime.now()}
-                            result = test_collection.insert_one(test_doc)
-                            # Remove documento de teste
-                            test_collection.delete_one({"_id": result.inserted_id})
-                            return str(result.inserted_id)
+                    # Teste rápido de funcionalidade
+                    test_doc = {"teste": True, "timestamp": datetime.now().isoformat()}
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: mongodb_manager.database.teste_data_manager.insert_one(test_doc)
+                    )
 
-                        test_id = await asyncio.get_event_loop().run_in_executor(
-                            None, _test_insert
-                        )
+                    # Remove documento de teste
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: mongodb_manager.database.teste_data_manager.delete_one({"_id": result.inserted_id})
+                    )
 
-                        logger.info(f"✅ Teste inserção MongoDB: {test_id}")
-
-                    except Exception as test_e:
-                        logger.error(f"❌ Falha no teste de inserção: {str(test_e)}")
-                        self.mongodb_ativo = False
+                    self.logger.info(f"Data manager inicializado com MongoDB ativo")
 
                     # Verifica saúde inicial
                     await self._verificar_saude_mongodb()
@@ -303,7 +292,7 @@ class DataManagerUnificado:
                 logger.info(f"   - mongodb_manager.conectado: {mongodb_manager.conectado}")
                 logger.info(f"   - database: {mongodb_manager.database.name if mongodb_manager.database is not None else 'None'}")
                 logger.info(f"   Dados: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
-                
+
                 mongo_id = await mongodb_manager.salvar_indices_economicos(indices_data)
                 if mongo_id:
                     resultados["mongodb"] = "sucesso"
@@ -325,7 +314,7 @@ class DataManagerUnificado:
                 motivo.append("mongodb_manager=None")  
             elif not mongodb_manager.conectado:
                 motivo.append("mongodb_manager.conectado=False")
-                
+
             resultados["mongodb"] = f"nao_tentado: {', '.join(motivo)}"
             logger.warning(f"⚠️ MongoDB não tentado para índices: {', '.join(motivo)}")
 
@@ -711,6 +700,7 @@ class DataManagerUnificado:
             logger.warning(f"⚠️ Erro ao carregar {arquivo}: {str(e)}")
             return default
 
+    Data manager logs simplified for production use.```text
     def _salvar_json_seguro(self, arquivo: str, dados):
         """Salva JSON com tratamento de erro"""
         try:

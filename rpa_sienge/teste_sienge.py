@@ -275,8 +275,6 @@ async def atualizar_status_contrato(numero_titulo: str,
         from core.data_manager import data_manager
         await data_manager.inicializar()
 
-        print(f"📝 Atualizando status {numero_titulo}: {status}")
-
         # Tentar MongoDB primeiro se disponível
         if data_manager.mongodb_ativo:
             try:
@@ -297,12 +295,12 @@ async def atualizar_status_contrato(numero_titulo: str,
                 )
 
                 if result.modified_count > 0:
-                    print(f"✅ Status atualizado no MongoDB: {numero_titulo}")
+                    print(f"Status atualizado: {numero_titulo} -> {status}")
                     return
                 else:
-                    print(f"⚠️ Contrato não encontrado no MongoDB: {numero_titulo}")
+                    print(f"Contrato não encontrado: {numero_titulo}")
             except Exception as e:
-                print(f"⚠️ Erro ao atualizar MongoDB: {str(e)}")
+                print(f"Erro ao atualizar MongoDB: {str(e)}")
 
         # Fallback JSON
         arquivo_fila = os.path.join("dados_processamento", "fila_contratos_sienge.json")
@@ -325,11 +323,11 @@ async def atualizar_status_contrato(numero_titulo: str,
             if contrato_encontrado:
                 with open(arquivo_fila, 'w', encoding='utf-8') as f:
                     json.dump(dados_fila, f, indent=2, ensure_ascii=False)
-                print(f"✅ Status atualizado no JSON: {numero_titulo}")
+                print(f"Status atualizado no JSON: {numero_titulo}")
             else:
-                print(f"⚠️ Contrato não encontrado no JSON: {numero_titulo}")
+                print(f"Contrato não encontrado: {numero_titulo}")
         else:
-            print(f"⚠️ Arquivo de fila não encontrado: {arquivo_fila}")
+            print(f"Arquivo de fila não encontrado: {arquivo_fila}")
 
     except Exception as e:
         print(f"❌ Erro ao atualizar status: {str(e)}")
