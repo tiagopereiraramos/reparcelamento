@@ -485,6 +485,75 @@ class DataManagerUnificado:
             logger.error(f"❌ Falha estatísticas JSON: {str(e)}")
             return {}
 
+    async def obter_igpm_mais_recente(self) -> Optional[float]:
+        """
+        Obtém o IGPM mais recente do banco de dados
+        MongoDB primeiro, JSON como fallback
+
+        Returns:
+            Valor do IGPM como float ou None se não encontrar
+        """
+        # Tentar MongoDB primeiro
+        if self.mongodb_ativo and MONGODB_DISPONIVEL:
+            try:
+                def _get_latest_igpm():
+                    cursor = mongodb_manager.database.indices_economicos.find(
+                        {"indices.igpm": {"$exists": True}},
+                        sort=[("timestamp_coleta", -1)]
+                    ).limit(1)
+
+                    resultado = list(cursor)
+                    if resultado:
+                        igmp_data = resultado[0].get("indices", {}).get("igpm", {})
+                        valor_str = igmp_data.get("valor", "")
+
+                        # Converter valor string para float
+                        if isinstance(valor_str, str):
+                            # Remove % e converte vírgula para ponto
+                            valor_limpo = valor_str.replace("%", "").replace(",", ".").strip()
+                            return float(valor_limpo)
+                        elif isinstance(valor_str, (int, float)):
+                            return float(valor_str)
+
+                    return None
+
+                import asyncio
+                igpm_valor = await asyncio.get_event_loop().run_in_executor(
+                    None, _get_latest_igpm
+                )
+
+                if igpm_valor is not None:
+                    logger.info(f"📊 IGPM obtido do MongoDB: {igpm_valor}%")
+                    return igpm_valor
+
+            except Exception as e:
+                logger.warning(f"⚠️ Erro ao obter IGPM do MongoDB: {str(e)}")
+
+        # Fallback para JSON
+        try:
+            indices = self._carregar_json_seguro(self.arquivo_indices, [])
+
+            # Busca o índice mais recente que tenha IGPM
+            for indice in reversed(indices):  # Mais recente primeiro
+                if indice.get("indices", {}).get("igpm"):
+                    igpm_data = indice["indices"]["igpm"]
+                    valor_str = igpm_data.get("valor", "")
+
+                    if isinstance(valor_str, str):
+                        valor_limpo = valor_str.replace("%", "").replace(",", ".").strip()
+                        logger.info(f"📄 IGPM obtido do JSON: {valor_limpo}%")
+                        return float(valor_limpo)
+                    elif isinstance(valor_str, (int, float)):
+                        logger.info(f"📄 IGPM obtido do JSON: {valor_str}%")
+                        return float(valor_str)
+
+            logger.warning("⚠️ Nenhum IGPM encontrado no JSON")
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao obter IGPM do JSON: {str(e)}")
+            return None
+
     async def debug_verificar_dados_salvos(self) -> Dict[str, Any]:
         """
         Método de debug para verificar dados salvos
@@ -638,7 +707,8 @@ data_manager = DataManagerUnificado()
 # Funções auxiliares para facilitar uso
 async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar execução simultaneamente"""
-    return await data_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+    ```text
+return await data_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
 
 async def salvar_contrato(contrato_data: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar contrato simultaneamente"""
@@ -663,3 +733,7 @@ async def obter_fila_sienge() -> Dict[str, Any]:
 async def obter_estatisticas_dashboard() -> Dict[str, Any]:
     """Função auxiliar para estatísticas"""
     return await data_manager.obter_estatisticas_dashboard()
+
+async def obter_igpm_mais_recente() -> Optional[float]:
+    """Função auxiliar para obter o IGPM mais recente"""
+    return await data_manager.obter_igpm_mais_recente()
