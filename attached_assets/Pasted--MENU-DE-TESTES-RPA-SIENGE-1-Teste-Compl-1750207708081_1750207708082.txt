@@ -1,0 +1,130 @@
+
+🎯 MENU DE TESTES - RPA SIENGE
+==================================================
+1. 🚀 Teste Completo (Processamento Fila)
+2. 🏢 Teste Contrato Único
+3. 🔍 Teste Etapa 1 - Consulta
+4. 🔄 Teste Etapa 2 - Reparcelamento
+5. 🧪 Teste Validação de Contrato
+6. 🧮 Teste Cálculo Reparcelamento
+7. 🏥 Verificação de Saúde
+8. ❌ Sair
+==================================================
+
+👉 Escolha uma opção (1-6): 3
+🧪 TESTE ETAPA 1 - CONSULTA DE RELATÓRIOS (FILA REAL)
+============================================================
+📋 Carregando fila real de contratos...
+🔍 Carregando fila de contratos...
+INFO:core.data_manager:🔧 Inicializando data_manager...
+INFO:core.data_manager:🔍 Verificando variáveis de ambiente MongoDB...
+INFO:core.data_manager:   DATABASE_URL: SET
+INFO:core.data_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.data_manager:🔄 Tentando conectar ao MongoDB...
+INFO:core.data_manager:   Usando URL: mongodb://localhost:...
+INFO:core.mongodb_manager:🔧 Iniciando conexão MongoDB...
+INFO:core.mongodb_manager:🔍 Variáveis de ambiente:
+INFO:core.mongodb_manager:   DATABASE_URL: SET
+INFO:core.mongodb_manager:   MONGODB_URI: NOT SET
+INFO:core.mongodb_manager:   MONGO_URL: NOT SET
+INFO:core.mongodb_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.mongodb_manager:   URI: mongodb://localhost:27017
+INFO:core.mongodb_manager:🔌 Criando cliente MongoDB...
+INFO:core.mongodb_manager:🏓 Testando conexão com ping...
+INFO:core.mongodb_manager:✅ Ping successful: {'ok': 1.0}
+INFO:core.mongodb_manager:🗄️ Configurando database: sistema_rpa
+INFO:core.mongodb_manager:🧪 Testando operação na database...
+INFO:core.mongodb_manager:✅ Teste inserção: 68520cbfbdc65a8a1355ec4e
+INFO:core.mongodb_manager:🧹 Documento de teste removido
+INFO:core.mongodb_manager:✅ MongoDB conectado com sucesso: sistema_rpa
+INFO:core.mongodb_manager:📊 Criando índices...
+INFO:core.mongodb_manager:🎉 MongoDB totalmente inicializado!
+INFO:core.data_manager:✅ Sistema Híbrido: MongoDB + JSON ativo
+ERROR:core.data_manager:❌ Falha no teste de inserção: object InsertOneResult can't be used in 'await' expression
+INFO:core.data_manager:✅ Data manager inicializado - MongoDB ativo: False
+INFO:core.data_manager:🔍 Estado final da inicialização:
+INFO:core.data_manager:   MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   self.mongodb_ativo: False
+INFO:core.data_manager:   mongodb_manager.conectado: True
+INFO:core.data_manager:   mongodb_manager.database: SET
+   Data Manager - MongoDB ativo: False
+   MongoDB Manager - Conectado: True
+   MongoDB - Disponível: True
+📊 Tentando carregar do MongoDB...
+✅ Fila carregada do MongoDB: 2 contratos
+📋 Fonte dos dados: mongodb
+📋 Primeiros contratos na fila:
+   1. 2239 - SANDRO RIZZON VIEIRA [pendente]
+   2. 2356 - MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO [pendente]
+✅ Encontrados 2 contratos na fila real
+📋 Contratos que serão processados:
+   1. 2239 - SANDRO RIZZON VIEIRA [pendente]
+   2. 2356 - MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO [pendente]
+INFO:core.data_manager:🔧 Inicializando data_manager...
+INFO:core.data_manager:🔍 Verificando variáveis de ambiente MongoDB...
+INFO:core.data_manager:   DATABASE_URL: SET
+INFO:core.data_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.data_manager:🔄 Tentando conectar ao MongoDB...
+INFO:core.data_manager:   Usando URL: mongodb://localhost:...
+INFO:core.data_manager:♻️ Desconectando MongoDB anterior...
+INFO:core.mongodb_manager:✅ MongoDB desconectado
+INFO:core.mongodb_manager:🔧 Iniciando conexão MongoDB...
+INFO:core.mongodb_manager:🔍 Variáveis de ambiente:
+INFO:core.mongodb_manager:   DATABASE_URL: SET
+INFO:core.mongodb_manager:   MONGODB_URI: NOT SET
+INFO:core.mongodb_manager:   MONGO_URL: NOT SET
+INFO:core.mongodb_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.mongodb_manager:   URI: mongodb://localhost:27017
+INFO:core.mongodb_manager:🔌 Criando cliente MongoDB...
+INFO:core.mongodb_manager:🏓 Testando conexão com ping...
+INFO:core.mongodb_manager:✅ Ping successful: {'ok': 1.0}
+INFO:core.mongodb_manager:🗄️ Configurando database: sistema_rpa
+INFO:core.mongodb_manager:🧪 Testando operação na database...
+INFO:core.mongodb_manager:✅ Teste inserção: 68520cbfbdc65a8a1355ec51
+INFO:core.mongodb_manager:🧹 Documento de teste removido
+INFO:core.mongodb_manager:✅ MongoDB conectado com sucesso: sistema_rpa
+INFO:core.mongodb_manager:📊 Criando índices...
+INFO:core.mongodb_manager:🎉 MongoDB totalmente inicializado!
+INFO:core.data_manager:✅ Sistema Híbrido: MongoDB + JSON ativo
+ERROR:core.data_manager:❌ Falha no teste de inserção: object InsertOneResult can't be used in 'await' expression
+INFO:core.data_manager:✅ Data manager inicializado - MongoDB ativo: False
+INFO:core.data_manager:🔍 Estado final da inicialização:
+INFO:core.data_manager:   MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   self.mongodb_ativo: False
+INFO:core.data_manager:   mongodb_manager.conectado: True
+INFO:core.data_manager:   mongodb_manager.database: SET
+📈 Carregando índices econômicos...
+📊 Usando índices simulados
+
+🔄 Processando 2 contratos em LOOP com login único...
+2025-06-17 20:47:59,290 - RPA.Sienge.Avancado - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:47:59 [info     ] 🔧 Inicializando recursos do RPA...
+2025-06-17 20:47:59 [info     ] ✅ MongoDB conectado com sucesso
+ERROR:RPABrowser:❌ Erro ao inicializar browser: [Errno 30] Read-only file system: '/RPA_DOWNLOADS'
+2025-06-17 20:47:59 [info     ] ✅ Browser Selenium inicializado
+2025-06-17 20:47:59,297 - RPA.Sienge.Avancado - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+❌ Erro geral: Falha no login Sienge: Message: Browser não inicializado; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 181, in _fazer_login_sienge
+    self.find_element(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 480, in find_element
+    return self.browser.find_element(xpath, condition)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/browser_manager.py", line 161, in find_element
+    raise NoSuchElementException("Browser não inicializado")
+selenium.common.exceptions.NoSuchElementException: Message: Browser não inicializado; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 438, in teste_etapa_consulta
+    await rpa._fazer_login_sienge()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 214, in _fazer_login_sienge
+    raise Exception(f"Falha no login Sienge: {str(e)}")
+Exception: Falha no login Sienge: Message: Browser não inicializado; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+
+
+❌ TESTE FALHOU!
