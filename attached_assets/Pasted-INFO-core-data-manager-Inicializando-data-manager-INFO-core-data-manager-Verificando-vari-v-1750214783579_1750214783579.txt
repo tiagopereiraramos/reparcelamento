@@ -1,0 +1,143 @@
+INFO:core.data_manager:🔧 Inicializando data_manager...
+INFO:core.data_manager:🔍 Verificando variáveis de ambiente MongoDB...
+INFO:core.data_manager:   DATABASE_URL: SET
+INFO:core.data_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.data_manager:🔄 Tentando conectar ao MongoDB...
+INFO:core.data_manager:   Usando URL: mongodb://localhost:...
+INFO:core.mongodb_manager:🔧 Iniciando conexão MongoDB...
+INFO:core.mongodb_manager:🔍 Variáveis de ambiente:
+INFO:core.mongodb_manager:   DATABASE_URL: SET
+INFO:core.mongodb_manager:   MONGODB_URI: NOT SET
+INFO:core.mongodb_manager:   MONGO_URL: NOT SET
+INFO:core.mongodb_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.mongodb_manager:   URI: mongodb://localhost:27017
+INFO:core.mongodb_manager:🔌 Criando cliente MongoDB...
+INFO:core.mongodb_manager:🏓 Testando conexão com ping...
+INFO:core.mongodb_manager:✅ Ping successful: {'ok': 1.0}
+INFO:core.mongodb_manager:🗄️ Configurando database: sistema_rpa
+INFO:core.mongodb_manager:🧪 Testando operação na database...
+INFO:core.mongodb_manager:✅ Teste inserção: 6852284bfdfce2d6035f1767
+INFO:core.mongodb_manager:🧹 Documento de teste removido
+INFO:core.mongodb_manager:✅ MongoDB conectado com sucesso: sistema_rpa
+INFO:core.mongodb_manager:📊 Criando índices...
+INFO:core.mongodb_manager:🎉 MongoDB totalmente inicializado!
+INFO:core.data_manager:✅ Sistema Híbrido: MongoDB + JSON ativo
+ERROR:core.data_manager:❌ Falha no teste de inserção: object InsertOneResult can't be used in 'await' expression
+INFO:core.data_manager:✅ Data manager inicializado - MongoDB ativo: False
+INFO:core.data_manager:🔍 Estado final da inicialização:
+INFO:core.data_manager:   MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   self.mongodb_ativo: False
+INFO:core.data_manager:   mongodb_manager.conectado: True
+INFO:core.data_manager:   mongodb_manager.database: SET
+🗄️ Sistema de dados híbrido inicializado
+2025-06-17 22:45:31,684 - RPA.Coleta_Indices.Avancado - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:45:31,684 - RPA.Coleta_Indices.Avancado - INFO - 🚀 Iniciando execução de Coleta_Indices
+2025-06-17 22:45:31,684 - RPA.Coleta_Indices.Avancado - INFO - 📋 Parâmetros: {
+  "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+INFO:core.rastreamento_unificado:🔍 Rastreamento iniciado: RPA_Coleta_Indices_20250617_224531_6849
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] INICIO: INICIO_EXECUCAO_RPA
+2025-06-17 22:45:31,687 - RPA.Coleta_Indices.Avancado - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:45:31 [info     ] 🔧 Inicializando recursos do RPA...
+2025-06-17 22:45:31 [info     ] ✅ MongoDB conectado com sucesso
+INFO:WDM:====== WebDriver manager ======
+INFO:WDM:Get LATEST geckodriver version for 139.0 firefox
+INFO:WDM:Get LATEST geckodriver version for 139.0 firefox
+INFO:WDM:Driver [/Users/tiagopereiraramos/.wdm/drivers/geckodriver/mac64/v0.36.0/geckodriver] found in cache
+INFO:RPABrowser:✅ Browser Firefox inicializado
+2025-06-17 22:45:34 [info     ] ✅ Browser Selenium inicializado
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] OPERACAO: CONEXAO_GOOGLE_SHEETS
+2025-06-17 22:45:34,399 - RPA.Coleta_Indices.Avancado - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:45:34,401 - RPA.Coleta_Indices.Avancado - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:45:34,401 - RPA.Coleta_Indices.Avancado - INFO - 📈 Coletando IPCA do site oficial do IBGE
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] OPERACAO: INICIO_COLETA_IPCA
+2025-06-17 22:45:38,645 - RPA.Coleta_Indices.Avancado - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:45:38,684 - RPA.Coleta_Indices.Avancado - INFO - 📈 ✅ IPCA coletado: 5,32%%
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] OPERACAO: RESULTADO_COLETA_IPCA
+2025-06-17 22:45:38,685 - RPA.Coleta_Indices.Avancado - INFO - 📈 Coletando IGPM do site oficial da FGV
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] OPERACAO: INICIO_COLETA_IGPM
+2025-06-17 22:45:47,786 - RPA.Coleta_Indices.Avancado - INFO - 📈 ✅ IGPM coletado: 7.02%
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] OPERACAO: RESULTADO_COLETA_IGPM
+2025-06-17 22:45:47,788 - RPA.Coleta_Indices.Avancado - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:45:48,506 - RPA.Coleta_Indices.Avancado - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:45:48,968 - RPA.Coleta_Indices.Avancado - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:45:49,467 - RPA.Coleta_Indices.Avancado - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:45:49,468 - RPA.Coleta_Indices.Avancado - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+INFO:core.data_manager:💾 Tentando salvar índices no MongoDB...
+INFO:core.data_manager:   Estado do MongoDB:
+INFO:core.data_manager:   - MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   - mongodb_manager.conectado: True
+ERROR:core.data_manager:❌ Índices MongoDB falhou: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+ERROR:core.data_manager:   Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 328, in salvar_indices_economicos
+    f"   - database: {mongodb_manager.database.name if mongodb_manager.database else 'None'}")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+WARNING:core.data_manager:⚠️ Erro ao carregar dados_processamento/indices_economicos.json: Expecting value: line 1 column 1 (char 0)
+INFO:core.data_manager:✅ Índices salvos em dados_processamento/indices_economicos.json
+INFO:core.data_manager:📄 Índices salvos apenas em JSON
+2025-06-17 22:45:49,475 - RPA.Coleta_Indices.Avancado - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+INFO:core.rastreamento_unificado:📝 [RPA_Coleta_Indices] SUCESSO: SUCESSO_EXECUCAO_RPA
+INFO:core.data_manager:🔍 Estado MongoDB antes do salvamento:
+INFO:core.data_manager:   MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   self.mongodb_ativo: False
+INFO:core.data_manager:   mongodb_manager existe: True
+INFO:core.data_manager:   mongodb_manager.conectado: True
+INFO:core.data_manager:   mongodb_manager.database: SET
+INFO:core.mongodb_manager:📊 Execução RPA_Coleta_Indices salva no MongoDB: 6852285dfdfce2d6035f1769
+INFO:core.data_manager:📊 [MongoDB] Execução RPA_Coleta_Indices salva: 6852285dfdfce2d6035f1769
+INFO:core.data_manager:📄 Salvando JSON para RPA_Coleta_Indices...
+WARNING:core.data_manager:⚠️ Erro ao carregar dados_processamento/execucoes_rpa.json: Expecting value: line 1 column 1 (char 0)
+INFO:core.data_manager:✅ [RPA_Coleta_Indices] JSON salvo com sucesso
+INFO:core.data_manager:✅ [RPA_Coleta_Indices] Salvo em MongoDB + JSON
+INFO:core.rastreamento_unificado:✅ Rastreamento finalizado: RPA_Coleta_Indices_20250617_224531_6849 (7 passos)
+2025-06-17 22:45:49,489 - RPA.Coleta_Indices.Avancado - INFO - ✅ Coleta_Indices executado com sucesso em 17.81s
+2025-06-17 22:45:49,490 - RPA.Coleta_Indices.Avancado - INFO - 📊 Resultado: Índices coletados com sucesso - IPCA: 5,32%, IGPM: 7,02%
+2025-06-17 22:45:49,490 - RPA.Coleta_Indices.Avancado - INFO - 📈 Dados retornados: {
+  "ipca": {
+    "tipo": "IPCA",
+    "valor": "5,32",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "IBGE",
+    "url": "https://www.ibge.gov.br/explica/inflacao.php",
+    "metodo": "webscraping_selenium",
+    "timestamp": "2025-06-17T22:45:38.684343"
+  },
+  "igpm": {
+    "tipo": "IGPM",
+    "valor": "7,02",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "FGV",
+    "url": "https://portalibre.fgv.br/taxonomy/term/94",
+    "metodo": "webscraping_selenium_download",
+    "timestamp": "2025-06-17T22:45:47.786728"
+  },
+  "planilha_atualizada": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "timestamp_coleta": "2025-06-17T22:45:49.475497"
+}
+
+✅ SUCESSO: Índices coletados com sucesso - IPCA: 5,32%, IGPM: 7,02%
+⏱️ Tempo: 17.8s
+
+📊 IPCA: 5,32% (mai.-25)
+📊 IGPM: 7,02% (mai.-25)
+📋 Planilha: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+
+🔍 Verificando persistência dos dados...
+📈 Total de execuções registradas: 1
+📊 Total de índices salvos: 1
+📄 Arquivo índices existe: True
+📄 Arquivo execuções existe: True
+🔍 Último índice salvo: N/A
+🔍 Última execução: RPA_Coleta_Indices
+INFO:RPABrowser:✅ Browser fechado
+
+🔄 Cleanup concluído
+============================================================
+✅ Teste RPA Coleta de Índices finalizado
