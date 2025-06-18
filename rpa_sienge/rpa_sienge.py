@@ -20,8 +20,7 @@ from dotenv import load_dotenv
 # Imports do sistema RPA
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
-from validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
-from regras_negocio_pdd import ProcessadorRegrasNegocio
+from processador_regras_pdd import ProcessadorRegrasNegocio, ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
 
 # Selenium imports necessários
 from selenium.webdriver.common.by import By
