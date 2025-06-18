@@ -131,8 +131,8 @@ class BaseRPA(ABC):
                     from core.browser_manager import RPABrowser
                     self.browser = RPABrowser(headless=False)
                     self.logger.info("✅ Browser Selenium inicializado")
-                except ImportError:
-                    self.logger.warning("⚠️ Browser não disponível")
+                except Exception as e:
+                    self.logger.warning(f"⚠️ Browser não disponível: {str(e)}")
                     self.browser = None
 
             return True

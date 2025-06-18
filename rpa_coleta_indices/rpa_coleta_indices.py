@@ -45,7 +45,6 @@ class RPAColetaIndices(BaseRPA):
         super().__init__(nome_rpa="Coleta_Indices", usar_browser=True)
         self.cliente_sheets = None
         self.rastreamento = None
- # Ensure browser is initialized
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -66,6 +65,13 @@ class RPAColetaIndices(BaseRPA):
             await self.rastreamento.registrar_inicio_rpa(parametros)
             
             self.log_info("📊 Iniciando coleta de índices econômicos...")
+            
+            # Inicializa browser se necessário
+            if not self.browser:
+                await self.inicializar()
+                if not self.browser:
+                    raise Exception("Falha crítica: Não foi possível inicializar o browser")
+            
             # Valida parâmetros
             planilha_id = parametros.get("planilha_id")
             if not planilha_id:
