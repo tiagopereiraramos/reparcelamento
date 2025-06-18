@@ -200,6 +200,15 @@ class RPASienge(BaseRPA):
             usuario_sienge = self.credenciais_sienge.get("usuario", "")
             senha_sienge = self.credenciais_sienge.get("senha", "")
 
+            # Inicializar rastreamento se não existe
+            if self.rastreamento is None:
+                self.rastreamento = iniciar_rastreamento("RPA_Sienge")
+                await self.rastreamento.registrar_inicio_rpa({
+                    "operacao": "login_sienge",
+                    "usuario": usuario_sienge,
+                    "timestamp": datetime.now().isoformat()
+                })
+
             await self.rastreamento.registrar_passo(
                 "TENTATIVA_LOGIN_SIENGE",
                 {
@@ -272,17 +281,18 @@ class RPASienge(BaseRPA):
             self.log_progresso("Login no Sienge realizado com sucesso")
 
         except Exception as e:
-            await self.rastreamento.registrar_login_sistema(
-                "sienge", 
-                self.credenciais_sienge.get("usuario", ""), 
-                False
-            )
-            
-            await self.rastreamento.registrar_erro_critico(e, {
-                "fase": "login_sienge",
-                "url": self.credenciais_sienge.get("url", ""),
-                "usuario": self.credenciais_sienge.get("usuario", "")
-            })
+            if self.rastreamento:
+                await self.rastreamento.registrar_login_sistema(
+                    "sienge", 
+                    self.credenciais_sienge.get("usuario", ""), 
+                    False
+                )
+                
+                await self.rastreamento.registrar_erro_critico(e, {
+                    "fase": "login_sienge",
+                    "url": self.credenciais_sienge.get("url", ""),
+                    "usuario": self.credenciais_sienge.get("usuario", "")
+                })
             
             raise Exception(f"Falha no login Sienge: {str(e)}")
 

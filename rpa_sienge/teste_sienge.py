@@ -155,8 +155,11 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
         if data_manager.mongodb_ativo:
             try:
                 from core.mongodb_manager import mongodb_manager
-                indices_doc = await mongodb_manager.database.indices_economicos.find_one(
-                    {}, sort=[("timestamp_coleta", -1)]  # Mais recente
+                indices_doc = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: mongodb_manager.database.indices_economicos.find_one(
+                        {}, sort=[("timestamp_coleta", -1)]
+                    )
                 )
                 if indices_doc and indices_doc.get("indices"):
                     print("📊 Índices carregados do MongoDB")
