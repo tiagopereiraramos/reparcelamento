@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 # Imports do sistema RPA
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.rastreamento_unificado import iniciar_rastreamento
 from processador_regras_pdd import ProcessadorRegrasNegocio, ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
 
 # Selenium imports necessários
@@ -48,6 +49,7 @@ class RPASienge(BaseRPA):
         self.pasta_planilhas = Path("dados_extraidos/planilhas_sienge")
         self.pasta_planilhas.mkdir(parents=True, exist_ok=True)
         self.processador_regras = ProcessadorRegrasNegocio()
+        self.rastreamento = None
 
     def _configurar_credenciais(self, credenciais: Dict[str, str]):
         """Configura credenciais do Sienge"""
@@ -77,6 +79,18 @@ class RPASienge(BaseRPA):
             notificar_analista: False para ignorar notificações de validação
         """
         try:
+            # ✅ INICIA RASTREAMENTO UNIFICADO
+            self.rastreamento = iniciar_rastreamento("RPA_Sienge")
+            
+            await self.rastreamento.registrar_inicio_rpa({
+                "contrato": contrato,
+                "credenciais_fornecidas": bool(credenciais_sienge),
+                "indices_fornecidos": bool(indices),
+                "etapa": etapa,
+                "autorizar_reparcelamento": autorizar_reparcelamento,
+                "notificar_analista": notificar_analista
+            })
+
             self.log_progresso(
                 f"Iniciando RPA Sienge - Etapa: {etapa.upper()}")
             self.log_progresso(
@@ -86,6 +100,11 @@ class RPASienge(BaseRPA):
                 f"Autorização automática: {autorizar_reparcelamento}")
 
             if not contrato or not credenciais_sienge:
+                await self.rastreamento.registrar_erro_critico(
+                    ValueError("Parâmetros obrigatórios não fornecidos"),
+                    {"contrato_fornecido": bool(contrato), "credenciais_fornecidas": bool(credenciais_sienge)}
+                )
+                
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem=
@@ -97,7 +116,7 @@ class RPASienge(BaseRPA):
             # Configura credenciais
             self._configurar_credenciais(credenciais_sienge)
 
-            # Faz login no Sienge
+            # Faz login no Sienge com rastreamento
             await self._fazer_login_sienge()
 
             # ETAPA 1: CONSULTA DE RELATÓRIOS (sempre executada)
@@ -152,10 +171,24 @@ class RPASienge(BaseRPA):
 
         except Exception as e:
             erro_msg = f"Erro na execução do RPA Sienge: {str(e)}"
+            
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro_critico(e, {
+                    "fase": "execucao_principal",
+                    "etapa": etapa,
+                    "contrato": contrato.get("numero_titulo", "N/A")
+                })
+                await self.rastreamento.finalizar_rastreamento()
+            
             self.log_erro(erro_msg, e)
             return ResultadoRPA(sucesso=False,
                                 mensagem="Falha na execução do RPA Sienge",
                                 erro=erro_msg)
+        
+        finally:
+            # ✅ SEMPRE finaliza rastreamento
+            if self.rastreamento:
+                await self.rastreamento.finalizar_rastreamento()
 
     async def _fazer_login_sienge(self):
         """
@@ -167,9 +200,23 @@ class RPASienge(BaseRPA):
             usuario_sienge = self.credenciais_sienge.get("usuario", "")
             senha_sienge = self.credenciais_sienge.get("senha", "")
 
+            await self.rastreamento.registrar_passo(
+                "TENTATIVA_LOGIN_SIENGE",
+                {
+                    "url_sienge": url_sienge,
+                    "usuario": usuario_sienge,
+                    "timestamp_tentativa": datetime.now().isoformat()
+                },
+                categoria="OPERACAO"
+            )
+
             self.log_progresso(f"Acessando sistema Sienge: {url_sienge}")
 
             if not url_sienge:
+                await self.rastreamento.registrar_erro_critico(
+                    ValueError("URL do Sienge não configurada"),
+                    {"credenciais_sienge": self.credenciais_sienge}
+                )
                 raise ValueError(
                     "URL do Sienge não foi configurada corretamente.")
 
@@ -215,9 +262,28 @@ class RPASienge(BaseRPA):
 
             # Login bem-sucedido
             self.logado_sienge = True
+            
+            await self.rastreamento.registrar_login_sistema(
+                "sienge", 
+                usuario_sienge, 
+                True
+            )
+            
             self.log_progresso("Login no Sienge realizado com sucesso")
 
         except Exception as e:
+            await self.rastreamento.registrar_login_sistema(
+                "sienge", 
+                self.credenciais_sienge.get("usuario", ""), 
+                False
+            )
+            
+            await self.rastreamento.registrar_erro_critico(e, {
+                "fase": "login_sienge",
+                "url": self.credenciais_sienge.get("url", ""),
+                "usuario": self.credenciais_sienge.get("usuario", "")
+            })
+            
             raise Exception(f"Falha no login Sienge: {str(e)}")
 
     async def _consultar_relatorios_financeiros(
@@ -318,6 +384,14 @@ class RPASienge(BaseRPA):
                 self.log_progresso("Processando planilha baixada...")
                 dados_planilha = await self._processar_planilha_baixada(
                     cliente, numero_titulo)
+                
+                # Registra consulta realizada
+                if self.rastreamento:
+                    await self.rastreamento.registrar_consulta_dados(
+                        "SALDO_DEVEDOR_SIENGE",
+                        {"cliente": cliente, "numero_titulo": numero_titulo},
+                        dados_planilha
+                    )
 
                 # NAVEGAR DE VOLTA À TELA DE CONSULTA PARA PRÓXIMO CONTRATO
                 self.log_progresso(
@@ -408,6 +482,13 @@ class RPASienge(BaseRPA):
             arquivo_destino = self.pasta_planilhas / \
                 f"sienge_{cliente.replace(' ', '_')}_{timestamp}.xlsx"
             shutil.copy2(arquivo_mais_recente, arquivo_destino)
+            
+            # Registra processamento da planilha
+            if self.rastreamento:
+                await self.rastreamento.registrar_processamento_planilha(
+                    str(arquivo_destino),
+                    {"cliente": cliente, "numero_titulo": numero_titulo, "arquivo_origem": caminho_arquivo}
+                )
 
             # APLICAR VALIDAÇÃO PDD RIGOROSA CONFORME SEÇÃO 9.1.1
             validador = ValidadorInadimplenciaPDD()
@@ -698,47 +779,10 @@ class RPASienge(BaseRPA):
 
     async def _registrar_passo_execucao(self, nome_passo: str, dados: Dict[str, Any]):
         """
-        Registra um passo da execução do RPA em JSON e no MongoDB.
-
-        Args:
-            nome_passo: Nome do passo a ser registrado (ex: "LOGIN_SIENGE", "CONSULTA_RELATORIO").
-            dados: Dados adicionais a serem registrados no passo (ex: informações do usuário, dados do contrato).
+        MÉTODO SUBSTITUÍDO pelo sistema unificado de rastreamento
+        Mantido para compatibilidade - delega para o rastreamento unificado
         """
-        try:
-            # 1. Registrar em JSON
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            nome_arquivo = f"execucao_rpa_{timestamp}.json"
-            caminho_arquivo = Path("logs") / nome_arquivo
-            caminho_arquivo.parent.mkdir(parents=True, exist_ok=True)
-
-            # Carrega o arquivo JSON existente (se existir)
-            dados_execucao = []```python
-            if caminho_arquivo.exists():
-                with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-                    try:
-                        dados_execucao = json.load(f)
-                    except json.JSONDecodeError:
-                        self.log_erro("Erro ao decodificar JSON existente. Criando novo arquivo.", exc_info=True)
-                        dados_execucao = []
-
-            # Adiciona o novo passo à lista de dados
-            dados_execucao.append({
-                "passo": nome_passo,
-                "dados": dados,
-                "timestamp": datetime.now().isoformat()
-            })
-
-            # Salva os dados atualizados no arquivo JSON
-            with open(caminho_arquivo, 'w', encoding='utf-8') as f:
-                json.dump(dados_execucao, f, ensure_ascii=False, indent=2)
-
-            self.log_progresso(f"Passo '{nome_passo}' registrado em JSON: {caminho_arquivo}")
-
-            # 2. Registrar no MongoDB (a ser implementado)
-            # TODO: Adicionar a lógica de registro no MongoDB aqui
-            # self._registrar_mongodb(nome_passo, dados)
-            self.log_progresso(f"Passo '{nome_passo}' registrado para MongoDB (implementação pendente)")
-
-        except Exception as e:
-            erro_msg = f"Erro ao registrar passo '{nome_passo}': {str(e)}"
-            self.log_erro(erro_msg, e)
+        if self.rastreamento:
+            await self.rastreamento.registrar_passo(nome_passo, dados, categoria="OPERACAO")
+        else:
+            self.log_progresso(f"⚠️ Rastreamento não iniciado - passo: {nome_passo}")

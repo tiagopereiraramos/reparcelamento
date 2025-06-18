@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.rastreamento_unificado import iniciar_rastreamento
 
 # Logger integrado via BaseRPA usando logger_avancado
 
@@ -37,6 +38,7 @@ class RPAAnalisePlanilhas(BaseRPA):
     def __init__(self):
         super().__init__(nome_rpa="Analise_Planilhas", usar_browser=False)
         self.cliente_sheets = None
+        self.rastreamento = None
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -52,6 +54,11 @@ class RPAAnalisePlanilhas(BaseRPA):
             ResultadoRPA com lista de contratos para processamento
         """
         try:
+            # ✅ INICIA RASTREAMENTO UNIFICADO
+            self.rastreamento = iniciar_rastreamento("RPA_Analise_Planilhas")
+            
+            await self.rastreamento.registrar_inicio_rpa(parametros)
+            
             # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
             from core.data_manager import data_manager
             await data_manager.inicializar()
@@ -110,6 +117,9 @@ class RPAAnalisePlanilhas(BaseRPA):
                 "timestamp_analise": datetime.now().isoformat()
             }
 
+            # Registra sucesso final
+            await self.rastreamento.registrar_sucesso_rpa(resultado_dados)
+
             return ResultadoRPA(
                 sucesso=True,
                 mensagem=f"Análise concluída - {len(contratos_reajuste)} contratos identificados para reparcelamento",
@@ -117,12 +127,23 @@ class RPAAnalisePlanilhas(BaseRPA):
             )
 
         except Exception as e:
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro_critico(e, {
+                    "fase": "execucao_principal",
+                    "parametros": parametros
+                })
+                
             self.log_erro("Erro durante análise das planilhas", e)
             return ResultadoRPA(
                 sucesso=False,
                 mensagem="Falha na análise das planilhas",
                 erro=str(e)
             )
+        
+        finally:
+            # ✅ SEMPRE finaliza rastreamento
+            if self.rastreamento:
+                await self.rastreamento.finalizar_rastreamento()
 
     async def _conectar_google_sheets(self, credenciais_google: Optional[str]):
         """

@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.rastreamento_unificado import iniciar_rastreamento
 
 # Logger integrado via BaseRPA usando logger_avancado
 
@@ -43,6 +44,7 @@ class RPAColetaIndices(BaseRPA):
     def __init__(self):
         super().__init__(nome_rpa="Coleta_Indices", usar_browser=True)
         self.cliente_sheets = None
+        self.rastreamento = None
  # Ensure browser is initialized
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
@@ -58,10 +60,20 @@ class RPAColetaIndices(BaseRPA):
             ResultadoRPA com dados dos índices coletados
         """
         try:
+            # ✅ INICIA RASTREAMENTO UNIFICADO
+            self.rastreamento = iniciar_rastreamento("RPA_Coleta_Indices")
+            
+            await self.rastreamento.registrar_inicio_rpa(parametros)
+            
             self.log_info("📊 Iniciando coleta de índices econômicos...")
             # Valida parâmetros
             planilha_id = parametros.get("planilha_id")
             if not planilha_id:
+                await self.rastreamento.registrar_erro_critico(
+                    ValueError("ID da planilha não fornecido"),
+                    {"parametros_recebidos": parametros}
+                )
+                
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem="ID da planilha não fornecido",
@@ -70,15 +82,44 @@ class RPAColetaIndices(BaseRPA):
 
             # Conecta ao Google Sheets se especificado
             credenciais_path = parametros.get("credenciais_google") or os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
+            
+            await self.rastreamento.registrar_passo(
+                "CONEXAO_GOOGLE_SHEETS",
+                {"credenciais_path": credenciais_path, "planilha_id": planilha_id},
+                categoria="OPERACAO"
+            )
+            
             await self._conectar_google_sheets(credenciais_path)
 
             # Coleta IPCA do IBGE
             self.log_progresso("Coletando IPCA do site oficial do IBGE")
+            await self.rastreamento.registrar_passo(
+                "INICIO_COLETA_IPCA",
+                {"fonte": "IBGE", "url": "https://www.ibge.gov.br/explica/inflacao.php"},
+                categoria="OPERACAO"
+            )
             dados_ipca = await self._coletar_ipca_ibge()
+            
+            await self.rastreamento.registrar_passo(
+                "RESULTADO_COLETA_IPCA",
+                {"dados_coletados": dados_ipca, "sucesso": dados_ipca is not None},
+                categoria="OPERACAO"
+            )
 
             # Coleta IGPM da FGV
             self.log_progresso("Coletando IGPM do site oficial da FGV")
+            await self.rastreamento.registrar_passo(
+                "INICIO_COLETA_IGPM",
+                {"fonte": "FGV", "url": "https://portalibre.fgv.br/taxonomy/term/94"},
+                categoria="OPERACAO"
+            )
             dados_igpm = await self._coletar_igpm_fgv()
+            
+            await self.rastreamento.registrar_passo(
+                "RESULTADO_COLETA_IGPM",
+                {"dados_coletados": dados_igpm, "sucesso": dados_igpm is not None},
+                categoria="OPERACAO"
+            )
 
             # Atualiza planilha Google Sheets
             self.log_progresso("Atualizando planilha Google Sheets")
@@ -95,6 +136,9 @@ class RPAColetaIndices(BaseRPA):
                 "timestamp_coleta": datetime.now().isoformat()
             }
 
+            # Registra sucesso final
+            await self.rastreamento.registrar_sucesso_rpa(resultado_dados)
+
             return ResultadoRPA(
                 sucesso=True,
                 mensagem=f"Índices coletados com sucesso - IPCA: {dados_ipca['valor']}%, IGPM: {dados_igpm['valor']}%",
@@ -102,12 +146,23 @@ class RPAColetaIndices(BaseRPA):
             )
 
         except Exception as e:
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro_critico(e, {
+                    "fase": "execucao_principal",
+                    "parametros": parametros
+                })
+                
             self.log_erro("Erro durante coleta de índices", e)
             return ResultadoRPA(
                 sucesso=False,
                 mensagem="Falha na coleta de índices econômicos",
                 erro=str(e)
             )
+        
+        finally:
+            # ✅ SEMPRE finaliza rastreamento
+            if self.rastreamento:
+                await self.rastreamento.finalizar_rastreamento()
 
     async def _conectar_google_sheets(self, caminho_credenciais: Optional[str] = None):
         """
