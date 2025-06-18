@@ -178,8 +178,10 @@ class DataManagerUnificado:
         logger.info(f"   MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
         logger.info(f"   self.mongodb_ativo: {self.mongodb_ativo}")
         logger.info(f"   mongodb_manager existe: {mongodb_manager is not None}")
-        logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado if mongodb_manager else 'N/A'}")
-        logger.info(f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
+        logger.info(
+            f"   mongodb_manager.conectado: {mongodb_manager.conectado if mongodb_manager else False}")
+        logger.info(
+            f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database is not None else 'NOT SET'}")
 
         # Tentar MongoDB primeiro - usar conectado ao invés de mongodb_ativo
         if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
@@ -704,7 +706,7 @@ async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: 
     """Função auxiliar para salvar execução simultaneamente"""
     return await data_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
 
-async def salvar_contrato(contrato_data: Dict[str, Any) -> Dict[str, str]:
+async def salvar_contrato(contrato_data: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar contrato simultaneamente"""
     return await data_manager.salvar_contrato_processado(contrato_data)
 
