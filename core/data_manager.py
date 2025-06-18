@@ -89,19 +89,20 @@ class DataManagerUnificado:
 
                     # Teste prático de inserção
                     try:
-                        async def _test_insert():
-                            # Teste direto no MongoDB
+                        def _test_insert():
+                            # Teste direto no MongoDB - PyMongo é síncrono
                             test_collection = mongodb_manager.database.teste_conexao
                             test_doc = {"teste": True, "timestamp": datetime.now()}
-                            result = await test_collection.insert_one(test_doc)
+                            result = test_collection.insert_one(test_doc)
                             # Remove documento de teste
-                            await test_collection.delete_one({"_id": result.inserted_id})
+                            test_collection.delete_one({"_id": result.inserted_id})
                             return str(result.inserted_id)
 
-                        test_id = await _test_insert()
+                        test_id = await asyncio.get_event_loop().run_in_executor(
+                            None, _test_insert
+                        )
 
                         logger.info(f"✅ Teste inserção MongoDB: {test_id}")
-
 
                     except Exception as test_e:
                         logger.error(f"❌ Falha no teste de inserção: {str(test_e)}")
