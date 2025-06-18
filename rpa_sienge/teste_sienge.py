@@ -30,7 +30,7 @@ async def executar_processamento_sienge(contrato: Dict[str, Any],
     try:
         rpa = RPASienge()
         await rpa.inicializar()
-        
+
         resultado = await rpa.executar(
             contrato=contrato,
             credenciais_sienge=credenciais_sienge,
@@ -39,10 +39,10 @@ async def executar_processamento_sienge(contrato: Dict[str, Any],
             autorizar_reparcelamento=autorizar_reparcelamento,
             notificar_analista=notificar_analista
         )
-        
+
         await rpa.finalizar()
         return resultado
-        
+
     except Exception as e:
         from core.base_rpa import ResultadoRPA
         return ResultadoRPA(
@@ -61,19 +61,19 @@ async def carregar_fila_contratos() -> List[Dict[str, Any]]:
         # Inicializa o data_manager (garante conexão MongoDB se disponível)
         from core.data_manager import data_manager
         from core.mongodb_manager import mongodb_manager, MONGODB_DISPONIVEL
-        
+
         print("🔍 Carregando fila de contratos...")
-        
+
         # Força inicialização do data_manager
         await data_manager.inicializar()
-        
+
         print(f"   Data Manager - MongoDB ativo: {data_manager.mongodb_ativo}")
         print(f"   MongoDB Manager - Conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
         print(f"   MongoDB - Disponível: {MONGODB_DISPONIVEL}")
-        
+
         contratos = []
         fonte_dados = "none"
-        
+
         # PRIORIDADE 1: Tentar MongoDB DIRETAMENTE se disponível
         if MONGODB_DISPONIVEL and mongodb_manager.conectado:
             try:
@@ -83,40 +83,40 @@ async def carregar_fila_contratos() -> List[Dict[str, Any]]:
                     mongodb_manager.executor,
                     lambda: collection.find_one()
                 )
-                
+
                 if documento and documento.get("contratos"):
                     contratos = documento.get("contratos", [])
                     fonte_dados = "mongodb"
                     print(f"✅ Fila carregada do MongoDB: {len(contratos)} contratos")
                 else:
                     print("⚠️ Documento de fila não encontrado no MongoDB")
-                    
+
             except Exception as e:
                 print(f"⚠️ Erro ao acessar MongoDB: {str(e)}")
-        
+
         # PRIORIDADE 2: Fallback para data_manager se MongoDB falhou
         if not contratos:
             print("📄 Tentando carregar via data_manager...")
             fila_dados = await data_manager.obter_fila_sienge()
-            
+
             if fila_dados and fila_dados.get("contratos"):
                 contratos = fila_dados.get("contratos", [])
                 fonte_dados = "json"
                 print(f"✅ Fila carregada do JSON: {len(contratos)} contratos")
-        
+
         # PRIORIDADE 3: Fallback direto para arquivo JSON
         if not contratos:
             print("📄 Tentando carregar diretamente do arquivo JSON...")
             import json
             arquivo_fila = os.path.join("dados_processamento", "fila_contratos_sienge.json")
-            
+
             if os.path.exists(arquivo_fila):
                 with open(arquivo_fila, 'r', encoding='utf-8') as f:
                     fila_dados = json.load(f)
                     contratos = fila_dados.get("contratos", [])
                     fonte_dados = "arquivo_json"
                     print(f"✅ Fila carregada do arquivo JSON: {len(contratos)} contratos")
-        
+
         if contratos:
             print(f"📋 Fonte dos dados: {fonte_dados}")
             print("📋 Primeiros contratos na fila:")
@@ -127,7 +127,7 @@ async def carregar_fila_contratos() -> List[Dict[str, Any]]:
                 print(f"   {i+1}. {titulo} - {cliente} [{status}]")
             if len(contratos) > 3:
                 print(f"   ... e mais {len(contratos)-3} contratos")
-                
+
             return contratos
         else:
             print("⚠️ Nenhuma fila encontrada em nenhuma fonte")
@@ -148,9 +148,9 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
     try:
         from core.data_manager import data_manager
         await data_manager.inicializar()
-        
+
         print("📈 Carregando índices econômicos...")
-        
+
         # Tenta carregar do MongoDB se disponível
         if data_manager.mongodb_ativo:
             try:
@@ -274,14 +274,14 @@ async def atualizar_status_contrato(numero_titulo: str,
     try:
         from core.data_manager import data_manager
         await data_manager.inicializar()
-        
+
         print(f"📝 Atualizando status {numero_titulo}: {status}")
-        
+
         # Tentar MongoDB primeiro se disponível
         if data_manager.mongodb_ativo:
             try:
                 from core.mongodb_manager import mongodb_manager
-                
+
                 def _update_contract():
                     return mongodb_manager.database.fila_processamento_sienge.update_one(
                         {"contratos.numero_titulo": numero_titulo}, {
@@ -291,11 +291,11 @@ async def atualizar_status_contrato(numero_titulo: str,
                                 "contratos.$.erro_processamento": erro
                             }
                         })
-                
+
                 result = await asyncio.get_event_loop().run_in_executor(
                     None, _update_contract
                 )
-                
+
                 if result.modified_count > 0:
                     print(f"✅ Status atualizado no MongoDB: {numero_titulo}")
                     return
@@ -409,7 +409,7 @@ async def teste_etapa_consulta():
         return False
 
     print(f"✅ Encontrados {len(contratos_fila)} contratos na fila real")
-    
+
     # Mostra primeiros contratos
     print("📋 Contratos que serão processados:")
     for i, contrato in enumerate(contratos_fila[:5]):  # Mostra primeiros 5
@@ -429,11 +429,11 @@ async def teste_etapa_consulta():
 
     try:
         print(f"\n🔄 Processando {len(contratos_fila)} contratos em LOOP com login único...")
-        
+
         # CRIAR RPA UMA VEZ PARA REUSAR LOGIN
         rpa = RPASienge()
         await rpa.inicializar()
-        
+
         # Configura credenciais e faz login UMA VEZ
         rpa._configurar_credenciais(credenciais_sienge)
         await rpa._fazer_login_sienge()
@@ -446,15 +446,15 @@ async def teste_etapa_consulta():
         for i, contrato_fila in enumerate(contratos_fila):
             print(f"\n📄 [{i+1}/{len(contratos_fila)}] Processando: {contrato_fila.get('numero_titulo', 'N/A')}")
             print(f"   👤 Cliente: {contrato_fila.get('cliente', 'N/A')}")
-            
+
             try:
                 # CONSULTA RELATÓRIOS PARA ESTE CONTRATO
                 dados_financeiros = await rpa._consultar_relatorios_financeiros(contrato_fila)
-                
+
                 if dados_financeiros.get("sucesso"):
                     sucessos += 1
                     print(f"   ✅ Sucesso - Planilha processada")
-                    
+
                     # Mostra resumo dos dados
                     dados_validacao = dados_financeiros.get("dados_validacao", {})
                     if dados_validacao:
@@ -462,7 +462,7 @@ async def teste_etapa_consulta():
                         print(f"   📊 Parcelas CT: {dados_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
                         print(f"   🚨 CT vencidas: {dados_validacao.get('qtd_ct_vencidas', 0)}")
                         print(f"   🎯 Pode reparcelar: {dados_validacao.get('pode_reparcelar', False)}")
-                    
+
                     # Atualizar status como processado
                     await atualizar_status_contrato(
                         contrato_fila.get("numero_titulo"),
@@ -473,7 +473,7 @@ async def teste_etapa_consulta():
                     falhas += 1
                     erro = dados_financeiros.get("erro", "Erro desconhecido")
                     print(f"   ❌ Falha: {erro}")
-                    
+
                     # Atualizar status como erro
                     await atualizar_status_contrato(
                         contrato_fila.get("numero_titulo"),
@@ -490,13 +490,20 @@ async def teste_etapa_consulta():
                 falhas += 1
                 erro_msg = str(e)
                 print(f"   ❌ Erro inesperado: {erro_msg}")
-                
+
+                # Registrar erro inesperado na auditoria
+                await registrar_erro_auditoria(contrato_fila, erro_msg, "ERRO_EXECUCAO_INESPERADO")
+
                 # Atualizar status como erro
                 await atualizar_status_contrato(
                     contrato_fila.get("numero_titulo"),
                     "erro_execucao",
                     erro_msg
                 )
+
+                # Continuar para próximo contrato mesmo com erro inesperado
+                print(f"   🔄 Continuando processamento dos demais contratos...")
+                continue
 
         # Finalizar RPA
         await rpa.finalizar()
@@ -554,7 +561,7 @@ async def teste_etapa_reparcelamento():
         print(f"\n📋 RESULTADO ETAPA 2:")
         print(f"✅ Sucesso: {resultado.sucesso}")
         print(f"📄 Mensagem: {resultado.mensagem}")
-        
+
         if resultado.dados:
             reparcelamento = resultado.dados.get("reparcelamento", {})
             print(f"🔄 Processado: {reparcelamento.get('sucesso', False)}")
@@ -895,6 +902,15 @@ async def main():
 
         return True
 
+
+# Adicionado função auxiliar para registrar erros na auditoria (simulação)
+async def registrar_erro_auditoria(contrato: Dict[str, Any], mensagem: str, tipo_erro: str):
+    """
+    Simula o registro de um erro na auditoria.
+    """
+    titulo = contrato.get("numero_titulo", "N/A")
+    cliente = contrato.get("cliente", "N/A")
+    print(f"   🚨 REGISTRO DE AUDITORIA: [{tipo_erro}] - Título: {titulo}, Cliente: {cliente}, Erro: {mensagem}")
 
 if __name__ == "__main__":
     # Configura event loop para Windows se necessário
