@@ -354,16 +354,12 @@ class RPASienge(BaseRPA):
                 xpath_erro_botao = '//div[@data-testid="snackbar"]//p[@data-testid="snackbar-message" and contains(normalize-space(.), "Informe pelo menos um dos seguintes campos para efetuar a consulta")]'
                 # Verifica se o cliente foi encontrado
                 if self.check_for_error(xpath=xpath_erro_botao):
-                    self.log_erro(
-                        "Erro ao consultar cliente: Informe pelo menos um dos seguintes campos para efetuar a consulta"
-                    )
-                    self.log_progresso(
-                        "Voltando à tela de consulta para próximo contrato...")
+                    erro_msg = "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
+                    self.log_erro("Erro ao consultar cliente", erro_msg)
+                    self.log_progresso("Voltando à tela de consulta para próximo contrato...")
                     return {
-                        "sucesso":
-                        False,
-                        "erro":
-                        "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
+                        "sucesso": False,
+                        "erro": erro_msg
                     }
                 # WEBSCRAPING REAL - CLICANDO EM TODOS NA BARRA PARA EXPORTAR TODOS OS REGISTROS
                 self.log_progresso("Selecionando todos os registros...")
