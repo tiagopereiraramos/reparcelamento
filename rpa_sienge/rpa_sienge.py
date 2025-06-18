@@ -525,11 +525,11 @@ class RPASienge(BaseRPA):
             # Se chegou aqui, pode prosseguir com o reparcelamento
             self.log_progresso("✅ Cliente aprovado para reparcelamento")
 
-            # Calcular valores de reparcelamento com IGPM do MongoDB
+            # Calcular valores de reparcelamento com IGPM centralizado
             saldo_atual = dados_validacao.get("saldo_total", 0)
             parcelas_pendentes = dados_validacao.get("qtd_parcelas_ct_a_vencer", 0)
             
-            # Tentar obter IGPM dos índices fornecidos ou do MongoDB
+            # Tentar obter IGPM dos índices fornecidos ou do sistema centralizado
             igpm_fornecido = indices.get("igpm", {}).get("valor") if indices else None
             
             calculo_resultado = await self.processador_regras.calcular_valores_reparcelamento(

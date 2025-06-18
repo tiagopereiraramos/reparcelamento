@@ -397,6 +397,97 @@ class MongoDBManager:
                 "timestamp": datetime.now().isoformat()
             }
 
+    async def obter_indice_mais_recente(self, tipo_indice: str = "igpm") -> Optional[float]:
+        """
+        Obtém índice econômico mais recente do MongoDB
+        
+        Args:
+            tipo_indice: "igpm" ou "ipca"
+            
+        Returns:
+            Valor do índice como float ou None se não encontrado
+        """
+        if not self.conectado:
+            return None
+
+        try:
+            def _get_latest_index():
+                # Buscar último documento com o índice solicitado
+                cursor = self.database.indices_economicos.find(
+                    {f"indices.{tipo_indice.lower()}": {"$exists": True}},
+                    sort=[("timestamp_coleta", -1)]
+                ).limit(1)
+                
+                resultado = list(cursor)
+                if resultado:
+                    indice_data = resultado[0].get("indices", {}).get(tipo_indice.lower(), {})
+                    valor_str = indice_data.get("valor", "")
+                    
+                    # Converter valor string para float
+                    if isinstance(valor_str, str):
+                        # Remove % e converte vírgula para ponto
+                        valor_limpo = valor_str.replace("%", "").replace(",", ".").strip()
+                        return float(valor_limpo)
+                    elif isinstance(valor_str, (int, float)):
+                        return float(valor_str)
+                
+                return None
+
+            indice_valor = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_latest_index
+            )
+            
+            return indice_valor
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao obter {tipo_indice} do MongoDB: {str(e)}")
+            return None
+
+    async def obter_documento_mais_recente(self, collection_name: str, filtro: Dict[str, Any] = None, 
+                                          campo_ordenacao: str = "timestamp_coleta") -> Optional[Dict[str, Any]]:
+        """
+        Obtém documento mais recente de uma collection
+        
+        Args:
+            collection_name: Nome da collection
+            filtro: Filtro para a busca (opcional)
+            campo_ordenacao: Campo para ordenação descendente
+            
+        Returns:
+            Documento mais recente ou None se não encontrado
+        """
+        if not self.conectado:
+            return None
+
+        try:
+            def _get_latest_document():
+                collection = self.database[collection_name]
+                cursor = collection.find(filtro or {}).sort(campo_ordenacao, -1).limit(1)
+                
+                resultado = list(cursor)
+                if resultado:
+                    documento = resultado[0]
+                    # Converte ObjectId para string
+                    if "_id" in documento:
+                        documento["_id"] = str(documento["_id"])
+                    # Converte datetime para ISO string
+                    for campo, valor in documento.items():
+                        if hasattr(valor, 'isoformat'):
+                            documento[campo] = valor.isoformat()
+                    return documento
+                
+                return None
+
+            documento = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_latest_document
+            )
+            
+            return documento
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao obter documento mais recente de {collection_name}: {str(e)}")
+            return None
+
     async def desconectar(self):
         """
         Fecha conexão MongoDB
