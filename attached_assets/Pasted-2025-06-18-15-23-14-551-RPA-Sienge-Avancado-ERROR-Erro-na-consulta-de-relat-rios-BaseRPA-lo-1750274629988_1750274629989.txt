@@ -1,0 +1,47 @@
+2025-06-18 15:23:14,551 - RPA.Sienge.Avancado - ERROR - ❌ Erro na consulta de relatórios: BaseRPA.log_erro() missing 1 required positional argument: 'erro': BaseRPA.log_erro() missing 1 required positional argument: 'erro'
+2025-06-18 15:23:14,551 - RPA.Sienge.Avancado - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 347, in _consultar_relatorios_financeiros
+    self.log_erro(
+TypeError: BaseRPA.log_erro() missing 1 required positional argument: 'erro'
+
+   ❌ Falha: Erro na consulta de relatórios: BaseRPA.log_erro() missing 1 required positional argument: 'erro'
+INFO:core.data_manager:Inicializando sistema de dados...
+INFO:core.data_manager:Conectando ao MongoDB: sistema_rpa
+INFO:core.mongodb_manager:✅ MongoDB desconectado
+INFO:core.mongodb_manager:Conectando ao MongoDB...
+INFO:core.mongodb_manager:🔍 Variáveis de ambiente:
+INFO:core.mongodb_manager:   DATABASE_URL: SET
+INFO:core.mongodb_manager:   MONGODB_URI: NOT SET
+INFO:core.mongodb_manager:   MONGO_URL: NOT SET
+INFO:core.mongodb_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.mongodb_manager:   URI: mongodb://localhost:27017
+INFO:core.mongodb_manager:🔌 Criando cliente MongoDB...
+INFO:core.mongodb_manager:🏓 Testando conexão com ping...
+INFO:core.mongodb_manager:✅ Ping successful: {'ok': 1.0}
+INFO:core.mongodb_manager:🗄️ Configurando database: sistema_rpa
+INFO:core.mongodb_manager:🧪 Testando operação na database...
+INFO:core.mongodb_manager:✅ Teste inserção: 68531222828eb8048a057fa2
+INFO:core.mongodb_manager:🧹 Documento de teste removido
+INFO:core.mongodb_manager:✅ MongoDB conectado com sucesso: sistema_rpa
+INFO:core.mongodb_manager:📊 Criando índices...
+INFO:core.mongodb_manager:🎉 MongoDB totalmente inicializado!
+INFO:core.data_manager:Sistema híbrido MongoDB + JSON ativo
+INFO:core.data_manager:Data manager inicializado com MongoDB ativo
+INFO:core.data_manager:✅ Data manager inicializado - MongoDB ativo: True
+INFO:core.data_manager:🔍 Estado final da inicialização:
+INFO:core.data_manager:   MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   self.mongodb_ativo: True
+INFO:core.data_manager:   mongodb_manager.conectado: True
+INFO:core.data_manager:   mongodb_manager.database: SET
+Status atualizado: 2356 -> erro_consulta
+2025-06-18 15:23:14,576 - RPA.Sienge.Avancado - INFO - 📈 RPA Sienge finalizado
+
+📈 RESUMO DO PROCESSAMENTO:
+   ✅ Sucessos: 1
+   ❌ Falhas: 1
+   📋 Total processado: 2
+   🎯 Taxa de sucesso: 50.0%
+INFO:RPABrowser:✅ Browser fechado
+
+🎉 TESTE CONCLUÍDO COM SUCESSO!
+(.venv) tiagopereiraramos@tiago-macbook reparcelamento % 
