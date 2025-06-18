@@ -521,6 +521,93 @@ async def teste_etapa_consulta():
         print(f"🔍 Traceback: {traceback.format_exc()}")
         return False
 
+async def teste_execucao_reparcelamento_real():
+    """
+    Testa execução completa do reparcelamento carregando dados da fila
+    """
+    print("🧪 TESTE EXECUÇÃO REPARCELAMENTO - FILA REAL")
+    print("=" * 55)
+
+    try:
+        rpa = RPASienge()
+        
+        # Configurar credenciais
+        credenciais = {
+            "url": os.getenv("SIENGE_URL", ""),
+            "usuario": os.getenv("SIENGE_USUARIO", ""),
+            "senha": os.getenv("SIENGE_SENHA", ""),
+            "empresa": os.getenv("SIENGE_EMPRESA", "")
+        }
+        
+        if not all(credenciais.values()):
+            print("⚠️ Credenciais Sienge não configuradas - usando modo simulação")
+            return False
+        
+        rpa._configurar_credenciais(credenciais)
+        
+        # Executar reparcelamento do próximo da fila
+        print("🔄 Executando reparcelamento do próximo contrato da fila...")
+        resultado = await rpa.executar_reparcelamento_webscraping()
+        
+        if resultado.sucesso:
+            print(f"✅ Reparcelamento executado com sucesso!")
+            print(f"   📄 Título: {resultado.dados.get('numero_titulo')}")
+            print(f"   👤 Cliente: {resultado.dados.get('cliente')}")
+            print(f"   🆕 Novo título: {resultado.dados.get('novo_titulo_gerado')}")
+            print(f"   💰 Saldo: R$ {resultado.dados.get('saldo_anterior', 0):,.2f} → R$ {resultado.dados.get('saldo_novo', 0):,.2f}")
+            return True
+        else:
+            print(f"❌ Falha no reparcelamento: {resultado.erro}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        return False
+
+async def teste_carregar_dados_fila():
+    """
+    Testa apenas o carregamento de dados da fila (sem webscraping)
+    """
+    print("🧪 TESTE CARREGAMENTO DADOS FILA")
+    print("=" * 40)
+
+    try:
+        rpa = RPASienge()
+        
+        # Carregar próximo da fila
+        print("📊 Carregando próximo contrato da fila...")
+        resultado = await rpa.carregar_dados_fila_reparcelamento()
+        
+        if resultado.get("sucesso", False):
+            parametros = resultado["parametros_navegacao"]
+            
+            print(f"✅ Dados carregados com sucesso!")
+            print(f"   📄 Título: {parametros['numero_titulo']}")
+            print(f"   👤 Cliente: {parametros['cliente']}")
+            print(f"   💰 Saldo: R$ {parametros['saldo_anterior']:,.2f} → R$ {parametros['saldo_novo']:,.2f}")
+            print(f"   📊 IGP-M: {parametros['igpm_aplicado']}%")
+            print(f"   🔄 Parcelas a desmarcar: {parametros['total_parcelas_desmarcar']}")
+            
+            print("\n📋 Valores para preenchimento no Sienge:")
+            valores = parametros['valores_sienge']
+            for campo, valor in valores.items():
+                print(f"   {campo}: {valor}")
+                
+            print("\n❌ Parcelas para desmarcar:")
+            for parcela in parametros['parcelas_desmarcar']:
+                print(f"   📄 {parcela['documento']} - {parcela['data_vencimento']} - {parcela['motivo']}")
+            
+            return True
+        else:
+            print(f"❌ Erro: {resultado.get('erro', 'Erro desconhecido')}")
+            if resultado.get("fila_vazia"):
+                print("📭 Fila de reparcelamento está vazia")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        return False
+
 async def teste_etapa_reparcelamento():
     """
     Testa apenas a etapa de reparcelamento (ETAPA 2) com autorização automática
