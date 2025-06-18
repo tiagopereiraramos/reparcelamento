@@ -807,12 +807,25 @@ class ProcessadorRegrasNegocio:
     
     # ============= CÁLCULOS FINANCEIROS =============
     
-    def calcular_valores_reparcelamento(self, saldo_atual: float, indice_igpm: float, 
-                                       parcelas_pendentes: int) -> Dict[str, Any]:
+    async def calcular_valores_reparcelamento(self, saldo_atual: float, indice_igpm: float = None, 
+                                       parcelas_pendentes: int = 0) -> Dict[str, Any]:
         """
         Calcula valores para reparcelamento conforme regras PDD
+        Busca IGPM no MongoDB se não fornecido
         """
         try:
+            # Se IGPM não foi fornecido, tentar buscar no MongoDB
+            if indice_igpm is None:
+                indice_igpm = await self._obter_igpm_mongodb()
+                
+                if indice_igpm is None:
+                    return {
+                        "sucesso": False,
+                        "erro": "IGPM não disponível",
+                        "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
+                        "mensagem": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM"
+                    }
+            
             # Aplicar correção IGP-M
             fator_correcao = 1 + (indice_igpm / 100)
             novo_saldo = saldo_atual * fator_correcao
@@ -844,7 +857,9 @@ class ProcessadorRegrasNegocio:
                 "valores_sienge": valores_sienge,
                 "novo_saldo": novo_saldo,
                 "fator_correcao": fator_correcao,
-                "diferenca_correcao": novo_saldo - saldo_atual
+                "diferenca_correcao": novo_saldo - saldo_atual,
+                "igpm_utilizado": indice_igpm,
+                "fonte_igpm": "mongodb" if indice_igpm else "parametro"
             }
             
         except Exception as e:
@@ -852,6 +867,55 @@ class ProcessadorRegrasNegocio:
                 "sucesso": False,
                 "erro": f"Erro no cálculo: {str(e)}"
             }
+    
+    async def _obter_igpm_mongodb(self) -> float:
+        """
+        Obtém último valor válido do IGPM no MongoDB
+        """
+        try:
+            from core.mongodb_manager import mongodb_manager
+            
+            if not mongodb_manager.conectado:
+                self.logger.warning("⚠️ MongoDB não conectado - não é possível obter IGPM")
+                return None
+            
+            # Buscar último índice IGPM válido
+            def _get_latest_igpm():
+                cursor = mongodb_manager.database.indices_economicos.find(
+                    {"indices.igpm": {"$exists": True}},
+                    sort=[("timestamp_coleta", -1)]
+                ).limit(1)
+                
+                resultado = list(cursor)
+                if resultado:
+                    igpm_data = resultado[0].get("indices", {}).get("igpm", {})
+                    valor_str = igpm_data.get("valor", "")
+                    
+                    # Converter valor string para float
+                    if isinstance(valor_str, str):
+                        # Remove % e converte vírgula para ponto
+                        valor_limpo = valor_str.replace("%", "").replace(",", ".").strip()
+                        return float(valor_limpo)
+                    elif isinstance(valor_str, (int, float)):
+                        return float(valor_str)
+                
+                return None
+            
+            import asyncio
+            igpm_valor = await asyncio.get_event_loop().run_in_executor(
+                None, _get_latest_igpm
+            )
+            
+            if igpm_valor is not None:
+                self.logger.info(f"✅ IGPM obtido do MongoDB: {igpm_valor}%")
+                return igpm_valor
+            else:
+                self.logger.warning("⚠️ Nenhum IGPM válido encontrado no MongoDB")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao obter IGPM do MongoDB: {str(e)}")
+            return None
     
     def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict]) -> List[Dict]:
         """

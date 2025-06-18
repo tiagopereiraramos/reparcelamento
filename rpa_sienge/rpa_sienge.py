@@ -525,20 +525,57 @@ class RPASienge(BaseRPA):
             # Se chegou aqui, pode prosseguir com o reparcelamento
             self.log_progresso("✅ Cliente aprovado para reparcelamento")
 
-            # Simular processamento de reparcelamento (TODO: implementar webscraping real)
+            # Calcular valores de reparcelamento com IGPM do MongoDB
+            saldo_atual = dados_validacao.get("saldo_total", 0)
+            parcelas_pendentes = dados_validacao.get("qtd_parcelas_ct_a_vencer", 0)
+            
+            # Tentar obter IGPM dos índices fornecidos ou do MongoDB
+            igpm_fornecido = indices.get("igpm", {}).get("valor") if indices else None
+            
+            calculo_resultado = await self.processador_regras.calcular_valores_reparcelamento(
+                saldo_atual=saldo_atual,
+                indice_igpm=igpm_fornecido,
+                parcelas_pendentes=parcelas_pendentes
+            )
+            
+            # Verificar se cálculo foi bem-sucedido
+            if not calculo_resultado.get("sucesso", False):
+                if calculo_resultado.get("acao_requerida") == "EXECUTAR_RPA_COLETA_INDICES":
+                    self.log_progresso("⚠️ IGPM não disponível no banco de dados")
+                    self.log_progresso("🔄 AÇÃO REQUERIDA: Execute o RPA de Coleta de Índices")
+                    
+                    return ResultadoRPA(
+                        sucesso=False,
+                        mensagem="IGPM não disponível - Execute RPA de Coleta de Índices",
+                        dados={
+                            "contrato": contrato,
+                            "validacao_pdd": dados_validacao,
+                            "erro_calculo": calculo_resultado.get("erro"),
+                            "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
+                            "instrucoes": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM antes de processar o reparcelamento"
+                        })
+                else:
+                    return ResultadoRPA(
+                        sucesso=False,
+                        mensagem=f"Erro no cálculo de reparcelamento: {calculo_resultado.get('erro')}",
+                        dados={
+                            "contrato": contrato,
+                            "validacao_pdd": dados_validacao,
+                            "erro_calculo": calculo_resultado.get("erro")
+                        })
+
+            # Simular processamento de reparcelamento com valores calculados
             resultado_reparcelamento = {
-                "sucesso":
-                True,
-                "novo_titulo_gerado":
-                f"REP_{contrato.get('numero_titulo', '')}_2025",
-                "valor_corrigido":
-                dados_validacao.get("saldo_total", 0),
-                "parcelas_processadas":
-                dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
-                "indices_aplicados":
-                indices,
-                "timestamp_reparcelamento":
-                datetime.now().isoformat()
+                "sucesso": True,
+                "novo_titulo_gerado": f"REP_{contrato.get('numero_titulo', '')}_2025",
+                "valor_anterior": saldo_atual,
+                "valor_corrigido": calculo_resultado.get("novo_saldo"),
+                "igpm_aplicado": calculo_resultado.get("igpm_utilizado"),
+                "fator_correcao": calculo_resultado.get("fator_correcao"),
+                "parcelas_processadas": parcelas_pendentes,
+                "valores_sienge": calculo_resultado.get("valores_sienge"),
+                "indices_aplicados": indices,
+                "timestamp_reparcelamento": datetime.now().isoformat()
             }
 
             return ResultadoRPA(
