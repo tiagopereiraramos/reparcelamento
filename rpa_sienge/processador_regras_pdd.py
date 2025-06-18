@@ -1,4 +1,3 @@
-"""Centralize métodos de busca de IGP-M em data_manager.py e mongodb_manager.py."""
 """
 PROCESSADOR REGRAS PDD - CONSOLIDADO
 Implementação completa de todas as regras de negócio PDD para reparcelamento Sienge
@@ -750,4 +749,197 @@ class ProcessadorRegrasNegocio:
         try:
             # Extrair dados principais
             dia_vencimento = regras_aplicadas["regra_1"].get("dia_vencimento")
-            primeiro_vencimento = regras
+            primeiro_vencimento = regras_aplicadas["regra_2"].get("data_primeiro_vencimento_formatada")
+            valor_parcela_base = regras_aplicadas["regra_3"].get("valor_parcela_base", 0)
+
+            irregularidades = regras_aplicadas["regra_4"]
+            parcelas_info = regras_aplicadas["regra_5"]
+            ct_vencidas_info = regras_aplicadas["regra_6"]
+            pendencias_info = regras_aplicadas["regra_7"]
+
+            return {
+                "sucesso": True,
+
+                # Dados principais do contrato
+                "dia_vencimento": dia_vencimento,
+                "valor_parcela_atual": valor_parcela_base,
+                "primeiro_vencimento_carne": primeiro_vencimento,
+
+                # Análise de irregularidades
+                "tem_parcelas_irregulares": irregularidades.get("tem_irregularidades", False),
+                "quantidade_irregulares": irregularidades.get("quantidade_irregulares", 0),
+                "parcelas_divergentes": irregularidades.get("parcelas_irregulares", []),
+
+                # Contagens de parcelas
+                "qtd_parcelas_ct_a_vencer": parcelas_info.get("quantidade_ct_a_vencer", 0),
+                "qtd_parcelas_rec_fat_a_vencer": parcelas_info.get("quantidade_rec_fat_a_vencer", 0),
+                "qtd_pendencias_rec_fat": pendencias_info.get("quantidade_pendencias_rec_fat", 0),
+
+                # Valores financeiros
+                "saldo_total": parcelas_info.get("saldo_total", 0),
+                "valor_total_ct": parcelas_info.get("valor_total_ct", 0),
+                "valor_total_rec_fat": parcelas_info.get("valor_total_rec_fat", 0),
+                "valor_total_vencido": ct_vencidas_info.get("valor_total_vencido", 0),
+
+                # Detalhes para auditoria
+                "parcelas_ct_vencidas_detalhes": ct_vencidas_info.get("parcelas_ct_vencidas_detalhes", []),
+                "pendencias_rec_fat_detalhes": pendencias_info.get("pendencias_detalhes", []),
+                "parcelas_ct_a_vencer_detalhes": parcelas_info.get("parcelas_ct_detalhes", []),
+                "parcelas_rec_fat_a_vencer_detalhes": parcelas_info.get("parcelas_rec_fat_detalhes", []),
+
+                # Tipo de reajuste (pode ser determinado posteriormente)
+                "tipo_reajuste": "ANUAL",  # Default - pode ser customizado
+
+                # Metadados
+                "regras_pdd_aplicadas": "REGRAS_COMPLETAS_9_1_1",
+                "total_regras_aplicadas": 8,
+                "todas_regras_sucesso": all(
+                    regra.get("sucesso", False) for regra in regras_aplicadas.values()
+                )
+            }
+
+        except Exception as e:
+            return {
+                "sucesso": False,
+                "erro": f"Erro na consolidação: {str(e)}"
+            }
+
+    # ============= CÁLCULOS FINANCEIROS =============
+
+    async def calcular_valores_reparcelamento(self, saldo_atual: float, indice_igpm: float = None, 
+                                       parcelas_pendentes: int = 0) -> Dict[str, Any]:
+        """
+        Calcula valores para reparcelamento conforme regras PDD
+        Busca IGPM no MongoDB se não fornecido
+        """
+        try:
+            # Se IGPM não foi fornecido, tentar buscar no MongoDB
+            if indice_igpm is None:
+                #indice_igpm = await self._obter_igpm_mongodb()
+                from core.data_manager import DataManager
+                data_manager = DataManager()
+                indice_igpm = await data_manager.obter_igpm_mais_recente()
+
+                if indice_igpm is None:
+                    return {
+                        "sucesso": False,
+                        "erro": "IGPM não disponível",
+                        "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
+                        "mensagem": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM"
+                    }
+
+            # Aplicar correção IGP-M
+            fator_correcao = 1 + (indice_igpm / 100)
+            novo_saldo = saldo_atual * fator_correcao
+
+            # Arredondar para 2 casas decimais
+            novo_saldo = float(Decimal(str(novo_saldo)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+
+            # Data primeiro vencimento (próximo mês, dia 15)
+            hoje = date.today()
+            primeiro_vencimento = (hoje.replace(day=1) + timedelta(days=32)).replace(day=15)
+
+            # Valores para preenchimento no Sienge
+            valores_sienge = {
+                "detalhamento": f"CORREÇÃO {hoje.strftime('%m/%y')}",
+                "tipo_condicao": "PM",  # Prazo Mensal
+                "valor_total": novo_saldo,
+                "quantidade_parcelas": parcelas_pendentes,
+                "data_primeiro_vencimento": primeiro_vencimento.strftime("%d/%m/%Y"),
+                "portador": "1 Carteira",
+                "operacao_cobranca": "0 Cobrança em Carteira",
+                "indexador": "1 IGP-M",
+                "tipo_juros": "Fixo",
+                "percentual_juros": 8.0,
+                "data_base_juros": primeiro_vencimento.strftime("%d/%m/%Y")
+            }
+
+            return {
+                "sucesso": True,
+                "valores_sienge": valores_sienge,
+                "novo_saldo": novo_saldo,
+                "fator_correcao": fator_correcao,
+                "diferenca_correcao": novo_saldo - saldo_atual,
+                "igpm_utilizado": indice_igpm,
+                "fonte_igpm": "mongodb" if indice_igpm else "parametro"
+            }
+
+        except Exception as e:
+            return {
+                "sucesso": False,
+                "erro": f"Erro no cálculo: {str(e)}"
+            }
+
+    # Método removido - agora usa data_manager.obter_igpm_mais_recente() centralizado
+    def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict]) -> List[Dict]:
+        """
+        Determina quais parcelas devem ser desmarcadas conforme regras PDD
+        """
+        try:
+            hoje = date.today()
+            parcelas_desmarcar = []
+
+            for parcela in parcelas_ct_a_vencer:
+                data_vencimento = parcela.get("Data vencimento")
+
+                # Converter data
+                if isinstance(data_vencimento, str):
+                    data_obj = pd.to_datetime(data_vencimento, errors='coerce')
+                    if pd.notna(data_obj):
+                        data_obj = data_obj.date()
+                    else:
+                        continue
+                else:
+                    data_obj = data_vencimento
+
+                # REGRA PDD: Desmarcar se vencimento <= hoje
+                if data_obj <= hoje:
+                    parcelas_desmarcar.append({
+                        "documento": parcela.get("Documento"),
+                        "data_vencimento": data_obj.strftime("%d/%m/%Y"),
+                        "valor": parcela.get("Valor a receber", 0),
+                        "motivo": "Vencimento igual ou anterior ao mês vigente (PDD)"
+                    })
+
+            return parcelas_desmarcar
+
+        except Exception as e:
+            self.logger.error(f"Erro ao determinar parcelas para desmarcar: {str(e)}")
+            return []
+
+    def _retorno_erro(self, erro: str, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+        """Helper para retornos de erro padronizados"""
+        return {
+            "cliente": cliente,
+            "numero_titulo": numero_titulo,
+            "sucesso": False,
+            "erro": erro,
+            "pode_reparcelar": False,
+            "status_cliente": "ERRO_PROCESSAMENTO",
+            "data_processamento": datetime.now().isoformat()
+        }
+
+
+# ============= CLASSES LEGACY PARA COMPATIBILIDADE =============
+
+class ValidadorInadimplenciaPDD:
+    """Wrapper de compatibilidade - usa ProcessadorRegrasNegocio"""
+
+    def __init__(self):
+        self.processador = ProcessadorRegrasNegocio()
+
+    def validar_cliente(self, df_planilha: pd.DataFrame, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+        return self.processador.validar_cliente_inadimplencia(df_planilha, cliente, numero_titulo)
+
+
+class CalculadoraReparcelamentoPDD:
+    """Wrapper de compatibilidade - usa ProcessadorRegrasNegocio"""
+
+    def __init__(self):
+        self.processador = ProcessadorRegrasNegocio()
+
+    async def calcular_valores_sienge(self, saldo_atual: float, indice_igpm: float, parcelas_pendentes: int) -> Dict[str, Any]:
+        return await self.processador.calcular_valores_reparcelamento(saldo_atual, indice_igpm, parcelas_pendentes)
+
+    def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict]) -> List[Dict]:
+        return self.processador.determinar_parcelas_desmarcar(parcelas_ct_a_vencer)

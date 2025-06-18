@@ -422,14 +422,14 @@ class RPASienge(BaseRPA):
             self.log_progresso(f"  📊 Status: {resultado_validacao.get('status_cliente', 'N/A')}")
             self.log_progresso(f"  🔢 Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}")
             self.log_progresso(f"  ✔️ Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}")
-            
+
             # LOGS ESPECÍFICOS DAS REGRAS 9.1.1
             if resultado_regras_pdd:
                 self.log_progresso(f"  📅 Dia vencimento identificado: {resultado_regras_pdd.get('dia_vencimento', 'N/A')}")
                 self.log_progresso(f"  💰 Valor parcela atual: R$ {resultado_regras_pdd.get('valor_parcela_atual', 0):,.2f}")
                 self.log_progresso(f"  🗓️ 1º vencimento carnê: {resultado_regras_pdd.get('primeiro_vencimento_carne', 'N/A')}")
                 self.log_progresso(f"  ⚠️ Parcelas divergentes: {len(resultado_regras_pdd.get('parcelas_divergentes', []))}")
-            
+
             # COMBINAR RESULTADOS
             resultado_validacao.update(resultado_regras_pdd or {})
 
@@ -459,10 +459,10 @@ class RPASienge(BaseRPA):
             # SALVAR AUDITORIA PDD
             arquivo_auditoria = self.pasta_planilhas.parent / "auditoria_pdd" / f"auditoria_{cliente.replace(' ', '_')}_{timestamp}.json"
             arquivo_auditoria.parent.mkdir(parents=True, exist_ok=True)
-            
+
             with open(arquivo_auditoria, 'w', encoding='utf-8') as f:
                 json.dump(dados_auditoria, f, ensure_ascii=False, indent=2)
-            
+
             self.log_progresso(f"📋 Auditoria PDD salva: {arquivo_auditoria}")
 
             return {
@@ -528,22 +528,22 @@ class RPASienge(BaseRPA):
             # Calcular valores de reparcelamento com IGPM centralizado
             saldo_atual = dados_validacao.get("saldo_total", 0)
             parcelas_pendentes = dados_validacao.get("qtd_parcelas_ct_a_vencer", 0)
-            
-            # Tentar obter IGPM dos índices fornecidos ou do sistema centralizado
+
+            # Tentar obter IGPM dos índices fornecidos ou do data_manager centralizado
             igpm_fornecido = indices.get("igpm", {}).get("valor") if indices else None
-            
+
             calculo_resultado = await self.processador_regras.calcular_valores_reparcelamento(
                 saldo_atual=saldo_atual,
                 indice_igpm=igpm_fornecido,
                 parcelas_pendentes=parcelas_pendentes
             )
-            
+
             # Verificar se cálculo foi bem-sucedido
             if not calculo_resultado.get("sucesso", False):
                 if calculo_resultado.get("acao_requerida") == "EXECUTAR_RPA_COLETA_INDICES":
                     self.log_progresso("⚠️ IGPM não disponível no banco de dados")
                     self.log_progresso("🔄 AÇÃO REQUERIDA: Execute o RPA de Coleta de Índices")
-                    
+
                     return ResultadoRPA(
                         sucesso=False,
                         mensagem="IGPM não disponível - Execute RPA de Coleta de Índices",

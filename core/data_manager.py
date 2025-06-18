@@ -537,10 +537,10 @@ class DataManagerUnificado:
         """
         Obtém índice econômico mais recente do sistema híbrido
         MongoDB primeiro, JSON como fallback
-        
+
         Args:
             tipo_indice: "igpm" ou "ipca"
-            
+
         Returns:
             Valor do índice como float ou None se não encontrado
         """
@@ -572,17 +572,17 @@ class DataManagerUnificado:
         """
         try:
             indices = self._carregar_json_seguro(self.arquivo_indices, [])
-            
+
             if not indices:
                 return None
-            
+
             # Procurar o último índice válido do tipo solicitado
             for indice_doc in reversed(indices):
                 indices_data = indice_doc.get("indices", {})
-                
+
                 if tipo_indice.lower() in indices_data:
                     valor_str = indices_data[tipo_indice.lower()].get("valor", "")
-                    
+
                     # Converter valor string para float
                     if isinstance(valor_str, str):
                         # Remove % e converte vírgula para ponto
@@ -590,9 +590,9 @@ class DataManagerUnificado:
                         return float(valor_limpo)
                     elif isinstance(valor_str, (int, float)):
                         return float(valor_str)
-            
+
             return None
-            
+
         except Exception as e:
             logger.error(f"❌ Erro ao obter {tipo_indice} do JSON: {str(e)}")
             return None
@@ -704,7 +704,7 @@ async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: 
     """Função auxiliar para salvar execução simultaneamente"""
     return await data_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
 
-async def salvar_contrato(contrato_data: Dict[str, Any]) -> Dict[str, str]:
+async def salvar_contrato(contrato_data: Dict[str, Any) -> Dict[str, str]:
     """Função auxiliar para salvar contrato simultaneamente"""
     return await data_manager.salvar_contrato_processado(contrato_data)
 
@@ -732,10 +732,10 @@ async def obter_indice_mais_recente(tipo_indice: str = "igpm") -> Optional[float
     """
     Obtém índice econômico mais recente (IGPM ou IPCA)
     MongoDB primeiro, JSON como fallback
-    
+
     Args:
         tipo_indice: "igmp" ou "ipca"
-        
+
     Returns:
         Valor do índice como float ou None se não encontrado
     """
