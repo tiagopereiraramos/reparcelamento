@@ -293,13 +293,16 @@ class RPABrowser:
         raise TimeoutException(
             f"Timeout enviando texto para elemento com xpath {xpath}")
 
-    def check_for_error(self,
-                        xpath: str,
-                        condition: Optional[str] = None,
-                        retry: int = 1) -> bool:
+    def check_for_error(
+        self,
+        xpath: str,
+        condition: Optional[str] = None,
+        retry: int = 1,
+        timeout: int = 5
+    ) -> bool:
         """Verifica se elemento de erro está presente"""
         try:
-            self.set_timeout(5)
+            self.set_timeout(timeout)
             self.find_element(xpath, condition or "presence")
             self.reset_timeout()
             return True

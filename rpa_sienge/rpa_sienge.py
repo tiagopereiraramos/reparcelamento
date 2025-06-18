@@ -81,14 +81,20 @@ class RPASienge(BaseRPA):
         try:
             # ✅ INICIA RASTREAMENTO UNIFICADO
             self.rastreamento = iniciar_rastreamento("RPA_Sienge")
-            
+
             await self.rastreamento.registrar_inicio_rpa({
-                "contrato": contrato,
-                "credenciais_fornecidas": bool(credenciais_sienge),
-                "indices_fornecidos": bool(indices),
-                "etapa": etapa,
-                "autorizar_reparcelamento": autorizar_reparcelamento,
-                "notificar_analista": notificar_analista
+                "contrato":
+                contrato,
+                "credenciais_fornecidas":
+                bool(credenciais_sienge),
+                "indices_fornecidos":
+                bool(indices),
+                "etapa":
+                etapa,
+                "autorizar_reparcelamento":
+                autorizar_reparcelamento,
+                "notificar_analista":
+                notificar_analista
             })
 
             self.log_progresso(
@@ -101,10 +107,11 @@ class RPASienge(BaseRPA):
 
             if not contrato or not credenciais_sienge:
                 await self.rastreamento.registrar_erro_critico(
-                    ValueError("Parâmetros obrigatórios não fornecidos"),
-                    {"contrato_fornecido": bool(contrato), "credenciais_fornecidas": bool(credenciais_sienge)}
-                )
-                
+                    ValueError("Parâmetros obrigatórios não fornecidos"), {
+                        "contrato_fornecido": bool(contrato),
+                        "credenciais_fornecidas": bool(credenciais_sienge)
+                    })
+
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem=
@@ -171,20 +178,21 @@ class RPASienge(BaseRPA):
 
         except Exception as e:
             erro_msg = f"Erro na execução do RPA Sienge: {str(e)}"
-            
+
             if self.rastreamento:
-                await self.rastreamento.registrar_erro_critico(e, {
-                    "fase": "execucao_principal",
-                    "etapa": etapa,
-                    "contrato": contrato.get("numero_titulo", "N/A")
-                })
+                await self.rastreamento.registrar_erro_critico(
+                    e, {
+                        "fase": "execucao_principal",
+                        "etapa": etapa,
+                        "contrato": contrato.get("numero_titulo", "N/A")
+                    })
                 await self.rastreamento.finalizar_rastreamento()
-            
+
             self.log_erro(erro_msg, e)
             return ResultadoRPA(sucesso=False,
                                 mensagem="Falha na execução do RPA Sienge",
                                 erro=erro_msg)
-        
+
         finally:
             # ✅ SEMPRE finaliza rastreamento
             if self.rastreamento:
@@ -204,28 +212,28 @@ class RPASienge(BaseRPA):
             if self.rastreamento is None:
                 self.rastreamento = iniciar_rastreamento("RPA_Sienge")
                 await self.rastreamento.registrar_inicio_rpa({
-                    "operacao": "login_sienge",
-                    "usuario": usuario_sienge,
-                    "timestamp": datetime.now().isoformat()
+                    "operacao":
+                    "login_sienge",
+                    "usuario":
+                    usuario_sienge,
+                    "timestamp":
+                    datetime.now().isoformat()
                 })
 
             await self.rastreamento.registrar_passo(
-                "TENTATIVA_LOGIN_SIENGE",
-                {
+                "TENTATIVA_LOGIN_SIENGE", {
                     "url_sienge": url_sienge,
                     "usuario": usuario_sienge,
                     "timestamp_tentativa": datetime.now().isoformat()
                 },
-                categoria="OPERACAO"
-            )
+                categoria="OPERACAO")
 
             self.log_progresso(f"Acessando sistema Sienge: {url_sienge}")
 
             if not url_sienge:
                 await self.rastreamento.registrar_erro_critico(
                     ValueError("URL do Sienge não configurada"),
-                    {"credenciais_sienge": self.credenciais_sienge}
-                )
+                    {"credenciais_sienge": self.credenciais_sienge})
                 raise ValueError(
                     "URL do Sienge não foi configurada corretamente.")
 
@@ -271,29 +279,25 @@ class RPASienge(BaseRPA):
 
             # Login bem-sucedido
             self.logado_sienge = True
-            
+
             await self.rastreamento.registrar_login_sistema(
-                "sienge", 
-                usuario_sienge, 
-                True
-            )
-            
+                "sienge", usuario_sienge, True)
+
             self.log_progresso("Login no Sienge realizado com sucesso")
 
         except Exception as e:
             if self.rastreamento:
                 await self.rastreamento.registrar_login_sistema(
-                    "sienge", 
-                    self.credenciais_sienge.get("usuario", ""), 
-                    False
-                )
-                
-                await self.rastreamento.registrar_erro_critico(e, {
-                    "fase": "login_sienge",
-                    "url": self.credenciais_sienge.get("url", ""),
-                    "usuario": self.credenciais_sienge.get("usuario", "")
-                })
-            
+                    "sienge", self.credenciais_sienge.get("usuario", ""),
+                    False)
+
+                await self.rastreamento.registrar_erro_critico(
+                    e, {
+                        "fase": "login_sienge",
+                        "url": self.credenciais_sienge.get("url", ""),
+                        "usuario": self.credenciais_sienge.get("usuario", "")
+                    })
+
             raise Exception(f"Falha no login Sienge: {str(e)}")
 
     async def _consultar_relatorios_financeiros(
@@ -347,6 +351,20 @@ class RPASienge(BaseRPA):
                 self.click(xpath="//button[normalize-space()='Consultar']")
                 time.sleep(3)
 
+                xpath_erro_botao = '//div[@data-testid="snackbar"]//p[@data-testid="snackbar-message" and contains(normalize-space(.), "Informe pelo menos um dos seguintes campos para efetuar a consulta")]'
+                # Verifica se o cliente foi encontrado
+                if self.check_for_error(xpath=xpath_erro_botao):
+                    self.log_erro(
+                        "Erro ao consultar cliente: Informe pelo menos um dos seguintes campos para efetuar a consulta"
+                    )
+                    self.log_progresso(
+                        "Voltando à tela de consulta para próximo contrato...")
+                    return {
+                        "sucesso":
+                        False,
+                        "erro":
+                        "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
+                    }
                 # WEBSCRAPING REAL - CLICANDO EM TODOS NA BARRA PARA EXPORTAR TODOS OS REGISTROS
                 self.log_progresso("Selecionando todos os registros...")
                 self.click(
@@ -394,14 +412,14 @@ class RPASienge(BaseRPA):
                 self.log_progresso("Processando planilha baixada...")
                 dados_planilha = await self._processar_planilha_baixada(
                     cliente, numero_titulo)
-                
+
                 # Registra consulta realizada
                 if self.rastreamento:
                     await self.rastreamento.registrar_consulta_dados(
-                        "SALDO_DEVEDOR_SIENGE",
-                        {"cliente": cliente, "numero_titulo": numero_titulo},
-                        dados_planilha
-                    )
+                        "SALDO_DEVEDOR_SIENGE", {
+                            "cliente": cliente,
+                            "numero_titulo": numero_titulo
+                        }, dados_planilha)
 
                 # NAVEGAR DE VOLTA À TELA DE CONSULTA PARA PRÓXIMO CONTRATO
                 self.log_progresso(
@@ -492,13 +510,15 @@ class RPASienge(BaseRPA):
             arquivo_destino = self.pasta_planilhas / \
                 f"sienge_{cliente.replace(' ', '_')}_{timestamp}.xlsx"
             shutil.copy2(arquivo_mais_recente, arquivo_destino)
-            
+
             # Registra processamento da planilha
             if self.rastreamento:
                 await self.rastreamento.registrar_processamento_planilha(
-                    str(arquivo_destino),
-                    {"cliente": cliente, "numero_titulo": numero_titulo, "arquivo_origem": caminho_arquivo}
-                )
+                    str(arquivo_destino), {
+                        "cliente": cliente,
+                        "numero_titulo": numero_titulo,
+                        "arquivo_origem": caminho_arquivo
+                    })
 
             # APLICAR VALIDAÇÃO PDD RIGOROSA CONFORME SEÇÃO 9.1.1
             validador = ValidadorInadimplenciaPDD()
@@ -510,45 +530,76 @@ class RPASienge(BaseRPA):
                 df, cliente, numero_titulo, resultado_validacao)
 
             self.log_progresso(f"✅ Validação PDD 9.1.1 concluída:")
-            self.log_progresso(f"  📊 Status: {resultado_validacao.get('status_cliente', 'N/A')}")
-            self.log_progresso(f"  🔢 Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}")
-            self.log_progresso(f"  ✔️ Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}")
+            self.log_progresso(
+                f"  📊 Status: {resultado_validacao.get('status_cliente', 'N/A')}"
+            )
+            self.log_progresso(
+                f"  🔢 Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}"
+            )
+            self.log_progresso(
+                f"  ✔️ Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}"
+            )
 
             # LOGS ESPECÍFICOS DAS REGRAS 9.1.1
             if resultado_regras_pdd:
-                self.log_progresso(f"  📅 Dia vencimento identificado: {resultado_regras_pdd.get('dia_vencimento', 'N/A')}")
-                self.log_progresso(f"  💰 Valor parcela atual: R$ {resultado_regras_pdd.get('valor_parcela_atual', 0):,.2f}")
-                self.log_progresso(f"  🗓️ 1º vencimento carnê: {resultado_regras_pdd.get('primeiro_vencimento_carne', 'N/A')}")
-                self.log_progresso(f"  ⚠️ Parcelas divergentes: {len(resultado_regras_pdd.get('parcelas_divergentes', []))}")
+                self.log_progresso(
+                    f"  📅 Dia vencimento identificado: {resultado_regras_pdd.get('dia_vencimento', 'N/A')}"
+                )
+                self.log_progresso(
+                    f"  💰 Valor parcela atual: R$ {resultado_regras_pdd.get('valor_parcela_atual', 0):,.2f}"
+                )
+                self.log_progresso(
+                    f"  🗓️ 1º vencimento carnê: {resultado_regras_pdd.get('primeiro_vencimento_carne', 'N/A')}"
+                )
+                self.log_progresso(
+                    f"  ⚠️ Parcelas divergentes: {len(resultado_regras_pdd.get('parcelas_divergentes', []))}"
+                )
 
             # COMBINAR RESULTADOS
             resultado_validacao.update(resultado_regras_pdd or {})
 
             # SALVAR DADOS DE AUDITORIA PDD CONFORME REQUERIDO
             dados_auditoria = {
-                "cliente": cliente,
-                "numero_titulo": numero_titulo,
-                "arquivo_processado": str(arquivo_destino),
+                "cliente":
+                cliente,
+                "numero_titulo":
+                numero_titulo,
+                "arquivo_processado":
+                str(arquivo_destino),
                 "regras_pdd_aplicadas": {
-                    "secao": "9.1.1",
-                    "dia_vencimento_identificado": resultado_validacao.get('dia_vencimento'),
-                    "valor_parcela_atual": resultado_validacao.get('valor_parcela_atual'),
-                    "primeiro_vencimento_carne": resultado_validacao.get('primeiro_vencimento_carne'),
-                    "tipo_reajuste": resultado_validacao.get('tipo_reajuste'),
-                    "parcelas_divergentes": resultado_validacao.get('parcelas_divergentes', [])
+                    "secao":
+                    "9.1.1",
+                    "dia_vencimento_identificado":
+                    resultado_validacao.get('dia_vencimento'),
+                    "valor_parcela_atual":
+                    resultado_validacao.get('valor_parcela_atual'),
+                    "primeiro_vencimento_carne":
+                    resultado_validacao.get('primeiro_vencimento_carne'),
+                    "tipo_reajuste":
+                    resultado_validacao.get('tipo_reajuste'),
+                    "parcelas_divergentes":
+                    resultado_validacao.get('parcelas_divergentes', [])
                 },
                 "validacao_inadimplencia": {
-                    "status_cliente": resultado_validacao.get('status_cliente'),
-                    "qtd_ct_vencidas": resultado_validacao.get('qtd_ct_vencidas'),
-                    "pode_reparcelar": resultado_validacao.get('pode_reparcelar'),
-                    "motivo_classificacao": resultado_validacao.get('motivo_classificacao')
+                    "status_cliente":
+                    resultado_validacao.get('status_cliente'),
+                    "qtd_ct_vencidas":
+                    resultado_validacao.get('qtd_ct_vencidas'),
+                    "pode_reparcelar":
+                    resultado_validacao.get('pode_reparcelar'),
+                    "motivo_classificacao":
+                    resultado_validacao.get('motivo_classificacao')
                 },
-                "timestamp_processamento": datetime.now().isoformat(),
-                "planilha_bruta": df.to_dict('records') if len(df) < 1000 else "Planilha muito grande - dados resumidos"
+                "timestamp_processamento":
+                datetime.now().isoformat(),
+                "planilha_bruta":
+                df.to_dict('records') if len(df) < 1000 else
+                "Planilha muito grande - dados resumidos"
             }
 
             # SALVAR AUDITORIA PDD
-            arquivo_auditoria = self.pasta_planilhas.parent / "auditoria_pdd" / f"auditoria_{cliente.replace(' ', '_')}_{timestamp}.json"
+            arquivo_auditoria = self.pasta_planilhas.parent / "auditoria_pdd" / \
+                f"auditoria_{cliente.replace(' ', '_')}_{timestamp}.json"
             arquivo_auditoria.parent.mkdir(parents=True, exist_ok=True)
 
             with open(arquivo_auditoria, 'w', encoding='utf-8') as f:
@@ -563,7 +614,8 @@ class RPASienge(BaseRPA):
                 "arquivo_processado": str(arquivo_destino),
                 "arquivo_auditoria_pdd": str(arquivo_auditoria),
                 "dados_validacao": resultado_validacao,
-                "regras_pdd_aplicadas": dados_auditoria["regras_pdd_aplicadas"],
+                "regras_pdd_aplicadas":
+                dados_auditoria["regras_pdd_aplicadas"],
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
@@ -593,12 +645,13 @@ class RPASienge(BaseRPA):
         Executa etapa de processamento de reparcelamento
         """
         try:
-            await self._registrar_passo_execucao("INICIO_PROCESSAMENTO_REPARCELAMENTO", {
-                "contrato": contrato.get("numero_titulo", ""),
-                "indices_fornecidos": bool(indices),
-                "autorizar_automatico": autorizar_reparcelamento,
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "INICIO_PROCESSAMENTO_REPARCELAMENTO", {
+                    "contrato": contrato.get("numero_titulo", ""),
+                    "indices_fornecidos": bool(indices),
+                    "autorizar_automatico": autorizar_reparcelamento,
+                    "timestamp": datetime.now().isoformat()
+                })
 
             self.log_progresso(
                 "🔄 Executando processamento de reparcelamento...")
@@ -607,23 +660,25 @@ class RPASienge(BaseRPA):
             dados_validacao = dados_financeiros.get("dados_validacao", {})
             pode_reparcelar = dados_validacao.get("pode_reparcelar", False)
 
-            await self._registrar_passo_execucao("VALIDACAO_PDD_REPARCELAMENTO", {
-                "pode_reparcelar": pode_reparcelar,
-                "autorizar_reparcelamento": autorizar_reparcelamento,
-                "dados_validacao": dados_validacao,
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "VALIDACAO_PDD_REPARCELAMENTO", {
+                    "pode_reparcelar": pode_reparcelar,
+                    "autorizar_reparcelamento": autorizar_reparcelamento,
+                    "dados_validacao": dados_validacao,
+                    "timestamp": datetime.now().isoformat()
+                })
 
             if not pode_reparcelar and not autorizar_reparcelamento:
                 motivo = dados_validacao.get("motivo_classificacao",
                                              "Cliente não pode reparcelar")
 
-                await self._registrar_passo_execucao("REPARCELAMENTO_NAO_AUTORIZADO", {
-                    "motivo": motivo,
-                    "pode_reparcelar": pode_reparcelar,
-                    "autorizar_reparcelamento": autorizar_reparcelamento,
-                    "timestamp": datetime.now().isoformat()
-                })
+                await self._registrar_passo_execucao(
+                    "REPARCELAMENTO_NAO_AUTORIZADO", {
+                        "motivo": motivo,
+                        "pode_reparcelar": pode_reparcelar,
+                        "autorizar_reparcelamento": autorizar_reparcelamento,
+                        "timestamp": datetime.now().isoformat()
+                    })
 
                 return ResultadoRPA(
                     sucesso=False,
@@ -636,73 +691,90 @@ class RPASienge(BaseRPA):
                     })
 
             # Se chegou aqui, pode prosseguir com o reparcelamento
-            await self._registrar_passo_execucao("CLIENTE_APROVADO_REPARCELAMENTO", {
-                "numero_titulo": contrato.get("numero_titulo", ""),
-                "cliente": contrato.get("cliente", ""),
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "CLIENTE_APROVADO_REPARCELAMENTO", {
+                    "numero_titulo": contrato.get("numero_titulo", ""),
+                    "cliente": contrato.get("cliente", ""),
+                    "timestamp": datetime.now().isoformat()
+                })
 
             self.log_progresso("✅ Cliente aprovado para reparcelamento")
 
             # Calcular valores de reparcelamento com IGPM centralizado
             saldo_atual = dados_validacao.get("saldo_total", 0)
-            parcelas_pendentes = dados_validacao.get("qtd_parcelas_ct_a_vencer", 0)
+            parcelas_pendentes = dados_validacao.get(
+                "qtd_parcelas_ct_a_vencer", 0)
 
             # Tentar obter IGPM dos índices fornecidos ou do data_manager centralizado
-            igpm_fornecido = indices.get("igpm", {}).get("valor") if indices else None
+            igpm_fornecido = indices.get("igpm",
+                                         {}).get("valor") if indices else None
 
-            await self._registrar_passo_execucao("CALCULO_VALORES_REPARCELAMENTO", {
-                "saldo_atual": saldo_atual,
-                "parcelas_pendentes": parcelas_pendentes,
-                "igpm_fornecido": igpm_fornecido,
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "CALCULO_VALORES_REPARCELAMENTO", {
+                    "saldo_atual": saldo_atual,
+                    "parcelas_pendentes": parcelas_pendentes,
+                    "igpm_fornecido": igpm_fornecido,
+                    "timestamp": datetime.now().isoformat()
+                })
 
             calculo_resultado = await self.processador_regras.calcular_valores_reparcelamento(
                 saldo_atual=saldo_atual,
                 indice_igpm=igpm_fornecido,
-                parcelas_pendentes=parcelas_pendentes
-            )
+                parcelas_pendentes=parcelas_pendentes)
 
-            await self._registrar_passo_execucao("RESULTADO_CALCULO_REPARCELAMENTO", {
-                "sucesso_calculo": calculo_resultado.get("sucesso", False),
-                "acao_requerida": calculo_resultado.get("acao_requerida"),
-                "erro_calculo": calculo_resultado.get("erro"),
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "RESULTADO_CALCULO_REPARCELAMENTO", {
+                    "sucesso_calculo": calculo_resultado.get("sucesso", False),
+                    "acao_requerida": calculo_resultado.get("acao_requerida"),
+                    "erro_calculo": calculo_resultado.get("erro"),
+                    "timestamp": datetime.now().isoformat()
+                })
 
             # Verificar se cálculo foi bem-sucedido
             if not calculo_resultado.get("sucesso", False):
-                if calculo_resultado.get("acao_requerida") == "EXECUTAR_RPA_COLETA_INDICES":
-                    await self._registrar_passo_execucao("IGPM_NAO_DISPONIVEL", {
-                        "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
-                        "instrucoes": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM",
-                        "timestamp": datetime.now().isoformat()
-                    })
+                if calculo_resultado.get(
+                        "acao_requerida") == "EXECUTAR_RPA_COLETA_INDICES":
+                    await self._registrar_passo_execucao(
+                        "IGPM_NAO_DISPONIVEL", {
+                            "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
+                            "instrucoes":
+                            "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM",
+                            "timestamp": datetime.now().isoformat()
+                        })
 
-                    self.log_progresso("⚠️ IGPM não disponível no banco de dados")
-                    self.log_progresso("🔄 AÇÃO REQUERIDA: Execute o RPA de Coleta de Índices")
+                    self.log_progresso(
+                        "⚠️ IGPM não disponível no banco de dados")
+                    self.log_progresso(
+                        "🔄 AÇÃO REQUERIDA: Execute o RPA de Coleta de Índices")
 
                     return ResultadoRPA(
                         sucesso=False,
-                        mensagem="IGPM não disponível - Execute RPA de Coleta de Índices",
+                        mensagem=
+                        "IGPM não disponível - Execute RPA de Coleta de Índices",
                         dados={
-                            "contrato": contrato,
-                            "validacao_pdd": dados_validacao,
-                            "erro_calculo": calculo_resultado.get("erro"),
-                            "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
-                            "instrucoes": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM antes de processar o reparcelamento"
+                            "contrato":
+                            contrato,
+                            "validacao_pdd":
+                            dados_validacao,
+                            "erro_calculo":
+                            calculo_resultado.get("erro"),
+                            "acao_requerida":
+                            "EXECUTAR_RPA_COLETA_INDICES",
+                            "instrucoes":
+                            "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM antes de processar o reparcelamento"
                         })
                 else:
-                    await self._registrar_passo_execucao("ERRO_CALCULO_REPARCELAMENTO", {
-                        "erro": calculo_resultado.get("erro"),
-                        "tipo_erro": "erro_calculo_geral",
-                        "timestamp": datetime.now().isoformat()
-                    })
+                    await self._registrar_passo_execucao(
+                        "ERRO_CALCULO_REPARCELAMENTO", {
+                            "erro": calculo_resultado.get("erro"),
+                            "tipo_erro": "erro_calculo_geral",
+                            "timestamp": datetime.now().isoformat()
+                        })
 
                     return ResultadoRPA(
                         sucesso=False,
-                        mensagem=f"Erro no cálculo de reparcelamento: {calculo_resultado.get('erro')}",
+                        mensagem=
+                        f"Erro no cálculo de reparcelamento: {calculo_resultado.get('erro')}",
                         dados={
                             "contrato": contrato,
                             "validacao_pdd": dados_validacao,
@@ -712,7 +784,8 @@ class RPASienge(BaseRPA):
             # Simular processamento de reparcelamento com valores calculados
             resultado_reparcelamento = {
                 "sucesso": True,
-                "novo_titulo_gerado": f"REP_{contrato.get('numero_titulo', '')}_2025",
+                "novo_titulo_gerado":
+                f"REP_{contrato.get('numero_titulo', '')}_2025",
                 "valor_anterior": saldo_atual,
                 "valor_corrigido": calculo_resultado.get("novo_saldo"),
                 "igpm_aplicado": calculo_resultado.get("igpm_utilizado"),
@@ -723,13 +796,17 @@ class RPASienge(BaseRPA):
                 "timestamp_reparcelamento": datetime.now().isoformat()
             }
 
-            await self._registrar_passo_execucao("REPARCELAMENTO_PROCESSADO_SUCESSO", {
-                "resultado_reparcelamento": resultado_reparcelamento,
-                "novo_titulo": resultado_reparcelamento["novo_titulo_gerado"],
-                "valor_anterior": resultado_reparcelamento["valor_anterior"],
-                "valor_corrigido": resultado_reparcelamento["valor_corrigido"],
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "REPARCELAMENTO_PROCESSADO_SUCESSO", {
+                    "resultado_reparcelamento": resultado_reparcelamento,
+                    "novo_titulo":
+                    resultado_reparcelamento["novo_titulo_gerado"],
+                    "valor_anterior":
+                    resultado_reparcelamento["valor_anterior"],
+                    "valor_corrigido":
+                    resultado_reparcelamento["valor_corrigido"],
+                    "timestamp": datetime.now().isoformat()
+                })
 
             return ResultadoRPA(
                 sucesso=True,
@@ -743,12 +820,13 @@ class RPASienge(BaseRPA):
         except Exception as e:
             erro_msg = f"Erro na etapa de reparcelamento: {str(e)}"
 
-            await self._registrar_passo_execucao("ERRO_ETAPA_REPARCELAMENTO", {
-                "erro_detalhado": erro_msg,
-                "tipo_erro": type(e).__name__,
-                "stack_trace": traceback.format_exc(),
-                "timestamp": datetime.now().isoformat()
-            })
+            await self._registrar_passo_execucao(
+                "ERRO_ETAPA_REPARCELAMENTO", {
+                    "erro_detalhado": erro_msg,
+                    "tipo_erro": type(e).__name__,
+                    "stack_trace": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat()
+                })
 
             self.log_erro(erro_msg, e)
             return ResultadoRPA(
@@ -787,12 +865,16 @@ class RPASienge(BaseRPA):
         except Exception as e:
             self.log_erro("Erro ao finalizar RPA", e)
 
-    async def _registrar_passo_execucao(self, nome_passo: str, dados: Dict[str, Any]):
+    async def _registrar_passo_execucao(self, nome_passo: str,
+                                        dados: Dict[str, Any]):
         """
         MÉTODO SUBSTITUÍDO pelo sistema unificado de rastreamento
         Mantido para compatibilidade - delega para o rastreamento unificado
         """
         if self.rastreamento:
-            await self.rastreamento.registrar_passo(nome_passo, dados, categoria="OPERACAO")
+            await self.rastreamento.registrar_passo(nome_passo,
+                                                    dados,
+                                                    categoria="OPERACAO")
         else:
-            self.log_progresso(f"⚠️ Rastreamento não iniciado - passo: {nome_passo}")
+            self.log_progresso(
+                f"⚠️ Rastreamento não iniciado - passo: {nome_passo}")
