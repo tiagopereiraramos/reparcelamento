@@ -135,7 +135,7 @@ class DataManagerUnificado:
         logger.info(f"   MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
         logger.info(f"   self.mongodb_ativo: {self.mongodb_ativo}")
         logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
-        logger.info(f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager.database is not None else 'NOT SET'}")
+        logger.info(f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.database is not None else 'NOT SET'}")
 
     async def _verificar_saude_mongodb(self):
         """Verifica saúde do MongoDB e reconecta se necessário"""
@@ -300,7 +300,7 @@ class DataManagerUnificado:
                 logger.info(f"   Estado do MongoDB:")
                 logger.info(f"   - MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
                 logger.info(f"   - mongodb_manager.conectado: {mongodb_manager.conectado}")
-                logger.info(f"   - database: {mongodb_manager.database.name if mongodb_manager.database else 'None'}")
+                logger.info(f"   - database: {mongodb_manager.database.name if mongodb_manager.database is not None else 'None'}")
                 logger.info(f"   Dados: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
                 
                 mongo_id = await mongodb_manager.salvar_indices_economicos(indices_data)
