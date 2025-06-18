@@ -281,14 +281,20 @@ async def atualizar_status_contrato(numero_titulo: str,
         if data_manager.mongodb_ativo:
             try:
                 from core.mongodb_manager import mongodb_manager
-                result = await mongodb_manager.database.fila_processamento_sienge.update_one(
-                    {"contratos.numero_titulo": numero_titulo}, {
-                        "$set": {
-                            "contratos.$.status_processamento": status,
-                            "contratos.$.processado_em": datetime.now().isoformat(),
-                            "contratos.$.erro_processamento": erro
-                        }
-                    })
+                
+                def _update_contract():
+                    return mongodb_manager.database.fila_processamento_sienge.update_one(
+                        {"contratos.numero_titulo": numero_titulo}, {
+                            "$set": {
+                                "contratos.$.status_processamento": status,
+                                "contratos.$.processado_em": datetime.now().isoformat(),
+                                "contratos.$.erro_processamento": erro
+                            }
+                        })
+                
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None, _update_contract
+                )
                 
                 if result.modified_count > 0:
                     print(f"✅ Status atualizado no MongoDB: {numero_titulo}")
