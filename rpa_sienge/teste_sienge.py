@@ -196,7 +196,6 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
             },
             "igpm": {
                 "valor": 3.89,
-                "tipo": "IGPM",
                 "periodo": "Dezembro/2024"
             }
         }
@@ -530,7 +529,7 @@ async def teste_execucao_reparcelamento_real():
 
     try:
         rpa = RPASienge()
-        
+
         # Configurar credenciais
         credenciais = {
             "url": os.getenv("SIENGE_URL", ""),
@@ -538,17 +537,17 @@ async def teste_execucao_reparcelamento_real():
             "senha": os.getenv("SIENGE_SENHA", ""),
             "empresa": os.getenv("SIENGE_EMPRESA", "")
         }
-        
+
         if not all(credenciais.values()):
             print("⚠️ Credenciais Sienge não configuradas - usando modo simulação")
             return False
-        
+
         rpa._configurar_credenciais(credenciais)
-        
+
         # Executar reparcelamento do próximo da fila
         print("🔄 Executando reparcelamento do próximo contrato da fila...")
         resultado = await rpa.executar_reparcelamento_webscraping()
-        
+
         if resultado.sucesso:
             print(f"✅ Reparcelamento executado com sucesso!")
             print(f"   📄 Título: {resultado.dados.get('numero_titulo')}")
@@ -559,9 +558,96 @@ async def teste_execucao_reparcelamento_real():
         else:
             print(f"❌ Falha no reparcelamento: {resultado.erro}")
             return False
-            
+
     except Exception as e:
         print(f"❌ Erro no teste: {str(e)}")
+        return False
+
+async def teste_webscraping_reparcelamento():
+    """
+    Testa APENAS o webscraping de reparcelamento com dados fictícios
+    Perfeito para validar sua implementação sem depender da fila
+    """
+    print("🧪 TESTE WEBSCRAPING REPARCELAMENTO - DADOS FICTÍCIOS")
+    print("=" * 60)
+
+    try:
+        rpa = RPASienge()
+        await rpa.inicializar()
+
+        # Configurar credenciais
+        credenciais = {
+            "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/"),
+            "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+            "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+        }
+
+        rpa._configurar_credenciais(credenciais)
+
+        # Fazer login
+        print("🔐 Fazendo login no Sienge...")
+        await rpa._fazer_login_sienge()
+
+        # DADOS FICTÍCIOS PARA TESTE
+        parametros_ficticios = {
+            # DADOS DO CONTRATO
+            "numero_titulo": "TEST123456789",
+            "cliente": "CLIENTE TESTE FICTÍCIO LTDA",
+            "empreendimento": "EMPREENDIMENTO TESTE",
+
+            # URL DE NAVEGAÇÃO
+            "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/reparcelamento/inclusao",
+
+            # VALORES PARA PREENCHIMENTO
+            "valores_sienge": {
+                "detalhamento": "CORREÇÃO 06/25 - TESTE",
+                "tipo_condicao": "PM",
+                "valor_total": 125000.00,
+                "data_primeiro_vencimento": "15/07/2025",
+                "indexador": "1 IGP-M",
+                "percentual_juros": 8.0
+            },
+
+            # PARCELAS PARA DESMARCAR
+            "parcelas_desmarcar": [
+                {"documento": "CT001-TESTE", "data_vencimento": "15/05/2025", "motivo": "Vencida"},
+                {"documento": "CT002-TESTE", "data_vencimento": "15/06/2025", "motivo": "Vencida"}
+            ],
+
+            # DADOS FINANCEIROS
+            "saldo_anterior": 120000.00,
+            "saldo_novo": 125000.00,
+            "igmp_aplicado": 4.16,
+            "total_parcelas_desmarcar": 2
+        }
+
+        print("📋 DADOS PARA O TESTE:")
+        print(f"   📄 Título: {parametros_ficticios['numero_titulo']}")
+        print(f"   👤 Cliente: {parametros_ficticios['cliente']}")
+        print(f"   💰 Saldo: R$ {parametros_ficticios['saldo_anterior']:,.2f} → R$ {parametros_ficticios['saldo_novo']:,.2f}")
+        print(f"   🔄 Parcelas a desmarcar: {len(parametros_ficticios['parcelas_desmarcar'])}")
+
+        print("\n🌐 Executando webscraping...")
+
+        # CHAMAR SUA IMPLEMENTAÇÃO
+        resultado = await rpa._navegar_e_executar_reparcelamento(parametros_ficticios)
+
+        if resultado.get("sucesso", False):
+            print(f"✅ Webscraping executado com sucesso!")
+            print(f"   🆕 Novo título: {resultado.get('novo_titulo', 'N/A')}")
+            print(f"   📊 Parcelas processadas: {resultado.get('parcelas_processadas', 0)}")
+            print(f"   ⏰ Executado em: {resultado.get('timestamp_webscraping', 'N/A')}")
+            return True
+        else:
+            print(f"❌ Erro no webscraping: {resultado.get('erro', 'Erro desconhecido')}")
+            return False
+
+        await rpa.finalizar()
+
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
         return False
 
 async def teste_carregar_dados_fila():
@@ -573,37 +659,37 @@ async def teste_carregar_dados_fila():
 
     try:
         rpa = RPASienge()
-        
+
         # Carregar próximo da fila
         print("📊 Carregando próximo contrato da fila...")
         resultado = await rpa.carregar_dados_fila_reparcelamento()
-        
+
         if resultado.get("sucesso", False):
             parametros = resultado["parametros_navegacao"]
-            
+
             print(f"✅ Dados carregados com sucesso!")
             print(f"   📄 Título: {parametros['numero_titulo']}")
             print(f"   👤 Cliente: {parametros['cliente']}")
             print(f"   💰 Saldo: R$ {parametros['saldo_anterior']:,.2f} → R$ {parametros['saldo_novo']:,.2f}")
-            print(f"   📊 IGP-M: {parametros['igpm_aplicado']}%")
+            print(f"   📊 IGP-M: {parametros['igmp_aplicado']}%")
             print(f"   🔄 Parcelas a desmarcar: {parametros['total_parcelas_desmarcar']}")
-            
+
             print("\n📋 Valores para preenchimento no Sienge:")
             valores = parametros['valores_sienge']
             for campo, valor in valores.items():
                 print(f"   {campo}: {valor}")
-                
+
             print("\n❌ Parcelas para desmarcar:")
             for parcela in parametros['parcelas_desmarcar']:
                 print(f"   📄 {parcela['documento']} - {parcela['data_vencimento']} - {parcela['motivo']}")
-            
+
             return True
         else:
             print(f"❌ Erro: {resultado.get('erro', 'Erro desconhecido')}")
             if resultado.get("fila_vazia"):
                 print("📭 Fila de reparcelamento está vazia")
             return False
-            
+
     except Exception as e:
         print(f"❌ Erro no teste: {str(e)}")
         return False
@@ -680,340 +766,4 @@ async def teste_contrato_unico():
 
     # Credenciais Sienge
     credenciais_sienge = {
-        "url": os.getenv("SIENGE_URL", "https://sienge-teste.com"),
-        "usuario": os.getenv("SIENGE_USERNAME",
-                             "tc@trajetoriaconsultoria.com.br"),
-        "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
-    }
-
-    print(f"🏢 Contrato de Teste: {contrato_teste['numero_titulo']}")
-    print(f"👤 Cliente: {contrato_teste['cliente']}")
-    print(f"🔐 URL Sienge: {credenciais_sienge['url']}")
-    print()
-
-    try:
-        print("🚀 Iniciando execução do RPA...")
-        resultado = await executar_processamento_sienge(
-            contrato=contrato_teste,
-            indices_economicos=indices_economicos,
-            credenciais_sienge=credenciais_sienge,
-            etapa="completa",
-            autorizar_reparcelamento=True,  # Para teste
-            notificar_analista=False)
-
-        # Mostra resultado
-        print("\n📋 RESULTADO DA EXECUÇÃO:")
-        print("-" * 30)
-        print(f"Sucesso: {'✅ SIM' if resultado.sucesso else '❌ NÃO'}")
-        print(f"Mensagem: {resultado.mensagem}")
-
-        if resultado.tempo_execucao:
-            print(f"Tempo: {resultado.tempo_execucao:.2f} segundos")
-
-        if resultado.sucesso and resultado.dados:
-            print("\n📊 DADOS PROCESSADOS:")
-            dados = resultado.dados
-
-            if "contrato_processado" in dados:
-                contrato = dados["contrato_processado"]
-                print(f"   Contrato: {contrato.get('numero_titulo', 'N/A')}")
-                print(f"   Cliente: {contrato.get('cliente', 'N/A')}")
-
-            if "reparcelamento" in dados:
-                reparc = dados["reparcelamento"]
-                if reparc.get("sucesso"):
-                    print(
-                        f"   Saldo Anterior: R$ {reparc.get('saldo_anterior', 0):,.2f}"
-                    )
-                    print(
-                        f"   Novo Saldo: R$ {reparc.get('novo_saldo', 0):,.2f}"
-                    )
-                    print(
-                        f"   Índice Aplicado: {reparc.get('indice_aplicado', 0)}%"
-                    )
-                    print(f"   Parcelas: {reparc.get('parcelas_total', 0)}")
-
-            if "carne_gerado" in dados:
-                carne = dados["carne_gerado"]
-                if carne and carne.get("sucesso"):
-                    print(f"   Carnê: {carne.get('nome_arquivo', 'N/A')}")
-
-        if not resultado.sucesso:
-            print(f"\n❌ ERRO: {resultado.erro or 'Erro desconhecido'}")
-
-        return resultado.sucesso
-
-    except Exception as e:
-        print(f"\n💥 ERRO INESPERADO: {str(e)}")
-        import traceback
-        print(f"🔍 Detalhes: {traceback.format_exc()}")
-        return False
-
-
-async def teste_validacao_contrato():
-    """
-    Testa apenas a validação de contrato
-    """
-    print("🧪 TESTE DE VALIDAÇÃO - CONTRATO")
-    print("=" * 40)
-
-    try:
-        rpa = RPASienge()
-
-        # Simula dados financeiros adimplente
-        dados_financeiros_ok = {
-            "cliente": "CLIENTE TESTE",
-            "numero_titulo": "123456",
-            "saldo_devedor": 150000.00,
-            "parcelas_pendentes": 48,
-            "parcelas_vencidas": 0,
-            "pendencias_ct": [],  # Sem pendências CT
-            "pendencias_rec_fat": [],
-            "status": "adimplente"
-        }
-
-        # Simula dados financeiros inadimplente
-        dados_financeiros_inadimplente = {
-            "cliente": "CLIENTE INADIMPLENTE",
-            "numero_titulo": "789012",
-            "saldo_devedor": 100000.00,
-            "parcelas_pendentes": 36,
-            "parcelas_vencidas": 5,
-            # 3 parcelas CT vencidas
-            "pendencias_ct": ["CT001", "CT002", "CT003"],
-            "pendencias_rec_fat": [],
-            "status": "inadimplente"
-        }
-
-        # Testa cliente adimplente
-        print("📊 Testando cliente adimplente...")
-        validacao_ok = await rpa._validar_contrato_reparcelamento(
-            dados_financeiros_ok)
-        print(
-            f"✅ Resultado: {validacao_ok['pode_reparcelar']} - {validacao_ok['motivo']}"
-        )
-
-        # Testa cliente inadimplente
-        print("\n📊 Testando cliente inadimplente...")
-        validacao_erro = await rpa._validar_contrato_reparcelamento(
-            dados_financeiros_inadimplente)
-        print(
-            f"❌ Resultado: {validacao_erro['pode_reparcelar']} - {validacao_erro['motivo']}"
-        )
-
-        return True
-
-    except Exception as e:
-        print(f"❌ Erro no teste: {str(e)}")
-        return False
-
-
-async def teste_calculo_reparcelamento():
-    """
-    Testa apenas o cálculo de reparcelamento
-    """
-    print("🧪 TESTE DE CÁLCULO - REPARCELAMENTO")
-    print("=" * 45)
-
-    try:
-        rpa = RPASienge()
-
-        contrato = {
-            "numero_titulo": "123456",
-            "cliente": "CLIENTE TESTE",
-            "indexador": "IPCA"
-        }
-
-        indices = {"ipca": {"valor": 4.62}, "igpm": {"valor": 3.89}}
-
-        dados_financeiros = {
-            "saldo_devedor": 100000.00,
-            "parcelas_pendentes": 48
-        }
-
-        print("📊 Testando cálculo de reparcelamento...")
-        print(f"   Saldo atual: R$ {dados_financeiros['saldo_devedor']:,.2f}")
-        print(f"   Índice IPCA: {indices['ipca']['valor']}%")
-
-        resultado = await rpa._processar_reparcelamento(
-            contrato, indices, dados_financeiros)
-
-        if resultado.get("sucesso"):
-            print(f"✅ Novo saldo: R$ {resultado.get('novo_saldo', 0):,.2f}")
-            print(
-                f"✅ Diferença: R$ {resultado.get('diferenca_valor', 0):,.2f}")
-            print(
-                f"✅ Fator correção: {resultado.get('fator_correcao', 1):.4f}")
-        else:
-            print(f"❌ Erro no cálculo: {resultado.get('erro', 'N/A')}")
-
-        return resultado.get("sucesso", False)
-
-    except Exception as e:
-        print(f"❌ Erro no teste: {str(e)}")
-        return False
-
-
-async def verificar_saude_rpa():
-    """
-    Verifica saúde do RPA (recursos disponíveis)
-    """
-    print("🧪 VERIFICAÇÃO DE SAÚDE - RPA SIENGE")
-    print("=" * 40)
-
-    try:
-        rpa = RPASienge()
-
-        print("🔧 Verificando inicialização...")
-        if await rpa.inicializar():
-            print("✅ Recursos inicializados com sucesso")
-
-            # Verifica browser (se habilitado)
-            if rpa.usar_browser and hasattr(rpa, 'browser') and rpa.browser:
-                print("✅ Browser disponível")
-            else:
-                print("⚠️ Browser não configurado")
-
-            # Verifica MongoDB (se disponível)
-            if hasattr(rpa, 'mongo_manager') and rpa.mongo_manager:
-                print("✅ MongoDB conectado")
-            else:
-                print("⚠️ MongoDB não disponível")
-
-            await rpa.finalizar()
-            return True
-        else:
-            print("❌ Falha na inicialização")
-            return False
-
-    except Exception as e:
-        print(f"❌ Erro na verificação: {str(e)}")
-        return False
-
-
-def menu_interativo():
-    """
-    Menu interativo para escolher tipo de teste
-    """
-    print("\n🎯 MENU DE TESTES - RPA SIENGE")
-    print("=" * 50)
-    print("1. 🚀 Teste Completo (Processamento Fila)")
-    print("2. 🏢 Teste Contrato Único")
-    print("3. 🔍 Teste Etapa 1 - Consulta")
-    print("4. 🔄 Teste Etapa 2 - Reparcelamento")
-    print("5. 🧪 Teste Validação de Contrato")
-    print("6. 🧮 Teste Cálculo Reparcelamento")
-    print("7. 🏥 Verificação de Saúde")
-    print("8. ❌ Sair")
-    print("=" * 50)
-
-    while True:
-        try:
-            opcao = input("\n👉 Escolha uma opção (1-6): ").strip()
-
-            if opcao == "1":
-                return teste_completo()
-            elif opcao == "2":
-                return teste_contrato_unico()
-            elif opcao == "3":
-                return teste_etapa_consulta()
-            elif opcao == "4":
-                return teste_etapa_reparcelamento()
-            elif opcao == "5":
-                return teste_validacao_contrato()
-            elif opcao == "6":
-                return teste_calculo_reparcelamento()
-            elif opcao == "7":
-                return verificar_saude_rpa()
-            elif opcao == "8":
-                print("👋 Encerrando testes...")
-                return None
-            else:
-                print("❌ Opção inválida! Escolha entre 1-8.")
-
-        except KeyboardInterrupt:
-            print("\n👋 Teste interrompido pelo usuário")
-            return None
-
-
-async def main():
-    """
-    Função principal do teste
-    """
-    print("🤖 SISTEMA DE TESTES RPA - SIENGE")
-    print("Desenvolvido em Python")
-    print("Permite testar RPA independente da orquestração Temporal")
-
-    # Verifica se é execução direta ou interativa
-    if len(sys.argv) > 1:
-        # Execução direta com parâmetros
-        comando = sys.argv[1].lower()
-
-        if comando == "completo":
-            sucesso = await teste_completo()
-        elif comando == "unico":
-            sucesso = await teste_contrato_unico()
-        elif comando == "consulta":
-            sucesso = await teste_etapa_consulta()
-        elif comando == "reparcelamento":
-            sucesso = await teste_etapa_reparcelamento()
-        elif comando == "validacao":
-            sucesso = await teste_validacao_contrato()
-        elif comando == "calculo":
-            sucesso = await teste_calculo_reparcelamento()
-        elif comando == "saude":
-            sucesso = await verificar_saude_rpa()
-        else:
-            print(f"❌ Comando inválido: {comando}")
-            print(
-                "Comandos disponíveis: completo, unico, consulta, reparcelamento, validacao, calculo, saude"
-            )
-            return False
-
-        return sucesso
-
-    else:
-        # Menu interativo
-        teste_escolhido = menu_interativo()
-        if teste_escolhido:
-            sucesso = await teste_escolhido
-
-            if sucesso:
-                print("\n🎉 TESTE CONCLUÍDO COM SUCESSO!")
-            else:
-                print("\n❌ TESTE FALHOU!")
-
-            return sucesso
-
-        return True
-
-
-# Adicionado função auxiliar para registrar erros na auditoria (simulação)
-async def registrar_erro_auditoria(contrato: Dict[str, Any], mensagem: str, tipo_erro: str):
-    """
-    Simula o registro de um erro na auditoria.
-    """
-    titulo = contrato.get("numero_titulo", "N/A")
-    cliente = contrato.get("cliente", "N/A")
-    print(f"   🚨 REGISTRO DE AUDITORIA: [{tipo_erro}] - Título: {titulo}, Cliente: {cliente}, Erro: {mensagem}")
-
-if __name__ == "__main__":
-    # Configura event loop para Windows se necessário
-    if sys.platform.startswith('win'):
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
-    # Executa teste
-    try:
-        resultado = asyncio.run(main())
-
-        if resultado is not None:
-            sys.exit(0 if resultado else 1)
-        else:
-            sys.exit(0)
-
-    except KeyboardInterrupt:
-        print("\n👋 Teste cancelado pelo usuário")
-        sys.exit(130)
-    except Exception as e:
-        print(f"\n💥 Erro fatal: {str(e)}")
-        sys.exit(1)
+        "url": os
