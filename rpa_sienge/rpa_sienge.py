@@ -502,6 +502,13 @@ class RPASienge(BaseRPA):
         Executa etapa de processamento de reparcelamento
         """
         try:
+            await self._registrar_passo_execucao("INICIO_PROCESSAMENTO_REPARCELAMENTO", {
+                "contrato": contrato.get("numero_titulo", ""),
+                "indices_fornecidos": bool(indices),
+                "autorizar_automatico": autorizar_reparcelamento,
+                "timestamp": datetime.now().isoformat()
+            })
+
             self.log_progresso(
                 "🔄 Executando processamento de reparcelamento...")
 
@@ -509,9 +516,24 @@ class RPASienge(BaseRPA):
             dados_validacao = dados_financeiros.get("dados_validacao", {})
             pode_reparcelar = dados_validacao.get("pode_reparcelar", False)
 
+            await self._registrar_passo_execucao("VALIDACAO_PDD_REPARCELAMENTO", {
+                "pode_reparcelar": pode_reparcelar,
+                "autorizar_reparcelamento": autorizar_reparcelamento,
+                "dados_validacao": dados_validacao,
+                "timestamp": datetime.now().isoformat()
+            })
+
             if not pode_reparcelar and not autorizar_reparcelamento:
                 motivo = dados_validacao.get("motivo_classificacao",
                                              "Cliente não pode reparcelar")
+
+                await self._registrar_passo_execucao("REPARCELAMENTO_NAO_AUTORIZADO", {
+                    "motivo": motivo,
+                    "pode_reparcelar": pode_reparcelar,
+                    "autorizar_reparcelamento": autorizar_reparcelamento,
+                    "timestamp": datetime.now().isoformat()
+                })
+
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem=f"Reparcelamento não autorizado: {motivo}",
@@ -523,6 +545,12 @@ class RPASienge(BaseRPA):
                     })
 
             # Se chegou aqui, pode prosseguir com o reparcelamento
+            await self._registrar_passo_execucao("CLIENTE_APROVADO_REPARCELAMENTO", {
+                "numero_titulo": contrato.get("numero_titulo", ""),
+                "cliente": contrato.get("cliente", ""),
+                "timestamp": datetime.now().isoformat()
+            })
+
             self.log_progresso("✅ Cliente aprovado para reparcelamento")
 
             # Calcular valores de reparcelamento com IGPM centralizado
@@ -532,15 +560,35 @@ class RPASienge(BaseRPA):
             # Tentar obter IGPM dos índices fornecidos ou do data_manager centralizado
             igpm_fornecido = indices.get("igpm", {}).get("valor") if indices else None
 
+            await self._registrar_passo_execucao("CALCULO_VALORES_REPARCELAMENTO", {
+                "saldo_atual": saldo_atual,
+                "parcelas_pendentes": parcelas_pendentes,
+                "igpm_fornecido": igpm_fornecido,
+                "timestamp": datetime.now().isoformat()
+            })
+
             calculo_resultado = await self.processador_regras.calcular_valores_reparcelamento(
                 saldo_atual=saldo_atual,
                 indice_igpm=igpm_fornecido,
                 parcelas_pendentes=parcelas_pendentes
             )
 
+            await self._registrar_passo_execucao("RESULTADO_CALCULO_REPARCELAMENTO", {
+                "sucesso_calculo": calculo_resultado.get("sucesso", False),
+                "acao_requerida": calculo_resultado.get("acao_requerida"),
+                "erro_calculo": calculo_resultado.get("erro"),
+                "timestamp": datetime.now().isoformat()
+            })
+
             # Verificar se cálculo foi bem-sucedido
             if not calculo_resultado.get("sucesso", False):
                 if calculo_resultado.get("acao_requerida") == "EXECUTAR_RPA_COLETA_INDICES":
+                    await self._registrar_passo_execucao("IGPM_NAO_DISPONIVEL", {
+                        "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES",
+                        "instrucoes": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM",
+                        "timestamp": datetime.now().isoformat()
+                    })
+
                     self.log_progresso("⚠️ IGPM não disponível no banco de dados")
                     self.log_progresso("🔄 AÇÃO REQUERIDA: Execute o RPA de Coleta de Índices")
 
@@ -555,6 +603,12 @@ class RPASienge(BaseRPA):
                             "instrucoes": "Execute o RPA de Coleta de Índices para obter o valor atual do IGPM antes de processar o reparcelamento"
                         })
                 else:
+                    await self._registrar_passo_execucao("ERRO_CALCULO_REPARCELAMENTO", {
+                        "erro": calculo_resultado.get("erro"),
+                        "tipo_erro": "erro_calculo_geral",
+                        "timestamp": datetime.now().isoformat()
+                    })
+
                     return ResultadoRPA(
                         sucesso=False,
                         mensagem=f"Erro no cálculo de reparcelamento: {calculo_resultado.get('erro')}",
@@ -578,6 +632,14 @@ class RPASienge(BaseRPA):
                 "timestamp_reparcelamento": datetime.now().isoformat()
             }
 
+            await self._registrar_passo_execucao("REPARCELAMENTO_PROCESSADO_SUCESSO", {
+                "resultado_reparcelamento": resultado_reparcelamento,
+                "novo_titulo": resultado_reparcelamento["novo_titulo_gerado"],
+                "valor_anterior": resultado_reparcelamento["valor_anterior"],
+                "valor_corrigido": resultado_reparcelamento["valor_corrigido"],
+                "timestamp": datetime.now().isoformat()
+            })
+
             return ResultadoRPA(
                 sucesso=True,
                 mensagem="Reparcelamento processado com sucesso",
@@ -589,6 +651,14 @@ class RPASienge(BaseRPA):
 
         except Exception as e:
             erro_msg = f"Erro na etapa de reparcelamento: {str(e)}"
+
+            await self._registrar_passo_execucao("ERRO_ETAPA_REPARCELAMENTO", {
+                "erro_detalhado": erro_msg,
+                "tipo_erro": type(e).__name__,
+                "stack_trace": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat()
+            })
+
             self.log_erro(erro_msg, e)
             return ResultadoRPA(
                 sucesso=False,
@@ -625,3 +695,50 @@ class RPASienge(BaseRPA):
             self.log_progresso("RPA Sienge finalizado")
         except Exception as e:
             self.log_erro("Erro ao finalizar RPA", e)
+
+    async def _registrar_passo_execucao(self, nome_passo: str, dados: Dict[str, Any]):
+        """
+        Registra um passo da execução do RPA em JSON e no MongoDB.
+
+        Args:
+            nome_passo: Nome do passo a ser registrado (ex: "LOGIN_SIENGE", "CONSULTA_RELATORIO").
+            dados: Dados adicionais a serem registrados no passo (ex: informações do usuário, dados do contrato).
+        """
+        try:
+            # 1. Registrar em JSON
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            nome_arquivo = f"execucao_rpa_{timestamp}.json"
+            caminho_arquivo = Path("logs") / nome_arquivo
+            caminho_arquivo.parent.mkdir(parents=True, exist_ok=True)
+
+            # Carrega o arquivo JSON existente (se existir)
+            dados_execucao = []```python
+            if caminho_arquivo.exists():
+                with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+                    try:
+                        dados_execucao = json.load(f)
+                    except json.JSONDecodeError:
+                        self.log_erro("Erro ao decodificar JSON existente. Criando novo arquivo.", exc_info=True)
+                        dados_execucao = []
+
+            # Adiciona o novo passo à lista de dados
+            dados_execucao.append({
+                "passo": nome_passo,
+                "dados": dados,
+                "timestamp": datetime.now().isoformat()
+            })
+
+            # Salva os dados atualizados no arquivo JSON
+            with open(caminho_arquivo, 'w', encoding='utf-8') as f:
+                json.dump(dados_execucao, f, ensure_ascii=False, indent=2)
+
+            self.log_progresso(f"Passo '{nome_passo}' registrado em JSON: {caminho_arquivo}")
+
+            # 2. Registrar no MongoDB (a ser implementado)
+            # TODO: Adicionar a lógica de registro no MongoDB aqui
+            # self._registrar_mongodb(nome_passo, dados)
+            self.log_progresso(f"Passo '{nome_passo}' registrado para MongoDB (implementação pendente)")
+
+        except Exception as e:
+            erro_msg = f"Erro ao registrar passo '{nome_passo}': {str(e)}"
+            self.log_erro(erro_msg, e)
