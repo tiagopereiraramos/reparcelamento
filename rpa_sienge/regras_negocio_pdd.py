@@ -125,24 +125,68 @@ class RegraNegocioPDD:
                 "dia_vencimento": None
             }
     
-    def _regra_2_primeiro_vencimento(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _regra_2_primeiro_vencimento(self, df: pd.DataFrame, tipo_reajuste: str = "ANUAL", 
+                                           dia_aniversario: int = None, mes_base_reparcelamento: int = None) -> Dict[str, Any]:
         """
         REGRA 2 PDD: Cálculo do 1º Vencimento do Novo Carnê
         
-        Define data do primeiro vencimento baseado no tipo de reajuste
+        Define data do primeiro vencimento baseado no tipo de reajuste conforme documento 9.1.1
         """
         try:
             hoje = date.today()
             
-            # Para reparcelamento, usa próximo mês no dia 15
-            proximo_mes = hoje.replace(day=1) + timedelta(days=32)
-            primeiro_vencimento = proximo_mes.replace(day=15)
+            # Obter dia de vencimento das parcelas
+            regra_1 = self._regra_1_dia_vencimento(df)
+            dia_vencimento = regra_1.get("dia_vencimento", 15)
+            
+            # Determinar mês base se não fornecido
+            if mes_base_reparcelamento is None:
+                mes_base_reparcelamento = hoje.month
+            
+            if tipo_reajuste.upper() == "ANUAL":
+                # REGRA ANUAL: Mesmo mês base do reparcelamento
+                primeiro_vencimento = date(hoje.year, mes_base_reparcelamento, dia_vencimento)
+                if primeiro_vencimento < hoje:
+                    primeiro_vencimento = primeiro_vencimento.replace(year=hoje.year + 1)
+                
+                observacao = f"Tipo Anual: 1º vencimento no mês base {mes_base_reparcelamento}"
+                
+            elif tipo_reajuste.upper() == "ANIVERSARIO":
+                # REGRA ANIVERSÁRIO: Depende se vence antes ou após aniversário
+                if dia_aniversario is None:
+                    dia_aniversario = 1  # Default se não informado
+                
+                if dia_vencimento < dia_aniversario:
+                    # Vence ANTES do aniversário → próximo mês
+                    proximo_mes = mes_base_reparcelamento + 1
+                    if proximo_mes > 12:
+                        proximo_mes = 1
+                        ano = hoje.year + 1
+                    else:
+                        ano = hoje.year
+                    primeiro_vencimento = date(ano, proximo_mes, dia_vencimento)
+                    observacao = f"Tipo Aniversário: Vencimento antes do dia {dia_aniversario} → mês seguinte"
+                else:
+                    # Vence APÓS o aniversário → mesmo mês base
+                    primeiro_vencimento = date(hoje.year, mes_base_reparcelamento, dia_vencimento)
+                    if primeiro_vencimento < hoje:
+                        primeiro_vencimento = primeiro_vencimento.replace(year=hoje.year + 1)
+                    observacao = f"Tipo Aniversário: Vencimento após o dia {dia_aniversario} → mesmo mês"
+            else:
+                # Fallback para reparcelamento simples
+                proximo_mes = hoje.replace(day=1) + timedelta(days=32)
+                primeiro_vencimento = proximo_mes.replace(day=dia_vencimento)
+                observacao = "Tipo padrão: próximo mês disponível"
             
             return {
                 "sucesso": True,
                 "data_primeiro_vencimento": primeiro_vencimento.isoformat(),
                 "data_primeiro_vencimento_formatada": primeiro_vencimento.strftime("%d/%m/%Y"),
-                "tipo_reajuste": "reparcelamento",
+                "tipo_reajuste": tipo_reajuste,
+                "dia_vencimento_usado": dia_vencimento,
+                "mes_base_reparcelamento": mes_base_reparcelamento,
+                "dia_aniversario": dia_aniversario,
+                "observacao_regra": observacao,
                 "dias_ate_vencimento": (primeiro_vencimento - hoje).days
             }
             
@@ -325,14 +369,21 @@ class RegraNegocioPDD:
                 "quantidade_rec_fat_a_vencer": 0
             }
     
-    def _regra_6_parcelas_vencidas_ct(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _regra_6_parcelas_vencidas_ct(self, df: pd.DataFrame, data_primeiro_vencimento_novo_carne: date = None) -> Dict[str, Any]:
         """
         REGRA 6 PDD: Quantidade de Parcelas Vencidas CT
         
-        Identifica parcelas CT vencidas e não quitadas (crítico para inadimplência)
+        Identifica parcelas CT vencidas e aplica regra dos 60 dias para inadimplência
         """
         try:
             hoje = date.today()
+            
+            # Se não informado, usar próximo mês como default
+            if data_primeiro_vencimento_novo_carne is None:
+                data_primeiro_vencimento_novo_carne = (hoje.replace(day=1) + timedelta(days=32)).replace(day=15)
+            
+            # Calcular limite dos 60 dias ANTES do 1º vencimento do novo carnê
+            limite_inadimplencia = data_primeiro_vencimento_novo_carne - timedelta(days=60)
             
             # Filtrar todas as parcelas CT
             todas_parcelas_ct = df[
@@ -340,6 +391,8 @@ class RegraNegocioPDD:
             ].copy()
             
             parcelas_ct_vencidas = []
+            parcelas_inadimplencia = []
+            
             for _, row in todas_parcelas_ct.iterrows():
                 try:
                     # Verificar data de vencimento
@@ -361,24 +414,40 @@ class RegraNegocioPDD:
                         except:
                             pass
                         
-                        parcelas_ct_vencidas.append({
+                        parcela_info = {
                             "documento": row.get("Documento"),
                             "data_vencimento": data_venc_date.isoformat(),
                             "status": status,
                             "valor": valor,
                             "dias_atraso": (hoje - data_venc_date).days
-                        })
+                        }
+                        
+                        parcelas_ct_vencidas.append(parcela_info)
+                        
+                        # REGRA DOS 60 DIAS: Se vencimento até 60 dias antes do 1º vencimento novo carnê
+                        if data_venc_date <= limite_inadimplencia:
+                            parcelas_inadimplencia.append({
+                                **parcela_info,
+                                "motivo_inadimplencia": f"Vencida em {data_venc_date.strftime('%d/%m/%Y')} - mais de 60 dias antes do novo 1º vencimento"
+                            })
+                            
                 except:
                     continue
             
             quantidade_vencidas = len(parcelas_ct_vencidas)
+            quantidade_inadimplencia = len(parcelas_inadimplencia)
             
             return {
                 "sucesso": True,
                 "quantidade_ct_vencidas": quantidade_vencidas,
+                "quantidade_inadimplencia_60_dias": quantidade_inadimplencia,
                 "parcelas_ct_vencidas_detalhes": parcelas_ct_vencidas,
+                "parcelas_inadimplencia_detalhes": parcelas_inadimplencia,
                 "valor_total_vencido": sum(p["valor"] for p in parcelas_ct_vencidas),
-                "data_analise": hoje.isoformat()
+                "data_analise": hoje.isoformat(),
+                "data_primeiro_vencimento_novo_carne": data_primeiro_vencimento_novo_carne.isoformat(),
+                "limite_inadimplencia_60_dias": limite_inadimplencia.isoformat(),
+                "regra_60_dias_aplicada": True
             }
             
         except Exception as e:
