@@ -20,9 +20,9 @@ from dotenv import load_dotenv
 # Imports do sistema RPA
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
-from rpa_sienge.validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
+from validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
 
-# Selenium imports necessários  
+# Selenium imports necessários
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -31,6 +31,7 @@ from selenium.webdriver.support.ui import Select
 from platformdirs import user_downloads_dir
 
 load_dotenv()
+
 
 class RPASienge(BaseRPA):
     """
@@ -75,16 +76,21 @@ class RPASienge(BaseRPA):
             notificar_analista: False para ignorar notificações de validação
         """
         try:
-            self.log_progresso(f"Iniciando RPA Sienge - Etapa: {etapa.upper()}")
-            self.log_progresso(f"Contrato: {contrato.get('numero_titulo', '')}")
+            self.log_progresso(
+                f"Iniciando RPA Sienge - Etapa: {etapa.upper()}")
+            self.log_progresso(
+                f"Contrato: {contrato.get('numero_titulo', '')}")
             self.log_progresso(f"Cliente: {contrato.get('cliente', '')}")
-            self.log_progresso(f"Autorização automática: {autorizar_reparcelamento}")
+            self.log_progresso(
+                f"Autorização automática: {autorizar_reparcelamento}")
 
             if not contrato or not credenciais_sienge:
                 return ResultadoRPA(
                     sucesso=False,
-                    mensagem="Dados do contrato ou credenciais Sienge não fornecidos",
-                    erro="Parâmetros 'contrato' e 'credenciais_sienge' são obrigatórios"
+                    mensagem=
+                    "Dados do contrato ou credenciais Sienge não fornecidos",
+                    erro=
+                    "Parâmetros 'contrato' e 'credenciais_sienge' são obrigatórios"
                 )
 
             # Configura credenciais
@@ -99,7 +105,8 @@ class RPASienge(BaseRPA):
             if etapa == "consulta":
                 return ResultadoRPA(
                     sucesso=dados_financeiros.get("sucesso", False),
-                    mensagem=f"Consulta realizada - Cliente: {contrato.get('cliente', '')}",
+                    mensagem=
+                    f"Consulta realizada - Cliente: {contrato.get('cliente', '')}",
                     dados={
                         "etapa_executada": "consulta",
                         "contrato": contrato,
@@ -111,8 +118,7 @@ class RPASienge(BaseRPA):
             if etapa in ["reparcelamento", "completa"]:
                 resultado_reparcelamento = await self._executar_etapa_reparcelamento(
                     contrato, indices or {}, dados_financeiros,
-                    autorizar_reparcelamento, notificar_analista
-                )
+                    autorizar_reparcelamento, notificar_analista)
 
                 if etapa == "reparcelamento":
                     return resultado_reparcelamento
@@ -121,7 +127,8 @@ class RPASienge(BaseRPA):
             if etapa == "completa":
                 # Gera carnê se processamento foi bem-sucedido
                 carne_gerado = None
-                if dados_financeiros.get("sucesso") and resultado_reparcelamento.sucesso:
+                if dados_financeiros.get(
+                        "sucesso") and resultado_reparcelamento.sucesso:
                     self.log_progresso("Gerando carnê atualizado")
                     carne_gerado = await self._gerar_carne_sienge(contrato)
 
@@ -130,14 +137,16 @@ class RPASienge(BaseRPA):
                     "etapa_executada": "completa",
                     "contrato_processado": contrato,
                     "dados_financeiros": dados_financeiros,
-                    "reparcelamento": resultado_reparcelamento.dados if resultado_reparcelamento.dados else {},
+                    "reparcelamento": resultado_reparcelamento.dados
+                    if resultado_reparcelamento.dados else {},
                     "carne_gerado": carne_gerado,
                     "timestamp_processamento": datetime.now().isoformat()
                 }
 
                 return ResultadoRPA(
                     sucesso=resultado_reparcelamento.sucesso,
-                    mensagem=f"Processamento completo - Cliente: {contrato.get('cliente', '')}",
+                    mensagem=
+                    f"Processamento completo - Cliente: {contrato.get('cliente', '')}",
                     dados=resultado_dados)
 
         except Exception as e:
@@ -160,7 +169,8 @@ class RPASienge(BaseRPA):
             self.log_progresso(f"Acessando sistema Sienge: {url_sienge}")
 
             if not url_sienge:
-                raise ValueError("URL do Sienge não foi configurada corretamente.")
+                raise ValueError(
+                    "URL do Sienge não foi configurada corretamente.")
 
             self.get_page(url_sienge)
             time.sleep(3)
@@ -173,10 +183,12 @@ class RPASienge(BaseRPA):
             # 5. Fechar caixas de mensagem
 
             # Preenche usuário inicial
-            self.find_element(xpath='(//input[@id="username"])[1]').send_keys(usuario_sienge)
+            self.find_element(
+                xpath='(//input[@id="username"])[1]').send_keys(usuario_sienge)
 
             # Preenche senha inicial
-            self.find_element(xpath='//input[@id="password"]').send_keys(senha_sienge)
+            self.find_element(
+                xpath='//input[@id="password"]').send_keys(senha_sienge)
 
             # Clica botão entrar inicial
             self.find_element(xpath='//*[@id="btnEntrarComSiengeID"]').click()
@@ -184,17 +196,21 @@ class RPASienge(BaseRPA):
 
             # Segunda etapa - email
             self.find_element(
-                xpath='//label[text()="Seu e-mail"]/following-sibling::div//input'
+                xpath=
+                '//label[text()="Seu e-mail"]/following-sibling::div//input'
             ).send_keys(usuario_sienge)
 
             # Clica continuar
-            self.find_element(xpath="//button[normalize-space(text())='CONTINUAR']").click()
+            self.find_element(
+                xpath="//button[normalize-space(text())='CONTINUAR']").click()
 
             # Terceira etapa - senha final
-            self.find_element(xpath="//input[@id='signup-password']").send_keys(senha_sienge)
+            self.find_element(
+                xpath="//input[@id='signup-password']").send_keys(senha_sienge)
 
             # Clica entrar final
-            self.find_element(xpath="//button[normalize-space(text())='ENTRAR']").click()
+            self.find_element(
+                xpath="//button[normalize-space(text())='ENTRAR']").click()
 
             # Login bem-sucedido
             self.logado_sienge = True
@@ -203,7 +219,8 @@ class RPASienge(BaseRPA):
         except Exception as e:
             raise Exception(f"Falha no login Sienge: {str(e)}")
 
-    async def _consultar_relatorios_financeiros(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+    async def _consultar_relatorios_financeiros(
+            self, contrato: Dict[str, Any]) -> Dict[str, Any]:
         """
         Consulta relatórios financeiros no Sienge conforme PDD seção 7.3.1
         WEBSCRAPING IMPLEMENTADO COM XPATHS FUNCIONAIS
@@ -212,7 +229,8 @@ class RPASienge(BaseRPA):
             cliente = contrato.get("cliente", "")
             numero_titulo = contrato.get("numero_titulo", "")
 
-            self.log_progresso(f"Consultando saldo devedor presente para: {cliente}")
+            self.log_progresso(
+                f"Consultando saldo devedor presente para: {cliente}")
             self.log_progresso(f"Título: {numero_titulo}")
 
             # WEBSCRAPING REAL - Navegação conforme PDD seção 7.3.1
@@ -224,7 +242,8 @@ class RPASienge(BaseRPA):
             # WEBSCRAPING REAL - Busca e preenche campo de pesquisa do cliente
             self.log_progresso("Pesquisando cliente...")
             combo_pesquisa = self.find_element(
-                xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']"
+                xpath=
+                "//input[@placeholder='Pesquisar cliente' and @role='combobox']"
             )
 
             if combo_pesquisa:
@@ -235,8 +254,9 @@ class RPASienge(BaseRPA):
                 time.sleep(1)
 
                 # Preenche nome do cliente
-                self.send_text(
-                    xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']",
+                self.send_text_human_like(
+                    xpath=
+                    "//input[@placeholder='Pesquisar cliente' and @role='combobox']",
                     text=cliente)
                 time.sleep(2)
 
@@ -250,33 +270,60 @@ class RPASienge(BaseRPA):
                 self.click(xpath="//button[normalize-space()='Consultar']")
                 time.sleep(3)
 
+                # WEBSCRAPING REAL - CLICANDO EM TODOS NA BARRA PARA EXPORTAR TODOS OS REGISTROS
+                self.log_progresso("Selecionando todos os registros...")
+                self.click(
+                    xpath=
+                    '//div[@role="combobox" and contains(@class, "MuiSelect-select")]'
+                )
+                time.sleep(1)
+                self.click(
+                    xpath=
+                    '//li[normalize-space(.)="Todas" or normalize-space(.)="All"]'
+                )
+                time.sleep(4)
+
                 # WEBSCRAPING REAL - Gera relatório
                 self.log_progresso("Gerando relatório...")
-                self.click(xpath="//button[@type='button' and contains(., 'Gerar Relatório')]")
+                self.click(
+                    xpath=
+                    "//button[@type='button' and contains(., 'Gerar Relatório')]"
+                )
                 time.sleep(2)
 
                 # WEBSCRAPING REAL - Seleciona formato Excel
                 self.log_progresso("Selecionando formato Excel...")
                 self.click(
-                    xpath="//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]"
+                    xpath=
+                    "//legend[span[normalize-space(.)='Gerar relatório como']]/ancestor::div[contains(@class, 'MuiInputBase-root')][1]//div[@role='combobox' and contains(@class, 'MuiSelect-select')]"
                 )
                 time.sleep(1)
 
-                self.click(xpath='//li[@role="option" and @data-value="excel" and text()="EXCEL"]')
+                self.click(
+                    xpath=
+                    '//li[@role="option" and @data-value="excel" and text()="EXCEL"]'
+                )
                 time.sleep(1)
 
                 # WEBSCRAPING REAL - Exporta relatório
                 self.log_progresso("Exportando relatório...")
-                self.click(xpath="//button[@type='button' and normalize-space()='Exportar']")
+                self.click(
+                    xpath=
+                    "//button[@type='button' and normalize-space()='Exportar']"
+                )
                 time.sleep(5)
 
                 # PROCESSAMENTO DA PLANILHA BAIXADA
                 self.log_progresso("Processando planilha baixada...")
-                dados_planilha = await self._processar_planilha_baixada(cliente, numero_titulo)
+                dados_planilha = await self._processar_planilha_baixada(
+                    cliente, numero_titulo)
 
                 # NAVEGAR DE VOLTA À TELA DE CONSULTA PARA PRÓXIMO CONTRATO
-                self.log_progresso("Voltando à tela de consulta para próximo contrato...")
-                self.get_page("https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor")
+                self.log_progresso(
+                    "Voltando à tela de consulta para próximo contrato...")
+                self.get_page(
+                    "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
+                )
                 time.sleep(2)
 
             # DADOS PROCESSADOS DA PLANILHA REAL
@@ -285,20 +332,31 @@ class RPASienge(BaseRPA):
             else:
                 # Fallback com dados vazios se planilha não processada
                 dados_financeiros = {
-                    "cliente": cliente,
-                    "numero_titulo": numero_titulo,
-                    "saldo_total": 0.0,
-                    "parcelas_pendentes": 0,
+                    "cliente":
+                    cliente,
+                    "numero_titulo":
+                    numero_titulo,
+                    "saldo_total":
+                    0.0,
+                    "parcelas_pendentes":
+                    0,
                     "parcelas_ct": [],
                     "parcelas_rec_fat": [],
-                    "status_cliente": "erro_processamento",
-                    "relatorio_exportado": False,
-                    "dados_brutos": None,
-                    "sucesso": False,
-                    "erro": dados_planilha.get("erro", "Falha no processamento da planilha")
+                    "status_cliente":
+                    "erro_processamento",
+                    "relatorio_exportado":
+                    False,
+                    "dados_brutos":
+                    None,
+                    "sucesso":
+                    False,
+                    "erro":
+                    dados_planilha.get("erro",
+                                       "Falha no processamento da planilha")
                 }
 
-            self.log_progresso("Webscraping concluído - Aguardando processamento da planilha")
+            self.log_progresso(
+                "Webscraping concluído - Aguardando processamento da planilha")
             return dados_financeiros
 
         except Exception as e:
@@ -306,57 +364,84 @@ class RPASienge(BaseRPA):
             self.log_erro(erro_msg, e)
             return {"erro": erro_msg, "sucesso": False}
 
-    async def _processar_planilha_baixada(self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+    async def _processar_planilha_baixada(
+            self, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """
         Processa planilha Excel baixada do Sienge aplicando regras PDD rigorosas
         PROCESSAMENTO IMPLEMENTADO PELO ASSISTENTE
         """
         try:
-            # Localizar arquivo baixado mais recente
-            downloads_dir = user_downloads_dir()
-            arquivos_excel = list(Path(downloads_dir).glob("*.xlsx"))
-            
+            RPA_DOWNLOADS_FOLDER = os.getenv("RPA_DOWNLOADS_FOLDER")
+            if RPA_DOWNLOADS_FOLDER and RPA_DOWNLOADS_FOLDER.startswith('/'):
+                # Remove barra inicial se houver
+                RPA_DOWNLOADS_FOLDER = RPA_DOWNLOADS_FOLDER[1:]
+
+            downloads_dir = Path(user_downloads_dir(
+            )) / RPA_DOWNLOADS_FOLDER if RPA_DOWNLOADS_FOLDER else Path(
+                user_downloads_dir())
+            # PosixPath('/Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250617-155816.xlsx') esse valor é um exemplo de como o caminho pode ser retornado, mas preciso do caminho do arquivo baixado mais recente
+            self.log_progresso(
+                f"Localizando planilha na pasta de downloads: {downloads_dir}")
+            # Verifica se a pasta de downloads existe
+            arquivos_excel = list(downloads_dir.glob("*.xlsx"))
+
             if not arquivos_excel:
-                return {"sucesso": False, "erro": "Nenhuma planilha encontrada na pasta de downloads"}
-            
-            # Arquivo mais recente
-            arquivo_mais_recente = max(arquivos_excel, key=lambda x: x.stat().st_mtime)
-            
-            self.log_progresso(f"Processando arquivo: {arquivo_mais_recente.name}")
-            
+                return {
+                    "sucesso": False,
+                    "erro": "Nenhuma planilha encontrada na pasta de downloads"
+                }
+
+            # Ajuste: seleciona o arquivo mais recente e retorna como string
+            arquivo_mais_recente = max(arquivos_excel,
+                                       key=lambda f: f.stat().st_mtime)
+            caminho_arquivo = str(arquivo_mais_recente.resolve())
+
+            self.log_progresso(
+                f"Processando arquivo: {arquivo_mais_recente.name}")
+
             # Ler planilha Excel
             df = pd.read_excel(arquivo_mais_recente)
-            
+
             # Salvar cópia na pasta do projeto
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            arquivo_destino = self.pasta_planilhas / f"sienge_{cliente.replace(' ', '_')}_{timestamp}.xlsx"
+            arquivo_destino = self.pasta_planilhas / \
+                f"sienge_{cliente.replace(' ', '_')}_{timestamp}.xlsx"
             shutil.copy2(arquivo_mais_recente, arquivo_destino)
-            
+
             # APLICAR VALIDAÇÃO PDD RIGOROSA
             validador = ValidadorInadimplenciaPDD()
-            resultado_validacao = validador.validar_cliente(df, cliente, numero_titulo)
-            
+            resultado_validacao = validador.validar_cliente(
+                df, cliente, numero_titulo)
+
             self.log_progresso(f"Validação PDD concluída:")
-            self.log_progresso(f"  Status: {resultado_validacao.get('status_cliente', 'N/A')}")
-            self.log_progresso(f"  Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}")
-            self.log_progresso(f"  Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}")
-            
+            self.log_progresso(
+                f"  Status: {resultado_validacao.get('status_cliente', 'N/A')}"
+            )
+            self.log_progresso(
+                f"  Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}"
+            )
+            self.log_progresso(
+                f"  Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}"
+            )
+
             return {
                 "sucesso": True,
                 "cliente": cliente,
                 "numero_titulo": numero_titulo,
                 "arquivo_processado": str(arquivo_destino),
                 "dados_validacao": resultado_validacao,
-                "planilha_bruta": df.to_dict('records') if len(df) < 1000 else "Planilha muito grande - dados resumidos",
+                "planilha_bruta": df.to_dict('records') if len(df) < 1000 else
+                "Planilha muito grande - dados resumidos",
                 "timestamp_processamento": datetime.now().isoformat()
             }
-            
+
         except Exception as e:
             erro_msg = f"Erro no processamento da planilha: {str(e)}"
             self.log_erro(erro_msg, e)
             return {"sucesso": False, "erro": erro_msg}
 
-    async def _executar_etapa_consulta(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+    async def _executar_etapa_consulta(
+            self, contrato: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executa etapa de consulta de relatórios financeiros
         """
@@ -368,23 +453,24 @@ class RPASienge(BaseRPA):
             self.log_erro(erro_msg, e)
             return {"sucesso": False, "erro": erro_msg}
 
-    async def _executar_etapa_reparcelamento(self, contrato: Dict[str, Any], 
-                                           indices: Dict[str, Any],
-                                           dados_financeiros: Dict[str, Any],
-                                           autorizar_reparcelamento: bool,
-                                           notificar_analista: bool) -> ResultadoRPA:
+    async def _executar_etapa_reparcelamento(
+            self, contrato: Dict[str, Any], indices: Dict[str, Any],
+            dados_financeiros: Dict[str, Any], autorizar_reparcelamento: bool,
+            notificar_analista: bool) -> ResultadoRPA:
         """
         Executa etapa de processamento de reparcelamento
         """
         try:
-            self.log_progresso("🔄 Executando processamento de reparcelamento...")
-            
+            self.log_progresso(
+                "🔄 Executando processamento de reparcelamento...")
+
             # Verificar se pode reparcelar com base na validação PDD
             dados_validacao = dados_financeiros.get("dados_validacao", {})
             pode_reparcelar = dados_validacao.get("pode_reparcelar", False)
-            
+
             if not pode_reparcelar and not autorizar_reparcelamento:
-                motivo = dados_validacao.get("motivo_classificacao", "Cliente não pode reparcelar")
+                motivo = dados_validacao.get("motivo_classificacao",
+                                             "Cliente não pode reparcelar")
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem=f"Reparcelamento não autorizado: {motivo}",
@@ -393,22 +479,27 @@ class RPASienge(BaseRPA):
                         "validacao_pdd": dados_validacao,
                         "autorizado": False,
                         "motivo_recusa": motivo
-                    }
-                )
-            
+                    })
+
             # Se chegou aqui, pode prosseguir com o reparcelamento
             self.log_progresso("✅ Cliente aprovado para reparcelamento")
-            
+
             # Simular processamento de reparcelamento (TODO: implementar webscraping real)
             resultado_reparcelamento = {
-                "sucesso": True,
-                "novo_titulo_gerado": f"REP_{contrato.get('numero_titulo', '')}_2025",
-                "valor_corrigido": dados_validacao.get("saldo_total", 0),
-                "parcelas_processadas": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
-                "indices_aplicados": indices,
-                "timestamp_reparcelamento": datetime.now().isoformat()
+                "sucesso":
+                True,
+                "novo_titulo_gerado":
+                f"REP_{contrato.get('numero_titulo', '')}_2025",
+                "valor_corrigido":
+                dados_validacao.get("saldo_total", 0),
+                "parcelas_processadas":
+                dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
+                "indices_aplicados":
+                indices,
+                "timestamp_reparcelamento":
+                datetime.now().isoformat()
             }
-            
+
             return ResultadoRPA(
                 sucesso=True,
                 mensagem="Reparcelamento processado com sucesso",
@@ -416,36 +507,35 @@ class RPASienge(BaseRPA):
                     "contrato": contrato,
                     "reparcelamento": resultado_reparcelamento,
                     "validacao_pdd": dados_validacao
-                }
-            )
-            
+                })
+
         except Exception as e:
             erro_msg = f"Erro na etapa de reparcelamento: {str(e)}"
             self.log_erro(erro_msg, e)
             return ResultadoRPA(
                 sucesso=False,
                 mensagem="Falha no processamento de reparcelamento",
-                erro=erro_msg
-            )
+                erro=erro_msg)
 
-    async def _gerar_carne_sienge(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
+    async def _gerar_carne_sienge(self, contrato: Dict[str,
+                                                       Any]) -> Dict[str, Any]:
         """
         Gera carnê atualizado no Sienge (placeholder)
         """
         try:
             self.log_progresso("📄 Gerando carnê atualizado...")
-            
+
             # TODO: Implementar webscraping para geração de carnê
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             nome_arquivo = f"carne_{contrato.get('numero_titulo', 'indefinido')}_{timestamp}.pdf"
-            
+
             return {
                 "sucesso": True,
                 "nome_arquivo": nome_arquivo,
                 "caminho_arquivo": f"outputs/carnes/{nome_arquivo}",
                 "timestamp_geracao": datetime.now().isoformat()
             }
-            
+
         except Exception as e:
             erro_msg = f"Erro na geração do carnê: {str(e)}"
             self.log_erro(erro_msg, e)
