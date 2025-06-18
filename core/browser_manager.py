@@ -85,7 +85,14 @@ class RPABrowser:
         # Configurações de download - usar pasta RPA parametrizada
         downloads_base = os.path.expanduser("~/Downloads")
         rpa_downloads_folder = os.getenv('RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
-        downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
+        
+        # Garantir concatenação correta do caminho
+        if not downloads_base.endswith('/') and not rpa_downloads_folder.startswith('/'):
+            downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
+        elif downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            downloads_dir = downloads_base + rpa_downloads_folder[1:]  # Remove barra dupla
+        else:
+            downloads_dir = downloads_base + rpa_downloads_folder
         os.makedirs(downloads_dir, exist_ok=True)
 
         self.options.set_preference("browser.download.folderList", 2)
