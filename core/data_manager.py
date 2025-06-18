@@ -296,15 +296,25 @@ class DataManagerUnificado:
         # 1. MongoDB (principal)
         if self.mongodb_ativo:
             try:
+                logger.info(f"💾 Tentando salvar índices no MongoDB...")
+                logger.info(f"   Dados: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
+                
                 mongo_id = await mongodb_manager.salvar_indices_economicos(indices_data)
                 if mongo_id:
                     resultados["mongodb"] = "sucesso"
                     documento["_id_mongodb"] = mongo_id
+                    logger.info(f"✅ Índices salvos no MongoDB com ID: {mongo_id}")
+                else:
+                    resultados["mongodb"] = "falha: retorno None"
+                    logger.warning(f"⚠️ MongoDB retornou None para salvamento de índices")
             except Exception as e:
-                logger.warning(f"⚠️ Índices MongoDB falhou: {str(e)}")
+                logger.error(f"❌ Índices MongoDB falhou: {str(e)}")
+                import traceback
+                logger.error(f"   Traceback: {traceback.format_exc()}")
                 resultados["mongodb"] = f"erro: {str(e)}"
         else:
             resultados["mongodb"] = "desconectado"
+            logger.warning(f"⚠️ MongoDB não ativo para salvar índices (mongodb_ativo: {self.mongodb_ativo})")
 
         # 2. JSON (fallback garantido)
         try:

@@ -13,6 +13,7 @@ import traceback
 import logging
 import os
 from core.logger_avancado import LoggerAvancado
+import time  # Import time
 
 # Import para type hints
 if TYPE_CHECKING:
@@ -233,71 +234,61 @@ class BaseRPA(ABC):
 
     async def executar_com_monitoramento(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
-        Executa RPA com monitoramento completo e persistência automática
+        Executa RPA com monitoramento completo de performance e erros
+
+        Args:
+            parametros: Parâmetros para execução do RPA
+
+        Returns:
+            ResultadoRPA com resultado detalhado
         """
-        inicio = datetime.now()
+        tempo_inicio = time.time()
+        resultado = None
 
         try:
-            # ✅ FORÇA inicialização do data_manager ANTES de tudo
-            from core.data_manager import data_manager
-            
-            self.log_info("🔧 Inicializando sistema de dados...")
-            await data_manager.inicializar()
-            self.log_info("✅ Sistema de dados inicializado")
+            self.log_info(f"🚀 Iniciando execução de {self.nome_rpa}")
+            self.log_info(f"📋 Parâmetros: {json.dumps(parametros, indent=2, ensure_ascii=False, default=str)}")
 
-            # Garante que recursos estão inicializados
-            self.log_info("🔧 Inicializando recursos do RPA...")
-            if not await self.inicializar():
-                return ResultadoRPA(
-                    sucesso=False,
-                    mensagem="Falha na inicialização dos recursos",
-                    erro="Recursos do RPA não puderam ser inicializados"
-                )
-
-            # Inicializa recursos obrigatórios
-            await self._inicializar_recursos_obrigatorios()
-
-            # Inicializa recursos opcionais
-            await self._inicializar_recursos_opcionais()
-
-            # Executa o RPA
-            self.log_info(f"▶️ Iniciando execução do RPA {self.nome_rpa}")
+            # Chama método executar da classe filha
             resultado = await self.executar(parametros)
 
-            # Calcula tempo de execução SEMPRE
-            tempo_execucao = (datetime.now() - inicio).total_seconds()
+            # Calcula tempo de execução
+            tempo_execucao = time.time() - tempo_inicio
             resultado.tempo_execucao = tempo_execucao
 
-            # FORÇA salvamento da execução no sistema
-            self.log_info("💾 Salvando execução no sistema...")
-            await self._salvar_execucao_sistema(parametros, resultado)
+            # Log de resultado
+            if resultado.sucesso:
+                self.log_info(f"✅ {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
+                self.log_info(f"📊 Resultado: {resultado.mensagem}")
+                if resultado.dados:
+                    self.log_info(f"📈 Dados retornados: {json.dumps(resultado.dados, indent=2, ensure_ascii=False, default=str)}")
+            else:
+                self.log_erro(f"❌ {self.nome_rpa} falhou após {tempo_execucao:.2f}s")
+                self.log_erro(f"🔍 Erro: {resultado.erro}")
 
-            self.log_info(f"✅ RPA {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
+            # ❌ REMOVIDO: Salvamento duplicado - data_manager já salva via rastreamento_unificado
+            # await self._salvar_execucao(parametros, resultado)
+
             return resultado
 
         except Exception as e:
-            tempo_execucao = (datetime.now() - inicio).total_seconds()
+            tempo_execucao = time.time() - tempo_inicio
 
-            resultado_erro = ResultadoRPA(
-                sucesso=False,
-                mensagem=f"❌ FALHA: Erro crítico durante execução do {self.nome_rpa}",
-                erro=str(e),
-                tempo_execucao=tempo_execucao
-            )
+            # Cria resultado de erro se não foi criado
+            if not resultado:
+                resultado = ResultadoRPA(
+                    sucesso=False,
+                    mensagem=f"Erro crítico durante execução: {str(e)}",
+                    erro=str(e),
+                    tempo_execucao=tempo_execucao
+                )
 
-            # FORÇA salvamento da execução com erro
-            try:
-                self.log_info("💾 Salvando execução com erro no sistema...")
-                await self._salvar_execucao_sistema(parametros, resultado_erro)
-            except Exception as save_error:
-                self.log_erro(f"❌ Falha ao salvar execução com erro: {str(save_error)}", save_error)
+            self.log_erro(f"💥 Erro crítico em {self.nome_rpa}", e)
 
-            self.log_erro(f"🔍 Erro: {str(e)}", e)
-            return resultado_erro
+            # ❌ REMOVIDO: Salvamento duplicado - rastreamento_unificado já salva
+            # await self._salvar_execucao(parametros, resultado)
 
-        finally:
-            # Finaliza recursos
-            await self._finalizar_recursos()
+            return resultado
 
     async def _salvar_execucao_sistema(self, parametros: Dict[str, Any],
                                        resultado: ResultadoRPA):
@@ -314,7 +305,7 @@ class BaseRPA(ABC):
                 await data_manager.inicializar()
 
             self.log_info(f"💾 Tentando salvar execução {self.nome_rpa}...")
-            
+
             # Salva a execução usando o data_manager
             resultados = await data_manager.salvar_execucao_rpa(
                 nome_rpa=self.nome_rpa,
@@ -334,14 +325,14 @@ class BaseRPA(ABC):
 
         except Exception as e:
             self.log_erro(f"❌ Erro ao salvar execução no sistema: {str(e)}", e)
-            
+
             # Fallback direto para JSON se tudo falhar
             try:
                 self.log_info("🔄 Tentando fallback direto para JSON...")
                 import json
                 import os
                 from datetime import datetime
-                
+
                 dados_execucao = {
                     "nome_rpa": self.nome_rpa,
                     "timestamp_inicio": datetime.now().isoformat(),
@@ -349,15 +340,15 @@ class BaseRPA(ABC):
                     "resultado": resultado.para_dict(),
                     "fallback": True
                 }
-                
+
                 os.makedirs("dados_processamento", exist_ok=True)
                 arquivo_fallback = f"dados_processamento/execucao_fallback_{self.nome_rpa}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                
+
                 with open(arquivo_fallback, 'w', encoding='utf-8') as f:
                     json.dump(dados_execucao, f, indent=2, ensure_ascii=False, default=str)
-                
+
                 self.log_info(f"📄 Fallback salvo em: {arquivo_fallback}")
-                
+
             except Exception as fallback_error:
                 self.log_erro(f"❌ Falha completa no salvamento: {str(fallback_error)}", fallback_error)
 

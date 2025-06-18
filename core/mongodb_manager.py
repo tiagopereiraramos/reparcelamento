@@ -203,6 +203,7 @@ class MongoDBManager:
             ID do documento inserido ou None se falhou
         """
         if not self.conectado:
+            logger.warning("⚠️ MongoDB não conectado - não pode salvar índices")
             return None
 
         try:
@@ -220,10 +221,14 @@ class MongoDBManager:
                 self.executor, _save_indices
             )
             
-            logger.debug(f"📊 Índices salvos no MongoDB: {document_id}")
+            logger.info(f"📊 Índices econômicos salvos no MongoDB: {document_id}")
             return document_id
 
         except Exception as e:
+            logger.error(f"❌ Erro ao salvar índices no MongoDB: {str(e)}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
+            return Nonexception as e:
             logger.error(f"❌ Erro ao salvar índices no MongoDB: {str(e)}")
             return None
 
