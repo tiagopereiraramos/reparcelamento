@@ -204,17 +204,28 @@ class MongoDBManager:
         """
         if not self.conectado:
             logger.warning("⚠️ MongoDB não conectado - não pode salvar índices")
+            logger.warning(f"   Estado conexão: conectado={self.conectado}, client={self.client is not None}, database={self.database is not None}")
             return None
 
         try:
+            logger.info(f"🔍 Preparando documento para MongoDB...")
+            logger.info(f"   Dados recebidos: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
+            
             documento = {
                 "timestamp_coleta": datetime.now(),
                 "indices": indices_data,
                 "fonte_coleta": "rpa_coleta_indices"
             }
+            
+            logger.info(f"📄 Documento preparado: {json.dumps(documento, indent=2, ensure_ascii=False, default=str)}")
+            logger.info(f"🗄️ Collection alvo: indices_economicos")
+            logger.info(f"🔗 Database: {self.database.name}")
 
             def _save_indices():
-                result = self.database.indices_economicos.insert_one(documento)
+                logger.info(f"💾 Executando insert_one na collection...")
+                collection = self.database.indices_economicos
+                result = collection.insert_one(documento)
+                logger.info(f"✅ Insert realizado, ID: {result.inserted_id}")
                 return str(result.inserted_id)
 
             document_id = await asyncio.get_event_loop().run_in_executor(
@@ -222,6 +233,18 @@ class MongoDBManager:
             )
             
             logger.info(f"📊 Índices econômicos salvos no MongoDB: {document_id}")
+            
+            # Verificação adicional
+            def _verify_save():
+                count = self.database.indices_economicos.count_documents({})
+                last_doc = self.database.indices_economicos.find_one(sort=[("timestamp_coleta", -1)])
+                return count, last_doc
+                
+            count, last_doc = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _verify_save
+            )
+            logger.info(f"🔍 Verificação: {count} documentos na collection, último: {last_doc['_id'] if last_doc else 'None'}")
+            
             return document_id
 
         except Exception as e:

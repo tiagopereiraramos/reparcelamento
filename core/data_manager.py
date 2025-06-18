@@ -293,10 +293,14 @@ class DataManagerUnificado:
 
         resultados = {"mongodb": "falhou", "json": "falhou"}
 
-        # 1. MongoDB (principal)
-        if self.mongodb_ativo:
+        # 1. MongoDB (principal) - usar conexão real ao invés de flag local
+        if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
             try:
                 logger.info(f"💾 Tentando salvar índices no MongoDB...")
+                logger.info(f"   Estado do MongoDB:")
+                logger.info(f"   - MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
+                logger.info(f"   - mongodb_manager.conectado: {mongodb_manager.conectado}")
+                logger.info(f"   - database: {mongodb_manager.database.name if mongodb_manager.database else 'None'}")
                 logger.info(f"   Dados: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
                 
                 mongo_id = await mongodb_manager.salvar_indices_economicos(indices_data)
@@ -313,8 +317,16 @@ class DataManagerUnificado:
                 logger.error(f"   Traceback: {traceback.format_exc()}")
                 resultados["mongodb"] = f"erro: {str(e)}"
         else:
-            resultados["mongodb"] = "desconectado"
-            logger.warning(f"⚠️ MongoDB não ativo para salvar índices (mongodb_ativo: {self.mongodb_ativo})")
+            motivo = []
+            if not MONGODB_DISPONIVEL:
+                motivo.append("MONGODB_DISPONIVEL=False")
+            if not mongodb_manager:
+                motivo.append("mongodb_manager=None")  
+            elif not mongodb_manager.conectado:
+                motivo.append("mongodb_manager.conectado=False")
+                
+            resultados["mongodb"] = f"nao_tentado: {', '.join(motivo)}"
+            logger.warning(f"⚠️ MongoDB não tentado para índices: {', '.join(motivo)}")
 
         # 2. JSON (fallback garantido)
         try:
