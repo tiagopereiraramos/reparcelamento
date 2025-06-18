@@ -228,8 +228,6 @@ class MongoDBManager:
             logger.error(f"❌ Erro ao salvar índices no MongoDB: {str(e)}")
             import traceback
             logger.error(f"   Traceback: {traceback.format_exc()}")
-            return Nonexception as e:
-            logger.error(f"❌ Erro ao salvar índices no MongoDB: {str(e)}")
             return None
 
     async def salvar_contrato_processado(self, contrato_data: Dict[str, Any]) -> Optional[str]:
