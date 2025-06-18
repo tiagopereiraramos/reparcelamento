@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
 from validador_inadimplencia_pdd import ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
+from regras_negocio_pdd import ProcessadorRegrasNegocio
 
 # Selenium imports necessários
 from selenium.webdriver.common.by import By
@@ -47,6 +48,7 @@ class RPASienge(BaseRPA):
         self.credenciais_sienge = {}
         self.pasta_planilhas = Path("dados_extraidos/planilhas_sienge")
         self.pasta_planilhas.mkdir(parents=True, exist_ok=True)
+        self.processador_regras = ProcessadorRegrasNegocio()
 
     def _configurar_credenciais(self, credenciais: Dict[str, str]):
         """Configura credenciais do Sienge"""
@@ -408,30 +410,70 @@ class RPASienge(BaseRPA):
                 f"sienge_{cliente.replace(' ', '_')}_{timestamp}.xlsx"
             shutil.copy2(arquivo_mais_recente, arquivo_destino)
 
-            # APLICAR VALIDAÇÃO PDD RIGOROSA
+            # APLICAR VALIDAÇÃO PDD RIGOROSA CONFORME SEÇÃO 9.1.1
             validador = ValidadorInadimplenciaPDD()
             resultado_validacao = validador.validar_cliente(
                 df, cliente, numero_titulo)
 
-            self.log_progresso(f"Validação PDD concluída:")
-            self.log_progresso(
-                f"  Status: {resultado_validacao.get('status_cliente', 'N/A')}"
-            )
-            self.log_progresso(
-                f"  Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}"
-            )
-            self.log_progresso(
-                f"  Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}"
-            )
+            # APLICAR REGRAS ESPECÍFICAS PDD 9.1.1
+            resultado_regras_pdd = self.processador_regras.processar_dados_cliente(
+                df, cliente, numero_titulo, resultado_validacao)
+
+            self.log_progresso(f"✅ Validação PDD 9.1.1 concluída:")
+            self.log_progresso(f"  📊 Status: {resultado_validacao.get('status_cliente', 'N/A')}")
+            self.log_progresso(f"  🔢 Parcelas CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}")
+            self.log_progresso(f"  ✔️ Pode reparcelar: {resultado_validacao.get('pode_reparcelar', False)}")
+            
+            # LOGS ESPECÍFICOS DAS REGRAS 9.1.1
+            if resultado_regras_pdd:
+                self.log_progresso(f"  📅 Dia vencimento identificado: {resultado_regras_pdd.get('dia_vencimento', 'N/A')}")
+                self.log_progresso(f"  💰 Valor parcela atual: R$ {resultado_regras_pdd.get('valor_parcela_atual', 0):,.2f}")
+                self.log_progresso(f"  🗓️ 1º vencimento carnê: {resultado_regras_pdd.get('primeiro_vencimento_carne', 'N/A')}")
+                self.log_progresso(f"  ⚠️ Parcelas divergentes: {len(resultado_regras_pdd.get('parcelas_divergentes', []))}")
+            
+            # COMBINAR RESULTADOS
+            resultado_validacao.update(resultado_regras_pdd or {})
+
+            # SALVAR DADOS DE AUDITORIA PDD CONFORME REQUERIDO
+            dados_auditoria = {
+                "cliente": cliente,
+                "numero_titulo": numero_titulo,
+                "arquivo_processado": str(arquivo_destino),
+                "regras_pdd_aplicadas": {
+                    "secao": "9.1.1",
+                    "dia_vencimento_identificado": resultado_validacao.get('dia_vencimento'),
+                    "valor_parcela_atual": resultado_validacao.get('valor_parcela_atual'),
+                    "primeiro_vencimento_carne": resultado_validacao.get('primeiro_vencimento_carne'),
+                    "tipo_reajuste": resultado_validacao.get('tipo_reajuste'),
+                    "parcelas_divergentes": resultado_validacao.get('parcelas_divergentes', [])
+                },
+                "validacao_inadimplencia": {
+                    "status_cliente": resultado_validacao.get('status_cliente'),
+                    "qtd_ct_vencidas": resultado_validacao.get('qtd_ct_vencidas'),
+                    "pode_reparcelar": resultado_validacao.get('pode_reparcelar'),
+                    "motivo_classificacao": resultado_validacao.get('motivo_classificacao')
+                },
+                "timestamp_processamento": datetime.now().isoformat(),
+                "planilha_bruta": df.to_dict('records') if len(df) < 1000 else "Planilha muito grande - dados resumidos"
+            }
+
+            # SALVAR AUDITORIA PDD
+            arquivo_auditoria = self.pasta_planilhas.parent / "auditoria_pdd" / f"auditoria_{cliente.replace(' ', '_')}_{timestamp}.json"
+            arquivo_auditoria.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(arquivo_auditoria, 'w', encoding='utf-8') as f:
+                json.dump(dados_auditoria, f, ensure_ascii=False, indent=2)
+            
+            self.log_progresso(f"📋 Auditoria PDD salva: {arquivo_auditoria}")
 
             return {
                 "sucesso": True,
                 "cliente": cliente,
                 "numero_titulo": numero_titulo,
                 "arquivo_processado": str(arquivo_destino),
+                "arquivo_auditoria_pdd": str(arquivo_auditoria),
                 "dados_validacao": resultado_validacao,
-                "planilha_bruta": df.to_dict('records') if len(df) < 1000 else
-                "Planilha muito grande - dados resumidos",
+                "regras_pdd_aplicadas": dados_auditoria["regras_pdd_aplicadas"],
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
