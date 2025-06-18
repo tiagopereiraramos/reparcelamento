@@ -14,6 +14,7 @@ from google.oauth2.service_account import Credentials
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 # Adiciona o diretório raiz ao Python path
@@ -201,10 +202,9 @@ class RPAAnalisePlanilhas(BaseRPA):
                     break
                 except Exception as e:
                     if "503" in str(e) and tentativa < max_tentativas - 1:
-                        import time
                         tempo_espera = (tentativa + 1) * 30  # 30, 60, 90 segundos
                         self.log_progresso(f"⚠️ Erro 503 - aguardando {tempo_espera}s antes da próxima tentativa...")
-                        time.sleep(tempo_espera)
+                        await asyncio.sleep(tempo_espera)
                         continue
                     raise e
 
@@ -779,9 +779,11 @@ class RPAAnalisePlanilhas(BaseRPA):
                     "id_fila": f"reajuste_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     "numero_titulo": numero_titulo,
                     "cliente": cliente_nome,
-                    "empreendimento": contrato.get('empreendimento') or contrato.get('Loteamento') or '',
-                    "cnpj_unidade": contrato.get('cnpj_unidade') or contrato.get('Empresa') or '',
-                    "indexador": contrato.get('indexador') or '',
+                    "empreendimento": contrato.get('Loteamento') or contrato.get('empreendimento') or '',
+                    "cnpj_unidade": contrato.get('Empresa') or contrato.get('cnpj_unidade') or '',
+                    "quadra": contrato.get('Quadra') or '',
+                    "lote": contrato.get('Lote') or '',
+                    "indexador": "IGPM",  # Sempre IGPM conforme PDD
                     "ultimo_reajuste": ultimo_reajuste,
                     "dias_desde_ultimo_reajuste": contrato.get('dias_desde_ultimo_reajuste', 0),
                     "linha_planilha": contrato.get('linha_planilha', 0),
@@ -1124,37 +1126,53 @@ async def executar_analise_planilhas(
     Returns:
         ResultadoRPA com resultado da análise
     """
-    rpa = RPAAnalisePlanilhas()
-
-    parametros = {
-        "planilha_calculo_id": planilha_calculo_id,
-        "planilha_apoio_id": planilha_apoio_id,
-        "credenciais_google": credenciais_google
-    }
-
-    resultado = await rpa.executar_com_monitoramento(parametros)
-
-    # Enviar notificação
+    rpa = None
     try:
-        if resultado.sucesso:
-            contratos_encontrados = len(resultado.dados.get(
-                'fila_processamento', [])) if resultado.dados else 0
-            notificar_sucesso(
-                nome_rpa="RPA Análise Planilhas",
-                tempo_execucao=f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
-                resultados={
-                    "contratos_identificados": contratos_encontrados,
-                    "planilhas_analisadas": 2,
-                    "status": "Análise concluída"
-                }
-            )
-        else:
-            notificar_erro(
-                nome_rpa="RPA Análise Planilhas",
-                erro=resultado.erro or "Erro desconhecido",
-                detalhes=resultado.mensagem
-            )
-    except Exception as e:
-        print(f"Aviso: Falha ao enviar notificação: {e}")
+        rpa = RPAAnalisePlanilhas()
 
-    return resultado
+        parametros = {
+            "planilha_calculo_id": planilha_calculo_id,
+            "planilha_apoio_id": planilha_apoio_id,
+            "credenciais_google": credenciais_google
+        }
+
+        resultado = await rpa.executar_com_monitoramento(parametros)
+
+        # Enviar notificação
+        try:
+            if resultado.sucesso:
+                contratos_encontrados = len(resultado.dados.get(
+                    'fila_processamento', [])) if resultado.dados else 0
+                await notificar_sucesso(
+                    nome_rpa="RPA Análise Planilhas",
+                    tempo_execucao=f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
+                    resultados={
+                        "contratos_identificados": contratos_encontrados,
+                        "planilhas_analisadas": 2,
+                        "status": "Análise concluída"
+                    }
+                )
+            else:
+                await notificar_erro(
+                    nome_rpa="RPA Análise Planilhas",
+                    erro=resultado.erro or "Erro desconhecido",
+                    detalhes=resultado.mensagem
+                )
+        except Exception as e:
+            print(f"Aviso: Falha ao enviar notificação: {e}")
+
+        return resultado
+
+    except Exception as e:
+        print(f"Erro crítico na análise de planilhas: {str(e)}")
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem="Falha crítica na análise",
+            erro=str(e)
+        )
+    finally:
+        if rpa:
+            try:
+                await rpa.finalizar()
+            except:
+                pass
