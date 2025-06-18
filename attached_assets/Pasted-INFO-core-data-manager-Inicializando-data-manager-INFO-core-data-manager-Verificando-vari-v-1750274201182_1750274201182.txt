@@ -1,0 +1,36 @@
+INFO:core.data_manager:🔧 Inicializando data_manager...
+INFO:core.data_manager:🔍 Verificando variáveis de ambiente MongoDB...
+INFO:core.data_manager:   DATABASE_URL: SET
+INFO:core.data_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.data_manager:🔄 Tentando conectar ao MongoDB...
+INFO:core.data_manager:   Usando URL: mongodb://localhost:...
+INFO:core.data_manager:♻️ Desconectando MongoDB anterior...
+INFO:core.mongodb_manager:✅ MongoDB desconectado
+INFO:core.mongodb_manager:🔧 Iniciando conexão MongoDB...
+INFO:core.mongodb_manager:🔍 Variáveis de ambiente:
+INFO:core.mongodb_manager:   DATABASE_URL: SET
+INFO:core.mongodb_manager:   MONGODB_URI: NOT SET
+INFO:core.mongodb_manager:   MONGO_URL: NOT SET
+INFO:core.mongodb_manager:   DATABASE_NAME: sistema_rpa
+INFO:core.mongodb_manager:   URI: mongodb://localhost:27017
+INFO:core.mongodb_manager:🔌 Criando cliente MongoDB...
+INFO:core.mongodb_manager:🏓 Testando conexão com ping...
+INFO:core.mongodb_manager:✅ Ping successful: {'ok': 1.0}
+INFO:core.mongodb_manager:🗄️ Configurando database: sistema_rpa
+INFO:core.mongodb_manager:🧪 Testando operação na database...
+INFO:core.mongodb_manager:✅ Teste inserção: 6852fe3000086571d0b6de6a
+INFO:core.mongodb_manager:🧹 Documento de teste removido
+INFO:core.mongodb_manager:✅ MongoDB conectado com sucesso: sistema_rpa
+INFO:core.mongodb_manager:📊 Criando índices...
+INFO:core.mongodb_manager:🎉 MongoDB totalmente inicializado!
+INFO:core.data_manager:✅ Sistema Híbrido: MongoDB + JSON ativo
+INFO:core.data_manager:✅ Teste inserção MongoDB: 6852fe3000086571d0b6de6b
+INFO:core.data_manager:✅ Data manager inicializado - MongoDB ativo: True
+INFO:core.data_manager:🔍 Estado final da inicialização:
+INFO:core.data_manager:   MONGODB_DISPONIVEL: True
+INFO:core.data_manager:   self.mongodb_ativo: True
+INFO:core.data_manager:   mongodb_manager.conectado: True
+INFO:core.data_manager:   mongodb_manager.database: SET
+📝 Atualizando status 2239: consulta_realizada
+✅ Status atualizado no MongoDB: 2239
+   ⏳ Aguardando 3 segundos...
