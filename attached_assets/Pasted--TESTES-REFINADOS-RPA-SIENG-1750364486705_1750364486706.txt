@@ -1,0 +1,218 @@
+======================================================================
+🧪 TESTES REFINADOS RPA SIENGE - DADOS REAIS
+Foco: Integração Webscraping (USUÁRIO) + Processamento PDD (ASSISTENTE)
+======================================================================
+1. 🔥 Teste Integração Completa (RECOMENDADO)
+2. 🤖 Teste Processamento PDD (Assistente)
+3. 📊 Teste Preparação Webscraping (Usuário)
+4. 🌐 Teste Simulação Webscraping
+5. 🔧 Teste Browser Manager
+0. ❌ Sair
+======================================================================
+
+➤ Escolha uma opção (0-5): 1
+
+🔄 Executando: 🔥 Teste Integração Completa (RECOMENDADO)
+----------------------------------------------------------------------
+🧪 TESTE INTEGRAÇÃO COMPLETA - PDD + WEBSCRAPING
+============================================================
+🔄 Etapa 1: Processamento dados reais...
+🧪 TESTE PROCESSAMENTO DADOS REAIS - ASSISTENTE
+=======================================================
+📊 Carregando Excel real: attached_assets/saldo_devedor_presente-20250610-093716.xlsx
+✅ Excel carregado: 26 registros
+📋 Colunas: ['Título', 'Parcela/Sequencial', 'Parcela/Condição', 'Cód. empresa', 'Empresa']...
+🎯 Testando 2 títulos únicos:
+   📄 494.0
+   📄 nan
+
+📄 [1/2] Processando título: 494.0
+   👤 Cliente: CHEILA SOARES PAIVA
+INFO:core.processador_regras_pdd:🔍 Processando regras PDD COMPLETAS para cliente: CHEILA SOARES PAIVA
+INFO:core.processador_regras_pdd:✅ Cliente adimplente - aplicando regras completas 9.1.1
+   ✅ Processamento bem-sucedido
+   🎯 Pode reparcelar: True
+   💰 Saldo total: R$ 0.00
+   📊 CT a vencer: 0
+   🚨 CT vencidas: 0
+
+📄 [2/2] Processando título: nan
+   ⚠️ Nenhum dado para título nan
+
+📈 RESUMO PROCESSAMENTO:
+   ✅ Sucessos: 1/1
+   ❌ Falhas: 0
+
+🔄 Etapa 2: Preparação parâmetros...
+🧪 TESTE PREPARAÇÃO PARÂMETROS WEBSCRAPING - USUÁRIO
+============================================================
+📊 Carregando Excel real: attached_assets/saldo_devedor_presente-20250610-093716.xlsx
+✅ Excel carregado: 26 registros
+📋 Colunas: ['Título', 'Parcela/Sequencial', 'Parcela/Condição', 'Cód. empresa', 'Empresa']...
+INFO:core.processador_regras_pdd:🔍 Processando regras PDD COMPLETAS para cliente: CHEILA SOARES PAIVA
+INFO:core.processador_regras_pdd:✅ Cliente adimplente - aplicando regras completas 9.1.1
+🎯 Título selecionado: 494.0
+👤 Cliente: CHEILA SOARES PAIVA
+❌ Erro no teste: name 'igmp_simulado' is not defined
+🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 181, in teste_preparacao_parametros_webscraping
+    indice_igpm=igmp_simulado,
+                ^^^^^^^^^^^^^
+NameError: name 'igmp_simulado' is not defined
+
+❌ Falha na preparação de parâmetros
+----------------------------------------------------------------------
+❌ Teste FALHOU em 0.3s
+
+⏳ Pressione ENTER para continuar...
+
+======================================================================
+1. 🔥 Teste Integração Completa (RECOMENDADO)
+2. 🤖 Teste Processamento PDD (Assistente)
+3. 📊 Teste Preparação Webscraping (Usuário)
+4. 🌐 Teste Simulação Webscraping
+5. 🔧 Teste Browser Manager
+0. ❌ Sair
+======================================================================
+
+➤ Escolha uma opção (0-5): 2
+
+🔄 Executando: 🤖 Teste Processamento PDD (Assistente)
+----------------------------------------------------------------------
+🧪 TESTE PROCESSAMENTO DADOS REAIS - ASSISTENTE
+=======================================================
+📊 Carregando Excel real: attached_assets/saldo_devedor_presente-20250610-093716.xlsx
+✅ Excel carregado: 26 registros
+📋 Colunas: ['Título', 'Parcela/Sequencial', 'Parcela/Condição', 'Cód. empresa', 'Empresa']...
+🎯 Testando 2 títulos únicos:
+   📄 494.0
+   📄 nan
+
+📄 [1/2] Processando título: 494.0
+   👤 Cliente: CHEILA SOARES PAIVA
+INFO:core.processador_regras_pdd:🔍 Processando regras PDD COMPLETAS para cliente: CHEILA SOARES PAIVA
+INFO:core.processador_regras_pdd:✅ Cliente adimplente - aplicando regras completas 9.1.1
+   ✅ Processamento bem-sucedido
+   🎯 Pode reparcelar: True
+   💰 Saldo total: R$ 0.00
+   📊 CT a vencer: 0
+   🚨 CT vencidas: 0
+
+📄 [2/2] Processando título: nan
+   ⚠️ Nenhum dado para título nan
+
+📈 RESUMO PROCESSAMENTO:
+   ✅ Sucessos: 1/1
+   ❌ Falhas: 0
+----------------------------------------------------------------------
+✅ Teste concluído com SUCESSO em 0.1s
+
+⏳ Pressione ENTER para continuar...
+
+======================================================================
+1. 🔥 Teste Integração Completa (RECOMENDADO)
+2. 🤖 Teste Processamento PDD (Assistente)
+3. 📊 Teste Preparação Webscraping (Usuário)
+4. 🌐 Teste Simulação Webscraping
+5. 🔧 Teste Browser Manager
+0. ❌ Sair
+======================================================================
+
+➤ Escolha uma opção (0-5): 3
+
+🔄 Executando: 📊 Teste Preparação Webscraping (Usuário)
+----------------------------------------------------------------------
+🧪 TESTE PREPARAÇÃO PARÂMETROS WEBSCRAPING - USUÁRIO
+============================================================
+📊 Carregando Excel real: attached_assets/saldo_devedor_presente-20250610-093716.xlsx
+✅ Excel carregado: 26 registros
+📋 Colunas: ['Título', 'Parcela/Sequencial', 'Parcela/Condição', 'Cód. empresa', 'Empresa']...
+INFO:core.processador_regras_pdd:🔍 Processando regras PDD COMPLETAS para cliente: CHEILA SOARES PAIVA
+INFO:core.processador_regras_pdd:✅ Cliente adimplente - aplicando regras completas 9.1.1
+🎯 Título selecionado: 494.0
+👤 Cliente: CHEILA SOARES PAIVA
+❌ Erro no teste: name 'igmp_simulado' is not defined
+🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 181, in teste_preparacao_parametros_webscraping
+    indice_igpm=igmp_simulado,
+                ^^^^^^^^^^^^^
+NameError: name 'igmp_simulado' is not defined
+
+----------------------------------------------------------------------
+❌ Teste FALHOU em 0.1s
+
+⏳ Pressione ENTER para continuar...
+
+======================================================================
+1. 🔥 Teste Integração Completa (RECOMENDADO)
+2. 🤖 Teste Processamento PDD (Assistente)
+3. 📊 Teste Preparação Webscraping (Usuário)
+4. 🌐 Teste Simulação Webscraping
+5. 🔧 Teste Browser Manager
+0. ❌ Sair
+======================================================================
+
+➤ Escolha uma opção (0-5): 4
+
+🔄 Executando: 🌐 Teste Simulação Webscraping
+----------------------------------------------------------------------
+🧪 TESTE SIMULAÇÃO WEBSCRAPING - EXEMPLO IMPLEMENTAÇÃO
+=================================================================
+❌ Execute primeiro: teste_preparacao_parametros_webscraping()
+----------------------------------------------------------------------
+❌ Teste FALHOU em 0.0s
+
+⏳ Pressione ENTER para continuar...
+
+======================================================================
+1. 🔥 Teste Integração Completa (RECOMENDADO)
+2. 🤖 Teste Processamento PDD (Assistente)
+3. 📊 Teste Preparação Webscraping (Usuário)
+4. 🌐 Teste Simulação Webscraping
+5. 🔧 Teste Browser Manager
+0. ❌ Sair
+======================================================================
+
+➤ Escolha uma opção (0-5): 5
+
+🔄 Executando: 🔧 Teste Browser Manager
+----------------------------------------------------------------------
+🧪 TESTE BROWSER MANAGER - FUNCIONALIDADES BÁSICAS
+=======================================================
+📊 Selenium disponível: ✅
+🌐 Inicializando browser...
+INFO:WDM:====== WebDriver manager ======
+INFO:WDM:Get LATEST geckodriver version for 139.0 firefox
+INFO:WDM:Get LATEST geckodriver version for 139.0 firefox
+INFO:WDM:Driver [/Users/tiagopereiraramos/.wdm/drivers/geckodriver/mac64/v0.36.0/geckodriver] found in cache
+INFO:RPABrowser:✅ Browser Firefox inicializado
+🔍 Testando navegação básica...
+   Navegação: ✅
+🔧 Testando métodos disponíveis:
+   get_page: ✅
+   find_element: ✅
+   find_elements: ✅
+   click: ✅
+   send_text: ✅
+   send_text_human_like: ✅
+   check_for_error: ✅
+   on_new_window: ✅
+   on_iframe: ✅
+   close: ✅
+INFO:RPABrowser:✅ Browser fechado
+
+✅ Browser Manager validado!
+🔧 Todos os métodos necessários estão disponíveis
+----------------------------------------------------------------------
+✅ Teste concluído com SUCESSO em 5.1s
+
+⏳ Pressione ENTER para continuar...
+
+======================================================================
+1. 🔥 Teste Integração Completa (RECOMENDADO)
+2. 🤖 Teste Processamento PDD (Assistente)
+3. 📊 Teste Preparação Webscraping (Usuário)
+4. 🌐 Teste Simulação Webscraping
+5. 🔧 Teste Browser Manager
+0. ❌ Sair
+======================================================================
