@@ -668,40 +668,112 @@ class ProcessadorRegrasNegocio:
                 "erro": f"Erro no cálculo: {str(e)}"
             }
 
-    def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict]) -> List[Dict]:
+    def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict], 
+                                    estrategia: str = "CONSERVADORA") -> List[Dict]:
         """
         Determina quais parcelas devem ser desmarcadas conforme regras PDD
+
+        Args:
+            parcelas_ct_a_vencer: Lista de parcelas CT a vencer
+            estrategia: Estratégia de reparcelamento
+                - "CONSERVADORA": Apenas parcelas já vencidas
+                - "MES_VIGENTE": Parcelas do mês atual (conforme PDD)
+                - "PROXIMO_MES": Inclui próximo mês para antecipação
+
+        Returns:
+            Lista de parcelas para desmarcar com motivos detalhados
         """
         try:
             hoje = date.today()
             parcelas_desmarcar = []
+            
+            # Definir data limite conforme estratégia
+            if estrategia == "CONSERVADORA":
+                data_limite = hoje
+                descricao_limite = "já vencidas"
+            elif estrategia == "MES_VIGENTE":
+                # Último dia do mês atual (PDD original)
+                ultimo_dia_mes = date(hoje.year, hoje.month, 
+                                    (date(hoje.year, hoje.month + 1, 1) - timedelta(days=1)).day)
+                data_limite = ultimo_dia_mes
+                descricao_limite = "do mês vigente"
+            elif estrategia == "PROXIMO_MES":
+                # Último dia do próximo mês
+                proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
+                data_limite = proximo_mes - timedelta(days=1)
+                descricao_limite = "até próximo mês"
+            else:
+                data_limite = hoje
+                descricao_limite = "padrão (vencidas)"
+
+            self.logger.info(f"🎯 Aplicando estratégia {estrategia} - limite: {data_limite.strftime('%d/%m/%Y')}")
 
             for parcela in parcelas_ct_a_vencer:
                 data_vencimento = parcela.get("Data vencimento")
 
-                # Converter data
+                # Converter data com validação robusta
                 if isinstance(data_vencimento, str):
                     data_obj = pd.to_datetime(data_vencimento, errors='coerce')
                     if pd.notna(data_obj):
                         data_obj = data_obj.date()
                     else:
+                        self.logger.warning(f"Data inválida ignorada: {data_vencimento}")
                         continue
+                elif isinstance(data_vencimento, (date, datetime)):
+                    data_obj = data_vencimento.date() if hasattr(data_vencimento, 'date') else data_vencimento
                 else:
-                    data_obj = data_vencimento
+                    self.logger.warning(f"Formato de data não reconhecido: {type(data_vencimento)}")
+                    continue
 
-                # REGRA PDD: Desmarcar se vencimento <= hoje
-                if data_obj <= hoje:
-                    parcelas_desmarcar.append({
+                # APLICAR REGRA CONFORME ESTRATÉGIA
+                if data_obj <= data_limite:
+                    # Calcular informações adicionais
+                    dias_diferenca = (data_obj - hoje).days
+                    status_vencimento = "VENCIDA" if dias_diferenca < 0 else "MES_ATUAL" if dias_diferenca == 0 else "FUTURA"
+                    
+                    # Determinar motivo específico
+                    if dias_diferenca < 0:
+                        motivo = f"Parcela vencida há {abs(dias_diferenca)} dias (estratégia {estrategia})"
+                    elif dias_diferenca == 0:
+                        motivo = f"Parcela vence hoje - incluída na estratégia {estrategia}"
+                    else:
+                        motivo = f"Parcela {descricao_limite} (estratégia {estrategia})"
+
+                    parcela_info = {
                         "documento": parcela.get("Documento"),
+                        "parcela_condicao": parcela.get("Parcela/Condição", "N/A"),
                         "data_vencimento": data_obj.strftime("%d/%m/%Y"),
-                        "valor": parcela.get("Valor a receber", 0),
-                        "motivo": "Vencimento igual ou anterior ao mês vigente (PDD)"
-                    })
+                        "valor": float(parcela.get("Valor a receber", 0)),
+                        "motivo": motivo,
+                        "estrategia_aplicada": estrategia,
+                        "status_vencimento": status_vencimento,
+                        "dias_diferenca": dias_diferenca,
+                        "prioridade": 1 if dias_diferenca < 0 else 2 if dias_diferenca == 0 else 3
+                    }
+
+                    parcelas_desmarcar.append(parcela_info)
+
+            # Ordenar por prioridade (vencidas primeiro)
+            parcelas_desmarcar.sort(key=lambda x: (x["prioridade"], x["data_vencimento"]))
+
+            # Log de auditoria
+            total_valor = sum(p["valor"] for p in parcelas_desmarcar)
+            self.logger.info(f"📋 Parcelas para desmarcar: {len(parcelas_desmarcar)} "
+                           f"(R$ {total_valor:,.2f}) - Estratégia: {estrategia}")
+            
+            if parcelas_desmarcar:
+                self.logger.info(f"📊 Distribuição:")
+                vencidas = len([p for p in parcelas_desmarcar if p["status_vencimento"] == "VENCIDA"])
+                mes_atual = len([p for p in parcelas_desmarcar if p["status_vencimento"] == "MES_ATUAL"])
+                futuras = len([p for p in parcelas_desmarcar if p["status_vencimento"] == "FUTURA"])
+                self.logger.info(f"   - Vencidas: {vencidas}, Mês atual: {mes_atual}, Futuras: {futuras}")
 
             return parcelas_desmarcar
 
         except Exception as e:
             self.logger.error(f"Erro ao determinar parcelas para desmarcar: {str(e)}")
+            import traceback
+            self.logger.error(f"Detalhes: {traceback.format_exc()}")
             return []
 
     def _retorno_erro(self, erro: str, cliente: str, numero_titulo: str) -> Dict[str, Any]:
