@@ -165,20 +165,14 @@ async def teste_regras_pdd_csv_completo():
         print("\n🔍 ETAPA 6: PARCELAS PARA DESMARCAR")
         print("-" * 40)
 
-        # Determinar parcelas para desmarcar com estratégias
+        # Determinar parcelas para desmarcar conforme PDD
         parcelas_ct = resultado_pdd.get("parcelas_ct_a_vencer_detalhes", [])
         
-        # Testar diferentes estratégias
-        estrategias = ["CONSERVADORA", "MES_VIGENTE", "PROXIMO_MES"]
-        resultados_estrategias = {}
+        # CORRIGIDO: Método não aceita parâmetro de estratégia
+        parcelas_desmarcar = processador.determinar_parcelas_desmarcar(parcelas_ct)
         
-        for estrategia in estrategias:
-            parcelas_estrategia = processador.determinar_parcelas_desmarcar(parcelas_ct, estrategia)
-            resultados_estrategias[estrategia] = parcelas_estrategia
-            print(f"📊 Estratégia {estrategia}: {len(parcelas_estrategia)} parcelas para desmarcar")
-        
-        # Usar estratégia padrão para o resto do teste
-        parcelas_desmarcar = resultados_estrategias["MES_VIGENTE"]
+        print(f"📊 Regra PDD aplicada: {len(parcelas_desmarcar)} parcelas para desmarcar")
+        print("📋 Critério: Data vencimento <= data atual")
 
         print(f"📋 Total de parcelas CT a vencer: {len(parcelas_ct)}")
         print(f"❌ Parcelas para desmarcar: {len(parcelas_desmarcar)}")

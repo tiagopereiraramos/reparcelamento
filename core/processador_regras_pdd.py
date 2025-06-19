@@ -1,4 +1,3 @@
-
 """
 PROCESSADOR REGRAS PDD - CENTRALIZADO
 Implementação completa de todas as regras de negócio PDD para reparcelamento Sienge
@@ -673,20 +672,24 @@ class ProcessadorRegrasNegocio:
         """
         Determina quais parcelas devem ser desmarcadas conforme regras PDD
 
-        Args:
-            parcelas_ct_a_vencer: Lista de parcelas CT a vencer
-            estrategia: Estratégia de reparcelamento
-                - "CONSERVADORA": Apenas parcelas já vencidas
-                - "MES_VIGENTE": Parcelas do mês atual (conforme PDD)
-                - "PROXIMO_MES": Inclui próximo mês para antecipação
+        MOMENTO DE DISPARO:
+        1. Durante processamento de dados (RPA Análise Planilhas)
+        2. Durante webscraping (RPA Sienge - Passo 23)
 
-        Returns:
-            Lista de parcelas para desmarcar com motivos detalhados
+        DADOS BUSCADOS:
+        - Data vencimento (campo obrigatório)
+        - Documento (ex: CT-12/84)
+        - Valor a receber
+        - Motivo da desmarcação (para auditoria)
+
+        REGRA CRÍTICA PDD:
+        - DESMARCAR se Data vencimento <= Data atual
+        - MANTER MARCADAS se Data vencimento > Data atual
         """
         try:
             hoje = date.today()
             parcelas_desmarcar = []
-            
+
             # Definir data limite conforme estratégia
             if estrategia == "CONSERVADORA":
                 data_limite = hoje
@@ -706,9 +709,7 @@ class ProcessadorRegrasNegocio:
                 data_limite = hoje
                 descricao_limite = "padrão (vencidas)"
 
-            self.logger.info(f"🎯 Aplicando estratégia {estrategia} - limite: {data_limite.strftime('%d/%m/%Y')}")
-
-            for parcela in parcelas_ct_a_vencer:
+            self.logger.info(f"🎯 Aplicando estratégia {estrategia} - limite: {data_limite.strftime('%d/%m/%Y')}")            for parcela in parcelas_ct_a_vencer:
                 data_vencimento = parcela.get("Data vencimento")
 
                 # Converter data com validação robusta
@@ -730,7 +731,7 @@ class ProcessadorRegrasNegocio:
                     # Calcular informações adicionais
                     dias_diferenca = (data_obj - hoje).days
                     status_vencimento = "VENCIDA" if dias_diferenca < 0 else "MES_ATUAL" if dias_diferenca == 0 else "FUTURA"
-                    
+
                     # Determinar motivo específico
                     if dias_diferenca < 0:
                         motivo = f"Parcela vencida há {abs(dias_diferenca)} dias (estratégia {estrategia})"
@@ -760,7 +761,7 @@ class ProcessadorRegrasNegocio:
             total_valor = sum(p["valor"] for p in parcelas_desmarcar)
             self.logger.info(f"📋 Parcelas para desmarcar: {len(parcelas_desmarcar)} "
                            f"(R$ {total_valor:,.2f}) - Estratégia: {estrategia}")
-            
+
             if parcelas_desmarcar:
                 self.logger.info(f"📊 Distribuição:")
                 vencidas = len([p for p in parcelas_desmarcar if p["status_vencimento"] == "VENCIDA"])
