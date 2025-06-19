@@ -169,7 +169,7 @@ class TestadorRPASiengeCompleto:
                 erro = resultado_carga.get("erro", "Erro desconhecido")
                 self.log_teste(f"❌ Erro no carregamento: {erro}", "ERROR")
 
-                if resultado_carga.get("fila_vazia")):
+                if resultado_carga.get("fila_vazia"):
                     self.log_teste("⚠️ Fila de reparcelamento vazia", "WARNING")
                 elif "IGPM não disponível" in erro:
                     self.log_teste("⚠️ Execute o RPA de Coleta de Índices primeiro", "WARNING")
