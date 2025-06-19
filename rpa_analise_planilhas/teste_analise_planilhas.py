@@ -144,7 +144,7 @@ async def teste_regras_pdd_csv_completo():
 
             calculo_resultado = await processador.calcular_valores_reparcelamento(
                 saldo_atual=saldo_atual,
-                indice_igpm=igmp_exemplo,
+                indice_igpm=igpm_exemplo,
                 parcelas_pendentes=resultado_pdd.get('qtd_parcelas_ct_a_vencer', 0)
             )
 
