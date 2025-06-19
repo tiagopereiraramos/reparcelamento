@@ -650,6 +650,137 @@ async def teste_webscraping_reparcelamento():
         print(f"🔍 Traceback: {traceback.format_exc()}")
         return False
 
+
+async def teste_webscraping_dados_reais():
+    """
+    Testa webscraping de reparcelamento com DADOS REAIS do contrato 2239
+    Use este teste para validar sua implementação com dados reais da fila
+    """
+    print("🧪 TESTE WEBSCRAPING REPARCELAMENTO - DADOS REAIS CONTRATO 2239")
+    print("=" * 70)
+
+    try:
+        rpa = RPASienge()
+        await rpa.inicializar()
+
+        # Configurar credenciais
+        credenciais = {
+            "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/"),
+            "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+            "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+        }
+
+        rpa._configurar_credenciais(credenciais)
+
+        # Fazer login
+        print("🔐 Fazendo login no Sienge...")
+        await rpa._fazer_login_sienge()
+
+        # DADOS REAIS DO CONTRATO 2239 - SANDRO RIZZON VIEIRA
+        parametros_reais = {
+            # DADOS DO CONTRATO REAL
+            "numero_titulo": "2239",
+            "cliente": "SANDRO RIZZON VIEIRA",
+            "empreendimento": "MARCELY",
+            "loteamento": "MARCELY",
+            "quadra": 36,
+            "lote": 128,
+            "cnpj_unidade": "BVRB",
+
+            # URL DE NAVEGAÇÃO
+            "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/reparcelamento/inclusao",
+
+            # VALORES PARA PREENCHIMENTO (baseados nos dados reais)
+            "valores_sienge": {
+                "detalhamento": "CORREÇÃO 06/25",
+                "tipo_condicao": "PM",
+                "valor_total": 0.00,  # Será calculado com base no saldo real
+                "data_primeiro_vencimento": "05/07/2025",  # Baseado no 1º vencimento original
+                "indexador": "1 IGP-M",  # Conforme dados reais
+                "percentual_juros": 8.0  # Conforme dados reais
+            },
+
+            # DADOS HISTÓRICOS REAIS
+            "dados_historicos": {
+                "assinatura_contrato": "01/06/2018",
+                "primeiro_vencimento_original": "05/07/2018",
+                "ultimo_reajuste": "jun.-24",
+                "tipo_reajuste": "anual",
+                "indice_original": "IGPM",
+                "juros_original": "8,0%",
+                "dia_vencimento": 5,
+                "mes_reajuste": "jun.-25"
+            },
+
+            # PARCELAS PARA DESMARCAR (simuladas - serão identificadas no webscraping)
+            "parcelas_desmarcar": [
+                {"documento": "CT-EXEMPLO-001", "data_vencimento": "05/05/2025", "motivo": "Vencimento anterior ao mês base"},
+                {"documento": "CT-EXEMPLO-002", "data_vencimento": "05/06/2025", "motivo": "Vencimento anterior ao mês base"}
+            ],
+
+            # DADOS FINANCEIROS (serão calculados com IGP-M real)
+            "saldo_anterior": 0.00,  # Será obtido do relatório
+            "saldo_novo": 0.00,      # Será calculado com IGP-M
+            "igmp_aplicado": 3.89,   # Valor real do IGP-M
+            "total_parcelas_desmarcar": 2
+        }
+
+        print("📋 DADOS REAIS PARA O TESTE:")
+        print(f"   📄 Título: {parametros_reais['numero_titulo']}")
+        print(f"   👤 Cliente: {parametros_reais['cliente']}")
+        print(f"   🏢 Empreendimento: {parametros_reais['empreendimento']}")
+        print(f"   📍 Quadra/Lote: {parametros_reais['quadra']}/{parametros_reais['lote']}")
+        print(f"   📅 Último reajuste: {parametros_reais['dados_historicos']['ultimo_reajuste']}")
+        print(f"   📈 Índice: {parametros_reais['dados_historicos']['indice_original']}")
+        print(f"   💰 Juros: {parametros_reais['dados_historicos']['juros_original']}")
+        print(f"   🗓️ Dia vencimento: {parametros_reais['dados_historicos']['dia_vencimento']}")
+
+        print("\n🌐 Executando webscraping com dados reais...")
+
+        # CHAMAR SUA IMPLEMENTAÇÃO COM DADOS REAIS
+        resultado = await rpa._navegar_e_executar_reparcelamento(parametros_reais)
+
+        if resultado.get("sucesso", False):
+            print(f"✅ Webscraping executado com sucesso!")
+            print(f"   🆕 Novo título: {resultado.get('novo_titulo', 'N/A')}")
+            print(f"   📊 Parcelas processadas: {resultado.get('parcelas_processadas', 0)}")
+            print(f"   💰 Valores aplicados: {resultado.get('valores_aplicados', 'N/A')}")
+            print(f"   ⏰ Executado em: {resultado.get('timestamp_webscraping', 'N/A')}")
+            
+            # Logs específicos do contrato real
+            print(f"\n📋 RESULTADO ESPECÍFICO CONTRATO 2239:")
+            print(f"   👤 Cliente processado: {parametros_reais['cliente']}")
+            print(f"   🏢 Empreendimento: {parametros_reais['empreendimento']}")
+            print(f"   📄 Título original: {parametros_reais['numero_titulo']}")
+            
+            return True
+        else:
+            print(f"❌ Erro no webscraping: {resultado.get('erro', 'Erro desconhecido')}")
+            
+            # Logs específicos do erro
+            print(f"\n🔍 ANÁLISE DO ERRO CONTRATO 2239:")
+            print(f"   👤 Cliente: {parametros_reais['cliente']}")
+            print(f"   📄 Título: {parametros_reais['numero_titulo']}")
+            print(f"   ❌ Erro detalhado: {resultado.get('erro', 'N/A')}")
+            
+            return False
+
+        await rpa.finalizar()
+
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
+        
+        # Log específico para o contrato 2239
+        print(f"\n🚨 ERRO CRÍTICO CONTRATO 2239:")
+        print(f"   👤 Cliente: SANDRO RIZZON VIEIRA")
+        print(f"   📄 Título: 2239")
+        print(f"   🏢 Empreendimento: MARCELY")
+        print(f"   ❌ Erro: {str(e)}")
+        
+        return False
+
 async def teste_carregar_dados_fila():
     """
     Testa apenas o carregamento de dados da fila (sem webscraping)
@@ -1017,6 +1148,7 @@ async def menu_interativo():
         "8": ("🌐 Teste Webscraping Reparcelamento", teste_webscraping_reparcelamento),
         "9": ("📊 Teste Carregar Dados Fila", teste_carregar_dados_fila),
         "10": ("🎯 Teste Execução Reparcelamento Real", teste_execucao_reparcelamento_real),
+        "11": ("🔥 Teste Webscraping Dados Reais (Contrato 2239)", teste_webscraping_dados_reais),
         "0": ("❌ Sair", None)
     }
 
@@ -1031,7 +1163,7 @@ async def menu_interativo():
 
     while True:
         try:
-            escolha = input("\n➤ Escolha uma opção (0-10): ").strip()
+            escolha = input("\n➤ Escolha uma opção (0-11): ").strip()
 
             if escolha == "0":
                 print("👋 Encerrando testes...")
@@ -1057,7 +1189,7 @@ async def menu_interativo():
                     print(f"{key}. {descricao}")
                 print("=" * 60)
             else:
-                print("❌ Opção inválida! Escolha entre 0-10.")
+                print("❌ Opção inválida! Escolha entre 0-11.")
 
         except KeyboardInterrupt:
             print("\n\n👋 Testes interrompidos pelo usuário.")
