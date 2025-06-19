@@ -709,7 +709,8 @@ class ProcessadorRegrasNegocio:
                 data_limite = hoje
                 descricao_limite = "padrão (vencidas)"
 
-            self.logger.info(f"🎯 Aplicando estratégia {estrategia} - limite: {data_limite.strftime('%d/%m/%Y')}")            for parcela in parcelas_ct_a_vencer:
+            self.logger.info(f"🎯 Aplicando estratégia {estrategia} - limite: {data_limite.strftime('%d/%m/%Y')}")
+            for parcela in parcelas_ct_a_vencer:
                 data_vencimento = parcela.get("Data vencimento")
 
                 # Converter data com validação robusta
