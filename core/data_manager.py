@@ -446,13 +446,25 @@ class DataManagerUnificado:
         Obtém fila Sienge - MongoDB primeiro, JSON como fallback
         """
         # Tentar MongoDB primeiro
-        if self.mongodb_ativo:
+        if self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager.conectado:
             try:
-                collection = mongodb_manager.database.fila_processamento_sienge
-                documento = await collection.find_one()
+                def _get_fila():
+                    collection = mongodb_manager.database.fila_processamento_sienge
+                    documento = collection.find_one()
+                    if documento:
+                        # Remove _id do MongoDB para compatibilidade
+                        documento.pop("_id", None)
+                        # Converte datetime para ISO string se necessário
+                        for campo, valor in documento.items():
+                            if hasattr(valor, 'isoformat'):
+                                documento[campo] = valor.isoformat()
+                    return documento
+
+                documento = await asyncio.get_event_loop().run_in_executor(
+                    None, _get_fila
+                )
+                
                 if documento:
-                    # Remove _id do MongoDB para compatibilidade
-                    documento.pop("_id", None)
                     logger.debug("📊 Fila Sienge obtida do MongoDB")
                     return documento
             except Exception as e:
