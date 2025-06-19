@@ -310,7 +310,7 @@ class TestadorRPASiengeReal:
             self.log_teste(f"   🔢 Parcelas pendentes: {dados_financeiros['parcelas_pendentes']}")
             
             # Simular cálculo de reparcelamento
-            fator_correcao = 1 + (igmp_mock / 100)
+            fator_correcao = 1 + (igpm_mock / 100)
             novo_saldo = dados_financeiros["saldo_atual"] * fator_correcao
             
             valores_sienge = {
