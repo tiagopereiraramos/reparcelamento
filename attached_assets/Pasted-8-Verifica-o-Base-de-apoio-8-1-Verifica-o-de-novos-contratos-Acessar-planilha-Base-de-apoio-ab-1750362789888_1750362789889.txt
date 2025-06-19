@@ -1,0 +1,128 @@
+8. Verificação Base de apoio
+8.1 Verificação de novos contratos
+Acessar planilha "Base de apoio", aba "NOVOS CONTRATOS"
+Copiar linhas com novos lançamentos
+Colar na aba "Base de cálculo" da planilha principal após os contratos existentes
+A aba "NOVOS CONTRATOS" deve espelhar a estrutura da planilha principal
+8.2 Verificação de consulta de IPTU
+Acessar aba "Consulta IPTU" na planilha base de apoio
+Para cada cliente/título verificar a data da consulta do IPTU
+Copiar informações da coluna "IPTU PENDÊNCIAS PMFI" somente para clientes com consulta no mês vigente
+Atualizar coluna correspondente na planilha principal
+Filtrar títulos para reparcelamento usando a coluna "mês reajuste"
+Registrar no log os títulos sem consulta atualizada
+Atualizar a data na coluna "Último reajuste" com formato dia/mês/ano
+9. Acesso ao ERP - Sienge
+9.1 Acesso aos relatório Saldo devedor Presente - Sienge
+Acessar menu: Financeiro > Relatório > Extrato > Saldo devedor Presente
+Buscar cada cliente do log "clientes/títulos a reparcelar"
+Gerar e exportar relatórios
+Compilar todos em um único arquivo
+9.1.1 Leitura e extração de dados do relatório
+Para cada cliente extrair:
+Dia de vencimento das parcelas:
+Filtrar por "Status da parcela" = "a vencer"
+Identificar na coluna "Data vencimento" o dia do vencimento
+Validar em parcelas a partir do mês base do reparcelamento
+Cálculo do 1º vencimento do novo carnê:
+Para Tipo Reajuste "Anual":
+Data base: 12 meses após primeiro vencimento de parcela
+1º vencimento: mesmo mês base do reparcelamento
+Para Tipo Reajuste "Aniversário":
+Data base: dia do mês em que contrato foi assinado
+Se vencimento antes do aniversário: preencher com mês seguinte
+Se vencimento após o aniversário: manter no mesmo mês do reparcelamento
+Valor da parcela atual:
+Verificar coluna "original ou corrigido" na planilha
+Filtrar por "Status da parcela" = "a vencer"
+Usar "Valor original" ou "Valor Corrigido" conforme indicado
+Validar em parcelas a partir do mês base do reparcelamento
+Verificar parcelas abertas especiais:
+Buscar parcelas com "Valor original" diferente do valor usual
+Identificar "Tipo condição" diferentes de "Parcela Mensal"
+Registrar no log para verificação pelo analista financeiro
+Quantidade de parcelas a vencer:
+Filtrar por "Status da parcela" = "a vencer" e "Documento" = "CT"
+Contar o número de parcelas em aberto
+Para contratos "Aniversário": considerar se vencimento é após data de aniversário
+Quantidade de parcelas vencidas:
+Filtrar por "Documento" = "CT" e "Status da parcela" = "vencida"
+Se houver parcelas vencidas 60+ dias antes do 1º vencimento: marcar "Inadimplência"
+Registrar na coluna "PENDÊNCIAS SIENGE INAD"
+Outras pendências:
+Filtrar por "Documento" = "REC ou FAT" e "Status da parcela" = "vencida"
+Registrar na coluna "PENDÊNCIAS SIENGE"
+9.1.2 Atualização dos dados captados em planilha base de cálculo
+Atualizar as colunas:
+PENDÊNCIAS SIENGE INAD
+PENDÊNCIAS SIENGE
+Parcelas a vencer
+Valor da Parcela Base
+Dia de vencimento de parcelas
+1º vencimento carnê
+Enviar planilha para validação do analista
+Fórmulas críticas da planilha:
+
+mês reajuste: =DATA(ANO(P2)+1; MÊS(P2); 1)
+reajuste total: Fórmula complexa que aplica indexador e limita a 15%
+parcela final: =SE(OU(W2=""; Q2=""); ""; Q2+Q2*W2)
+saldo devedor final: =SE(X5="";"";X5*R5)
+próximo reajuste: =SE('Base de cálculo'!$R2="";"";SE(R2>12;"sim";"não"))
+10. Retorno de validação
+No 16º dia, verificar e-mail com título "Lançamento de reparcelamentos autorizado"
+Se não recebido, programar nova tentativa para o dia seguinte
+Realizar tentativas por 5 dias consecutivos
+Não recebendo autorização, informar necessidade de lançamento manual
+10.1 Registro do reparcelamento no Sistema Sienge
+Acessar: Financeiro > Contas a receber > Reparcelamento > Inclusão
+Preencher número do título e consultar
+Selecionar documentos
+Marcar todas as parcelas e desmarcar as com vencimento igual ou inferior ao mês vigente
+Manter apenas parcelas futuras a partir do mês de reajuste
+No detalhamento informar: "CORREÇÃO MM/AA" (ex: CORREÇÃO 04/25)
+Configurações obrigatórias:
+Tipo condição: PM
+Valor total: saldo devedor novo
+Quantidade de parcelas: número pendente
+Data do 1º vencimento: conforme cálculo anterior
+Portador: 1 Carteira (não alterar)
+Operação de cobrança: 0 Cobrança em Carteira (não alterar)
+Indexador: 1 IGP-M (mesmo quando o contrato usa IPCA)
+Tipo de juros: Nenhum
+Percentual ao período: não alterar
+Data base para juros: não alterar
+Na mensagem de diferença, replicar o valor da diferença no campo correção
+Salvar e confirmar
+10.2 Emissão de carnê - Sistema Sienge
+Gerar carnês apenas para clientes com status OK nas colunas de pendência
+Verificar pendências IPTU na planilha base de apoio
+Não gerar carnê para clientes com pendências em:
+PENDÊNCIAS PMFI
+PENDÊNCIAS SIENGE INAD
+PENDÊNCIAS SIENGE
+Acessar: Financeiro > Contas a Receber > Cobrança Escritural > Geração de Arquivos de remessa
+Configurar período:
+Data inicial: 1º vencimento carnê
+Data final: mesma data do mês anterior no ano seguinte
+Selecionar a unidade específica
+Marcar opções:
+Incluir Títulos Inadimplentes
+Incluir Títulos sub judice
+Selecionar conta corrente da empresa
+Nomear arquivo:
+Padrão: 5 dígitos da conta + nº mês + nº dia + "." + sequencial
+Rio Almada: usar "06300" no início
+SPE RESIDENCIAL PARQUE DA LAGOA: usar "01870" no início
+Configurar mensagens:
+Mensagem para Remessa: 1 (Mensagem de Boleto Sicredi)
+Mensagem para Boletos: 12 (Boleto de Correção de Parcel)
+Marcar opções:
+Imprimir boletos de cobrança
+Enviar boletos
+Agrupar boletos do cliente em um único e-mail
+Gerar boletos em arquivos separados
+Considerar apenas os tipos de condições que geram cobrança
+Considerar parcelas já enviadas para cobrança
+Desmarcar "Fazer Download"
+Selecionar as 12 parcelas geradas para clientes adimplentes
+Gerar Arquivo de Remessa
