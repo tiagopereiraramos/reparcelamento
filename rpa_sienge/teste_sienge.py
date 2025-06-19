@@ -977,11 +977,13 @@ class TestadorRPASiengeReal:
             df_parcelas = pd.DataFrame(parcelas_df_data)
 
             # Aplicar regras PDD usando o processador
-            resultado_validacao = self.processador_regras.processar_pdd_completo(
-                df_parcelas=df_parcelas,
-                numero_titulo=str(contrato_teste.get('numero_titulo')),
+            from core.processador_regras_pdd import ProcessadorRegrasNegocio
+            processador = ProcessadorRegrasNegocio()
+            
+            resultado_validacao = processador.processar_dados_cliente_completo(
+                df_planilha=df_parcelas,
                 cliente=contrato_teste.get('cliente', ''),
-                valor_total_devido=0  # Será calculado pelo processador
+                numero_titulo=str(contrato_teste.get('numero_titulo'))
             )
 
             if resultado_validacao.get('sucesso'):
@@ -989,7 +991,7 @@ class TestadorRPASiengeReal:
                 self.log_teste(f"   📊 Pode reparcelar: {resultado_validacao.get('pode_reparcelar')}")
                 self.log_teste(f"   💰 Valor total CT: R$ {resultado_validacao.get('valor_total_ct', 0):,.2f}")
                 self.log_teste(f"   🔢 Parcelas CT a vencer: {resultado_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
-                self.log_teste(f"   🚨 CT vencidas: {resultado_validacao.get('qtd_parcelas_ct_vencidas', 0)}")
+                self.log_teste(f"   🚨 CT vencidas: {resultado_validacao.get('qtd_ct_vencidas', 0)}")
 
                 # Verificar parcelas identificadas para desmarcação
                 parcelas_desmarcar_pdd = resultado_validacao.get('parcelas_desmarcar', [])
@@ -1005,13 +1007,13 @@ class TestadorRPASiengeReal:
                 parcelas_para_reparcelar = [p for p in parcelas if not p['deve_desmarcar']]
                 saldo_reparcelar = sum(p['valor_a_receber'] for p in parcelas_para_reparcelar)
 
-                calculo_reparcelamento = self.processador_regras.calcular_reparcelamento_pdd(
+                calculo_reparcelamento = await processador.calcular_valores_reparcelamento(
                     saldo_atual=saldo_reparcelar,
                     indice_igpm=3.89,
                     parcelas_pendentes=len(parcelas_para_reparcelar)
                 )
 
-                if calculo_reparcelamento['sucesso']:
+                if calculo_reparcelamento.get('sucesso'):
                     self.log_teste(f"\n💰 CÁLCULO REPARCELAMENTO (PDD):")
                     valores = calculo_reparcelamento['valores_sienge']
                     self.log_teste(f"   💰 Valor original: R$ {saldo_reparcelar:,.2f}")
@@ -1043,6 +1045,266 @@ class TestadorRPASiengeReal:
             traceback.print_exc()
             return False
 
+    async def teste_webscraping_real_login_consulta(self) -> bool:
+        """
+        🎯 TESTE REAL: Login no Sienge + Consulta + Exportação
+        Para debugar e implementar a parte de webscraping
+        """
+        self.log_teste("🧪 TESTE WEBSCRAPING REAL: LOGIN + CONSULTA + EXPORTAÇÃO")
+        self.log_teste("=" * 70)
+
+        try:
+            # Configurar credenciais reais (precisam estar no ambiente)
+            credenciais_sienge = {
+                "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/8"),
+                "usuario": os.getenv("SIENGE_USUARIO", ""),
+                "senha": os.getenv("SIENGE_SENHA", "")
+            }
+
+            if not credenciais_sienge["usuario"] or not credenciais_sienge["senha"]:
+                self.log_teste("❌ CREDENCIAIS SIENGE NÃO CONFIGURADAS", "ERROR")
+                self.log_teste("Configure SIENGE_USUARIO e SIENGE_SENHA no ambiente", "WARNING")
+                return False
+
+            # Inicializar RPA Sienge real
+            self.rpa_sienge = RPASienge()
+            self.log_teste("✅ RPA Sienge inicializado")
+
+            # Configurar credenciais
+            self.rpa_sienge._configurar_credenciais(credenciais_sienge)
+            self.log_teste("✅ Credenciais configuradas")
+
+            # ETAPA 1: FAZER LOGIN REAL
+            self.log_teste("\n🔐 ETAPA 1: FAZENDO LOGIN NO SIENGE...")
+            await self.rpa_sienge._fazer_login_sienge()
+            self.log_teste("✅ Login realizado com sucesso")
+
+            # ETAPA 2: CONSULTAR RELATÓRIO COM CLIENTE REAL
+            contrato_teste = {
+                "numero_titulo": "2239",
+                "cliente": "SANDRO RIZZON VIEIRA",
+                "empreendimento": "MARCELY"
+            }
+
+            self.log_teste(f"\n📊 ETAPA 2: CONSULTANDO RELATÓRIO...")
+            self.log_teste(f"   👤 Cliente: {contrato_teste['cliente']}")
+            self.log_teste(f"   📄 Título: {contrato_teste['numero_titulo']}")
+
+            # Fazer consulta real
+            dados_financeiros = await self.rpa_sienge._consultar_relatorios_financeiros(contrato_teste)
+
+            # VERIFICAR RESULTADO DA CONSULTA
+            if dados_financeiros.get("sucesso"):
+                self.log_teste("✅ CONSULTA REALIZADA COM SUCESSO!")
+                self.log_teste(f"   📄 Arquivo processado: {dados_financeiros.get('arquivo_processado')}")
+                
+                dados_validacao = dados_financeiros.get("dados_validacao", {})
+                if dados_validacao:
+                    self.log_teste(f"   📊 Status cliente: {dados_validacao.get('status_cliente')}")
+                    self.log_teste(f"   💰 Saldo total: R$ {dados_validacao.get('saldo_total', 0):,.2f}")
+                    self.log_teste(f"   🔢 Parcelas CT a vencer: {dados_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
+                    self.log_teste(f"   🚨 CT vencidas: {dados_validacao.get('qtd_ct_vencidas', 0)}")
+                    self.log_teste(f"   ✅ Pode reparcelar: {dados_validacao.get('pode_reparcelar')}")
+
+                # ETAPA 3: GERAR DADOS PARA IMPLEMENTAÇÃO
+                self.log_teste(f"\n🎯 ETAPA 3: GERANDO DADOS PARA IMPLEMENTAÇÃO...")
+                
+                # Dados essenciais para implementação de reparcelamento
+                dados_implementacao = {
+                    "contrato": contrato_teste,
+                    "dados_financeiros": dados_financeiros,
+                    "login_realizado": True,
+                    "relatorio_exportado": True,
+                    "dados_processados": True,
+                    "credenciais_funcionais": True,
+                    "timestamp_teste": datetime.now().isoformat()
+                }
+
+                # Salvar dados para implementação
+                await self._salvar_resultado_teste("webscraping_real_implementacao", dados_implementacao)
+
+                self.log_teste("✅ DADOS SALVOS PARA IMPLEMENTAÇÃO!")
+                self.log_teste(f"📁 Arquivo: dados_processamento/testes_reais/webscraping_real_implementacao_{self.timestamp_execucao}.json")
+
+                return True
+            else:
+                self.log_teste("❌ FALHA NA CONSULTA", "ERROR")
+                self.log_teste(f"   Erro: {dados_financeiros.get('erro', 'Erro desconhecido')}")
+                return False
+
+        except Exception as e:
+            self.log_teste(f"❌ Erro no teste webscraping real: {str(e)}", "ERROR")
+            traceback.print_exc()
+            return False
+
+        finally:
+            # Fechar browser se foi inicializado
+            if self.rpa_sienge and hasattr(self.rpa_sienge, 'driver'):
+                try:
+                    self.rpa_sienge.driver.quit()
+                except:
+                    pass
+
+    async def teste_navegacao_reparcelamento_mock(self) -> bool:
+        """
+        🎯 TESTE: Navegação para reparcelamento com dados mock mas login real
+        Para debugar implementação de marcação/desmarcação
+        """
+        self.log_teste("🧪 TESTE NAVEGAÇÃO REPARCELAMENTO: LOGIN REAL + MOCK MARCAÇÃO")
+        self.log_teste("=" * 70)
+
+        try:
+            # Configurar credenciais reais
+            credenciais_sienge = {
+                "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/8"),
+                "usuario": os.getenv("SIENGE_USUARIO", ""),
+                "senha": os.getenv("SIENGE_SENHA", "")
+            }
+
+            if not credenciais_sienge["usuario"] or not credenciais_sienge["senha"]:
+                self.log_teste("❌ CREDENCIAIS SIENGE NÃO CONFIGURADAS", "ERROR")
+                return False
+
+            # Inicializar RPA
+            self.rpa_sienge = RPASienge()
+            self.rpa_sienge._configurar_credenciais(credenciais_sienge)
+
+            # ETAPA 1: LOGIN REAL
+            self.log_teste("\n🔐 ETAPA 1: LOGIN NO SIENGE...")
+            await self.rpa_sienge._fazer_login_sienge()
+            self.log_teste("✅ Login realizado")
+
+            # ETAPA 2: NAVEGAR PARA REPARCELAMENTO
+            self.log_teste("\n🌐 ETAPA 2: NAVEGANDO PARA REPARCELAMENTO...")
+            url_reparcelamento = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/reparcelamento/inclusao"
+            
+            self.rpa_sienge.get_page(url_reparcelamento)
+            self.log_teste(f"✅ Navegou para: {url_reparcelamento}")
+
+            # ETAPA 3: PREPARAR DADOS MOCK PARA MARCAÇÃO/DESMARCAÇÃO
+            self.log_teste("\n📊 ETAPA 3: PREPARANDO DADOS MOCK...")
+            
+            contrato_mock = {
+                "numero_titulo": "2239",
+                "cliente": "SANDRO RIZZON VIEIRA"
+            }
+
+            # Parcelas mock baseadas em dados reais mas simplificadas
+            parcelas_mock = [
+                {
+                    "documento": "CT001",
+                    "data_vencimento": "2024-12-15",
+                    "valor_a_receber": 2500.00,
+                    "deve_desmarcar": True,
+                    "motivo": "Parcela CT vencida"
+                },
+                {
+                    "documento": "CT002",
+                    "data_vencimento": "2025-01-15",
+                    "valor_a_receber": 2500.00,
+                    "deve_desmarcar": True,
+                    "motivo": "Parcela CT vencida"
+                },
+                {
+                    "documento": "CT003",
+                    "data_vencimento": "2025-07-15",
+                    "valor_a_receber": 2500.00,
+                    "deve_desmarcar": False,
+                    "motivo": "Parcela CT futura"
+                },
+                {
+                    "documento": "REC001",
+                    "data_vencimento": "2025-08-31",
+                    "valor_a_receber": 1200.00,
+                    "deve_desmarcar": False,
+                    "motivo": "Parcela REC futura"
+                },
+                {
+                    "documento": "IPTU001",
+                    "data_vencimento": "2025-01-31",
+                    "valor_a_receber": 800.00,
+                    "deve_desmarcar": True,
+                    "motivo": "Parcela IPTU vencida"
+                }
+            ]
+
+            # ETAPA 4: GERAR INSTRUÇÕES PARA IMPLEMENTAÇÃO
+            self.log_teste("\n🎯 ETAPA 4: INSTRUÇÕES PARA IMPLEMENTAÇÃO...")
+
+            # Calcular estatísticas
+            total_parcelas = len(parcelas_mock)
+            parcelas_desmarcar = [p for p in parcelas_mock if p['deve_desmarcar']]
+            parcelas_manter = [p for p in parcelas_mock if not p['deve_desmarcar']]
+            
+            valor_desmarcar = sum(p['valor_a_receber'] for p in parcelas_desmarcar)
+            valor_manter = sum(p['valor_a_receber'] for p in parcelas_manter)
+
+            self.log_teste(f"📊 ESTATÍSTICAS PARA IMPLEMENTAÇÃO:")
+            self.log_teste(f"   📄 Total parcelas: {total_parcelas}")
+            self.log_teste(f"   ❌ Para desmarcar: {len(parcelas_desmarcar)}")
+            self.log_teste(f"   ✅ Para manter: {len(parcelas_manter)}")
+            self.log_teste(f"   💰 Valor desmarcado: R$ {valor_desmarcar:,.2f}")
+            self.log_teste(f"   💰 Valor mantido: R$ {valor_manter:,.2f}")
+
+            self.log_teste(f"\n🔧 LISTA DE PARCELAS PARA DESMARCAR:")
+            for parcela in parcelas_desmarcar:
+                self.log_teste(f"   ❌ {parcela['documento']} - {parcela['data_vencimento']} - R$ {parcela['valor_a_receber']:,.2f}")
+                self.log_teste(f"      Motivo: {parcela['motivo']}")
+
+            self.log_teste(f"\n✅ LISTA DE PARCELAS PARA MANTER:")
+            for parcela in parcelas_manter:
+                self.log_teste(f"   ✅ {parcela['documento']} - {parcela['data_vencimento']} - R$ {parcela['valor_a_receber']:,.2f}")
+
+            # ETAPA 5: SALVAR DADOS PARA IMPLEMENTAÇÃO
+            dados_implementacao_marcacao = {
+                "contrato": contrato_mock,
+                "parcelas_detalhadas": parcelas_mock,
+                "parcelas_desmarcar": parcelas_desmarcar,
+                "parcelas_manter": parcelas_manter,
+                "estatisticas": {
+                    "total_parcelas": total_parcelas,
+                    "total_desmarcar": len(parcelas_desmarcar),
+                    "total_manter": len(parcelas_manter),
+                    "valor_desmarcar": valor_desmarcar,
+                    "valor_manter": valor_manter
+                },
+                "url_reparcelamento": url_reparcelamento,
+                "login_realizado": True,
+                "navegacao_realizada": True,
+                "pronto_para_implementacao": True,
+                "timestamp_teste": datetime.now().isoformat()
+            }
+
+            await self._salvar_resultado_teste("navegacao_reparcelamento_implementacao", dados_implementacao_marcacao)
+
+            self.log_teste("\n✅ TESTE CONCLUÍDO - DADOS SALVOS PARA IMPLEMENTAÇÃO!")
+            self.log_teste(f"📁 Arquivo: navegacao_reparcelamento_implementacao_{self.timestamp_execucao}.json")
+            self.log_teste("\n🎯 PRÓXIMOS PASSOS PARA IMPLEMENTAÇÃO:")
+            self.log_teste("   1. Buscar título específico no formulário")
+            self.log_teste("   2. Identificar lista de parcelas na interface")
+            self.log_teste("   3. Implementar marcação: primeiro marcar todas")
+            self.log_teste("   4. Implementar desmarcação: desmarcar parcelas específicas")
+            self.log_teste("   5. Validar seleção final antes de prosseguir")
+
+            return True
+
+        except Exception as e:
+            self.log_teste(f"❌ Erro no teste navegação: {str(e)}", "ERROR")
+            traceback.print_exc()
+            return False
+
+        finally:
+            # Manter browser aberto para debug se necessário
+            if hasattr(self, 'manter_browser_aberto') and self.manter_browser_aberto:
+                self.log_teste("🔧 Browser mantido aberto para debug")
+                input("Pressione ENTER para fechar o browser...")
+            
+            if self.rpa_sienge and hasattr(self.rpa_sienge, 'driver'):
+                try:
+                    self.rpa_sienge.driver.quit()
+                except:
+                    pass
+
 async def menu_interativo():
     """
     Menu interativo para execução dos testes baseados em dados reais
@@ -1057,7 +1319,9 @@ async def menu_interativo():
         "5": ("🤖 Teste RPA Real com Dados Fila", testador.teste_rpa_real_com_dados_fila),
         "6": ("✅ Teste Análise Parcelas e Marcação/Desmarcação", testador.teste_análise_parcelas_marcacao),
         "7": ("✨ Teste Simulação Webscraping Rep", testador.teste_simulacao_webscraping_reparcelamento),
-         "8": ("🧪 Teste Validação PDD com Parcelas", testador.teste_validacao_regras_pdd_com_parcelas),
+        "8": ("🧪 Teste Validação PDD com Parcelas", testador.teste_validacao_regras_pdd_com_parcelas),
+        "9": ("🎯 TESTE WEBSCRAPING REAL: Login + Consulta + Dados", testador.teste_webscraping_real_login_consulta),
+        "10": ("🔧 TESTE NAVEGAÇÃO REPARCELAMENTO: Login + Marcação Mock", testador.teste_navegacao_reparcelamento_mock),
         "0": ("❌ Sair", None)
     }
 
@@ -1073,7 +1337,7 @@ async def menu_interativo():
 
     while True:
         try:
-            escolha = input("\n➤ Escolha uma opção (0-8): ").strip()
+            escolha = input("\n➤ Escolha uma opção (0-10): ").strip()
 
             if escolha == "0":
                 print("👋 Encerrando testes...")
@@ -1101,7 +1365,7 @@ async def menu_interativo():
                     print(f"{key}. {descricao}")
                 print("=" * 70)
             else:
-                print("❌ Opção inválida! Escolha entre 0-8.")
+                print("❌ Opção inválida! Escolha entre 0-10.")
 
         except KeyboardInterrupt:
             print("\n\n👋 Testes interrompidos pelo usuário.")
