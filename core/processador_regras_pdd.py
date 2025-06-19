@@ -667,8 +667,7 @@ class ProcessadorRegrasNegocio:
                 "erro": f"Erro no cálculo: {str(e)}"
             }
 
-    def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict], 
-                                    estrategia: str = "CONSERVADORA") -> List[Dict]:
+    def determinar_parcelas_desmarcar(self, parcelas_ct_a_vencer: List[Dict]) -> List[Dict]:
         """
         Determina quais parcelas devem ser desmarcadas conforme regras PDD
 
@@ -690,24 +689,10 @@ class ProcessadorRegrasNegocio:
             hoje = date.today()
             parcelas_desmarcar = []
 
-            # Definir data limite conforme estratégia
-            if estrategia == "CONSERVADORA":
-                data_limite = hoje
-                descricao_limite = "já vencidas"
-            elif estrategia == "MES_VIGENTE":
-                # Último dia do mês atual (PDD original)
-                ultimo_dia_mes = date(hoje.year, hoje.month, 
-                                    (date(hoje.year, hoje.month + 1, 1) - timedelta(days=1)).day)
-                data_limite = ultimo_dia_mes
-                descricao_limite = "do mês vigente"
-            elif estrategia == "PROXIMO_MES":
-                # Último dia do próximo mês
-                proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
-                data_limite = proximo_mes - timedelta(days=1)
-                descricao_limite = "até próximo mês"
-            else:
-                data_limite = hoje
-                descricao_limite = "padrão (vencidas)"
+            # Usar estratégia conservadora (apenas vencidas)
+            estrategia = "CONSERVADORA"
+            data_limite = hoje
+            descricao_limite = "já vencidas"
 
             self.logger.info(f"🎯 Aplicando estratégia {estrategia} - limite: {data_limite.strftime('%d/%m/%Y')}")
             for parcela in parcelas_ct_a_vencer:
@@ -735,11 +720,11 @@ class ProcessadorRegrasNegocio:
 
                     # Determinar motivo específico
                     if dias_diferenca < 0:
-                        motivo = f"Parcela vencida há {abs(dias_diferenca)} dias (estratégia {estrategia})"
+                        motivo = f"Parcela vencida há {abs(dias_diferenca)} dias"
                     elif dias_diferenca == 0:
-                        motivo = f"Parcela vence hoje - incluída na estratégia {estrategia}"
+                        motivo = f"Parcela vence hoje"
                     else:
-                        motivo = f"Parcela {descricao_limite} (estratégia {estrategia})"
+                        motivo = f"Parcela {descricao_limite}"
 
                     parcela_info = {
                         "documento": parcela.get("Documento"),
@@ -747,7 +732,7 @@ class ProcessadorRegrasNegocio:
                         "data_vencimento": data_obj.strftime("%d/%m/%Y"),
                         "valor": float(parcela.get("Valor a receber", 0)),
                         "motivo": motivo,
-                        "estrategia_aplicada": estrategia,
+                        "estrategia_aplicada": "CONSERVADORA",
                         "status_vencimento": status_vencimento,
                         "dias_diferenca": dias_diferenca,
                         "prioridade": 1 if dias_diferenca < 0 else 2 if dias_diferenca == 0 else 3
@@ -761,7 +746,7 @@ class ProcessadorRegrasNegocio:
             # Log de auditoria
             total_valor = sum(p["valor"] for p in parcelas_desmarcar)
             self.logger.info(f"📋 Parcelas para desmarcar: {len(parcelas_desmarcar)} "
-                           f"(R$ {total_valor:,.2f}) - Estratégia: {estrategia}")
+                           f"(R$ {total_valor:,.2f}) - Estratégia: CONSERVADORA")
 
             if parcelas_desmarcar:
                 self.logger.info(f"📊 Distribuição:")
