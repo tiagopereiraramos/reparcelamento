@@ -82,8 +82,25 @@ class RPABrowser:
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--no-sandbox")
 
-        # Configurações de download
-        downloads_dir = os.path.expanduser("~/Downloads/RPA_DOWNLOADS")
+        # Configurações de download - usar pasta RPA parametrizada
+        downloads_base = os.path.expanduser("~/Downloads")
+        rpa_downloads_folder = os.getenv(
+            'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+
+        # Garantir concatenação correta do caminho - todos os casos
+        if downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads/" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder[1:]
+        elif downloads_base.endswith('/') and not rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads/" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder
+        elif not downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder
+        else:
+            # Caso: "/Downloads" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
+
         os.makedirs(downloads_dir, exist_ok=True)
 
         self.options.set_preference("browser.download.folderList", 2)
@@ -277,13 +294,33 @@ class RPABrowser:
         raise TimeoutException(
             f"Timeout enviando texto para elemento com xpath {xpath}")
 
+    def dismiss_alert_if_present(self, timeout: int = 2) -> bool:
+        """
+        Se um alerta JS estiver presente, faz o dismiss.
+        Retorna True se havia alerta, False caso contrário.
+        """
+        if not self._driver:
+            return False
+        try:
+            WebDriverWait(self._driver, timeout).until(EC.alert_is_present())
+            alert = self._driver.switch_to.alert
+            self.logger.warning(
+                f"Alerta detectado: {alert.text!r}. Dando dismiss.")
+            alert.dismiss()
+            return True
+        except NoAlertPresentException:
+            return False
+        except Exception as e:
+            self.logger.error(f"Erro ao tratar alerta: {e}")
+            return False
+
     def check_for_error(self,
                         xpath: str,
                         condition: Optional[str] = None,
                         retry: int = 1) -> bool:
         """Verifica se elemento de erro está presente"""
         try:
-            self.set_timeout(5)
+            self.set_timeout(3)
             self.find_element(xpath, condition or "presence")
             self.reset_timeout()
             return True

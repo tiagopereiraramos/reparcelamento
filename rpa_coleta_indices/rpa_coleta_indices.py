@@ -1,3 +1,4 @@
+# Applying the changes to update the _salvar_indices_local method with enhanced auditing and file management.
 """
 RPA Coleta de Índices Econômicos
 Primeiro RPA do sistema - Coleta IPCA e IGPM dos sites oficiais e atualiza planilhas Google Sheets
@@ -6,6 +7,9 @@ Desenvolvido em Português Brasileiro
 Baseado no PDD seções 6.1.1.1 e 6.1.1.2
 """
 
+from core.rastreamento_unificado import iniciar_rastreamento
+from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.base_rpa import BaseRPA, ResultadoRPA
 from io import BytesIO
 import os
 import sys
@@ -27,8 +31,8 @@ import aiohttp
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.base_rpa import BaseRPA, ResultadoRPA
-from core.notificacoes_simples import notificar_sucesso, notificar_erro
+
+# Logger integrado via BaseRPA usando logger_avancado
 
 
 class RPAColetaIndices(BaseRPA):
@@ -40,7 +44,7 @@ class RPAColetaIndices(BaseRPA):
     def __init__(self):
         super().__init__(nome_rpa="Coleta_Indices", usar_browser=True)
         self.cliente_sheets = None
- # Ensure browser is initialized
+        self.rastreamento = None
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -55,27 +59,75 @@ class RPAColetaIndices(BaseRPA):
             ResultadoRPA com dados dos índices coletados
         """
         try:
-            self.log_progresso("Iniciando coleta de índices econômicos")
+            # ✅ INICIA RASTREAMENTO UNIFICADO
+            self.rastreamento = iniciar_rastreamento("RPA_Coleta_Indices")
+
+            await self.rastreamento.registrar_inicio_rpa(parametros)
+
+            self.log_info("📊 Iniciando coleta de índices econômicos...")
+
+            # Inicializa browser se necessário
+            if not self.browser:
+                await self.inicializar()
+                if not self.browser:
+                    raise Exception(
+                        "Falha crítica: Não foi possível inicializar o browser")
 
             # Valida parâmetros
             planilha_id = parametros.get("planilha_id")
             if not planilha_id:
+                await self.rastreamento.registrar_erro_critico(
+                    ValueError("ID da planilha não fornecido"),
+                    {"parametros_recebidos": parametros}
+                )
+
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem="ID da planilha não fornecido",
                     erro="Parâmetro 'planilha_id' é obrigatório"
                 )
 
-            # Conecta ao Google Sheets
-            await self._conectar_google_sheets(parametros.get("credenciais_google") or "./credentials/google_service_account.json")
+            # Conecta ao Google Sheets se especificado
+            credenciais_path = parametros.get("credenciais_google") or os.getenv(
+                "GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
+
+            await self.rastreamento.registrar_passo(
+                "CONEXAO_GOOGLE_SHEETS",
+                {"credenciais_path": credenciais_path, "planilha_id": planilha_id},
+                categoria="OPERACAO"
+            )
+
+            await self._conectar_google_sheets(credenciais_path)
 
             # Coleta IPCA do IBGE
             self.log_progresso("Coletando IPCA do site oficial do IBGE")
+            await self.rastreamento.registrar_passo(
+                "INICIO_COLETA_IPCA",
+                {"fonte": "IBGE", "url": "https://www.ibge.gov.br/explica/inflacao.php"},
+                categoria="OPERACAO"
+            )
             dados_ipca = await self._coletar_ipca_ibge()
+
+            await self.rastreamento.registrar_passo(
+                "RESULTADO_COLETA_IPCA",
+                {"dados_coletados": dados_ipca, "sucesso": dados_ipca is not None},
+                categoria="OPERACAO"
+            )
 
             # Coleta IGPM da FGV
             self.log_progresso("Coletando IGPM do site oficial da FGV")
+            await self.rastreamento.registrar_passo(
+                "INICIO_COLETA_IGPM",
+                {"fonte": "FGV", "url": "https://portalibre.fgv.br/taxonomy/term/94"},
+                categoria="OPERACAO"
+            )
             dados_igpm = await self._coletar_igpm_fgv()
+
+            await self.rastreamento.registrar_passo(
+                "RESULTADO_COLETA_IGPM",
+                {"dados_coletados": dados_igpm, "sucesso": dados_igpm is not None},
+                categoria="OPERACAO"
+            )
 
             # Atualiza planilha Google Sheets
             self.log_progresso("Atualizando planilha Google Sheets")
@@ -92,6 +144,9 @@ class RPAColetaIndices(BaseRPA):
                 "timestamp_coleta": datetime.now().isoformat()
             }
 
+            # Registra sucesso final
+            await self.rastreamento.registrar_sucesso_rpa(resultado_dados)
+
             return ResultadoRPA(
                 sucesso=True,
                 mensagem=f"Índices coletados com sucesso - IPCA: {dados_ipca['valor']}%, IGPM: {dados_igpm['valor']}%",
@@ -99,12 +154,23 @@ class RPAColetaIndices(BaseRPA):
             )
 
         except Exception as e:
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro_critico(e, {
+                    "fase": "execucao_principal",
+                    "parametros": parametros
+                })
+
             self.log_erro("Erro durante coleta de índices", e)
             return ResultadoRPA(
                 sucesso=False,
                 mensagem="Falha na coleta de índices econômicos",
                 erro=str(e)
             )
+
+        finally:
+            # ✅ SEMPRE finaliza rastreamento
+            if self.rastreamento:
+                await self.rastreamento.finalizar_rastreamento()
 
     async def _conectar_google_sheets(self, caminho_credenciais: Optional[str] = None):
         """
@@ -713,7 +779,7 @@ class RPAColetaIndices(BaseRPA):
 
     async def _salvar_indices_coletados(self, dados_ipca: Dict[str, Any], dados_igpm: Dict[str, Any], planilha_id: str):
         """
-        Salva índices coletados no MongoDB ou fallback para JSON local
+        Salva índices coletados usando data_manager unificado (MongoDB + JSON)
 
         Args:
             dados_ipca: Dados do IPCA coletado
@@ -721,78 +787,122 @@ class RPAColetaIndices(BaseRPA):
             planilha_id: ID da planilha atualizada
         """
         try:
-            if self.mongo_manager and self.mongo_manager.conectado:
-                # Salva no MongoDB
-                collection = self.mongo_manager.database.indices_coletados
-                documento = {
-                    "timestamp": datetime.now(),
-                    "ipca": dados_ipca,
-                    "igpm": dados_igpm,
-                    "planilha_id": planilha_id,
-                    "tipo": "coleta_indices"
-                }
-                await collection.insert_one(documento)
-                self.log_progresso("✅ Índices salvos no MongoDB")
-            else:
-                # Fallback para JSON local
-                await self._salvar_indices_local(dados_ipca, dados_igpm, planilha_id)
+            # Usa data_manager unificado que SEMPRE salva em MongoDB + JSON
+            from core.data_manager import data_manager
 
-        except Exception as e:
-            self.log_progresso(
-                f"⚠️ Erro ao salvar no MongoDB: {str(e)} - usando fallback local")
-            await self._salvar_indices_local(dados_ipca, dados_igpm, planilha_id)
-
-    async def _salvar_indices_local(self, dados_ipca: Dict[str, Any], dados_igpm: Dict[str, Any], planilha_id: str):
-        """
-        Salva índices localmente em JSON como fallback
-
-        Args:
-            dados_ipca: Dados do IPCA
-            dados_igpm: Dados do IGPM
-            planilha_id: ID da planilha
-        """
-        try:
-            # Garante que o diretório existe
-            os.makedirs("dados_processamento", exist_ok=True)
-
-            # Nome único do arquivo
-            arquivo_indices = "dados_processamento/indices_coletados.json"
-
-            # Carrega dados existentes ou cria lista vazia
-            dados_existentes = []
-            if os.path.exists(arquivo_indices):
-                with open(arquivo_indices, 'r', encoding='utf-8') as f:
-                    dados_existentes = json.load(f)
-
-            # Adiciona novo registro
-            novo_registro = {
-                "timestamp": datetime.now().isoformat(),
+            indices_data = {
                 "ipca": dados_ipca,
                 "igpm": dados_igpm,
-                "planilha_id": planilha_id,
-                "tipo": "coleta_indices",
-                "status": "coletado"
+                "planilha_id": planilha_id
             }
-            dados_existentes.append(novo_registro)
 
-            # Salva arquivo atualizado
-            with open(arquivo_indices, 'w', encoding='utf-8') as f:
-                json.dump(dados_existentes, f, indent=2, ensure_ascii=False)
+            resultados_salvamento = await data_manager.salvar_indices_economicos(indices_data)
 
-            self.log_progresso(
-                f"✅ Índices salvos localmente: {arquivo_indices}")
+            # Log do resultado
+            if resultados_salvamento.get("json") == "sucesso":
+                self.log_progresso(
+                    "✅ Índices salvos com sucesso (sistema híbrido)")
+            else:
+                self.log_progresso("⚠️ Falha ao salvar índices")
 
         except Exception as e:
+            self.log_progresso(f"❌ Erro crítico ao salvar índices: {str(e)}")
+            # Log de erro mas não tenta fallback local que cria arquivo errado
+
+    async def verificar_saude(self) -> Dict[str, Any]:
+        """
+        Verifica a saúde do RPA e seus componentes
+
+        Returns:
+            Dicionário com status de saúde detalhado
+        """
+        try:
+            saude = {
+                "status": "saudavel",
+                "timestamp": datetime.now().isoformat(),
+                "detalhes": {}
+            }
+
+            # Verifica browser
+            try:
+                if self.browser:
+                    saude["detalhes"]["browser"] = "conectado"
+                else:
+                    saude["detalhes"]["browser"] = "desconectado"
+                    saude["status"] = "atencao"
+            except Exception:
+                saude["detalhes"]["browser"] = "erro"
+                saude["status"] = "critico"
+
+            # Verifica Google Sheets
+            try:
+                if self.cliente_sheets:
+                    saude["detalhes"]["google_sheets"] = "conectado"
+                else:
+                    saude["detalhes"]["google_sheets"] = "desconectado"
+            except Exception:
+                saude["detalhes"]["google_sheets"] = "erro"
+
+            # Verifica MongoDB
+            try:
+                if self.mongo_manager and self.mongo_manager.conectado:
+                    saude["detalhes"]["mongodb"] = "conectado"
+                else:
+                    saude["detalhes"]["mongodb"] = "desconectado"
+            except Exception:
+                saude["detalhes"]["mongodb"] = "erro"
+
+            # Verifica APIs externas
+            try:
+                async with aiohttp.ClientSession() as session:
+                    # Testa API BCB
+                    async with session.get(
+                        "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json",
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
+                        if response.status == 200:
+                            saude["detalhes"]["api_bcb"] = "disponivel"
+                        else:
+                            saude["detalhes"]["api_bcb"] = "indisponivel"
+                            saude["status"] = "atencao"
+            except Exception:
+                saude["detalhes"]["api_bcb"] = "erro"
+                saude["status"] = "atencao"
+
+            return saude
+
+        except Exception as e:
+            return {
+                "status": "critico",
+                "timestamp": datetime.now().isoformat(),
+                "erro": str(e),
+                "detalhes": {}
+            }
+
+    async def finalizar(self):
+        """Limpa recursos do RPA"""
+        try:
+            # Fecha conexão Google Sheets
+            if self.cliente_sheets:
+                self.cliente_sheets = None
+
+            # Chama finalização da classe pai
+            await super().finalizar()
+
             self.log_progresso(
-                f"❌ Erro ao salvar índices localmente: {str(e)}")
+                "✅ RPA Coleta de Índices finalizado com sucesso")
+
+        except Exception as e:
+            self.log_erro("Erro ao finalizar RPA", e)
 
 
-# Função auxiliar para uso direto
-
-
-async def executar_coleta_indices(planilha_id: str, credenciais_google: Optional[str] = None) -> ResultadoRPA:
+# Função auxiliar para execução independente
+async def executar_coleta_indices(
+    planilha_id: str,
+    credenciais_google: Optional[str] = None
+) -> ResultadoRPA:
     """
-    Função auxiliar para executar coleta de índices diretamente
+    Função auxiliar para executar coleta de índices de forma independente
 
     Args:
         planilha_id: ID da planilha Google Sheets
@@ -801,31 +911,46 @@ async def executar_coleta_indices(planilha_id: str, credenciais_google: Optional
     Returns:
         ResultadoRPA com resultado da execução
     """
-    rpa = RPAColetaIndices()
-
-    parametros = {
-        "planilha_id": planilha_id,
-        "credenciais_google": credenciais_google
-    }
-
-    resultado = await rpa.executar_com_monitoramento(parametros)
-
-    # Enviar notificação
+    rpa = None
     try:
+        # Inicializa sistema de dados híbrido
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+
+        # Cria e executa RPA
+        rpa = RPAColetaIndices()
+
+        parametros = {
+            "planilha_id": planilha_id,
+            "credenciais_google": credenciais_google
+        }
+
+        resultado = await rpa.executar_com_monitoramento(parametros)
+
+        # Notificações automáticas
         if resultado.sucesso:
-            notificar_sucesso(
-                nome_rpa="RPA Coleta Índices",
-                tempo_execucao=f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
-                resultados=resultado.dados or {}
+            await notificar_sucesso(
+                "RPA Coleta de Índices",
+                f"Índices coletados com sucesso: IPCA {resultado.dados.get('ipca', {}).get('valor', 'N/A')}%, IGPM {resultado.dados.get('igpm', {}).get('valor', 'N/A')}%"
             )
         else:
-            notificar_erro(
-                nome_rpa="RPA Coleta Índices",
-                erro=resultado.erro or "Erro desconhecido",
-                detalhes=resultado.mensagem
+            await notificar_erro(
+                "RPA Coleta de Índices",
+                f"Falha na coleta: {resultado.mensagem}"
             )
-    except Exception as e:
-        # Falha na notificação não deve afetar o resultado do RPA
-        print(f"Aviso: Falha ao enviar notificação: {e}")
 
-    return resultado
+        return resultado
+
+    except Exception as e:
+        erro_msg = f"Erro crítico na execução: {str(e)}"
+        await notificar_erro("RPA Coleta de Índices", erro_msg)
+
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem=erro_msg,
+            erro=str(e)
+        )
+
+    finally:
+        if rpa:
+            await rpa.finalizar()

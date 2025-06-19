@@ -6,6 +6,9 @@ Desenvolvido em Português Brasileiro
 Baseado no PDD seção 7 - Processamento de dados das planilhas
 """
 
+from core.rastreamento_unificado import iniciar_rastreamento
+from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.base_rpa import BaseRPA, ResultadoRPA
 import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -19,8 +22,8 @@ from pathlib import Path
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.base_rpa import BaseRPA, ResultadoRPA
-from core.notificacoes_simples import notificar_sucesso, notificar_erro
+
+# Logger integrado via BaseRPA usando logger_avancado
 
 
 class RPAAnalisePlanilhas(BaseRPA):
@@ -35,6 +38,7 @@ class RPAAnalisePlanilhas(BaseRPA):
     def __init__(self):
         super().__init__(nome_rpa="Analise_Planilhas", usar_browser=False)
         self.cliente_sheets = None
+        self.rastreamento = None
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -50,8 +54,21 @@ class RPAAnalisePlanilhas(BaseRPA):
             ResultadoRPA com lista de contratos para processamento
         """
         try:
-            self.log_progresso(
-                "Iniciando análise das planilhas para reparcelamento")
+            # ✅ INICIA RASTREAMENTO UNIFICADO
+            self.rastreamento = iniciar_rastreamento("RPA_Analise_Planilhas")
+
+            await self.rastreamento.registrar_inicio_rpa(parametros)
+
+            # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
+            from core.data_manager import data_manager
+            await data_manager.inicializar()
+            self.log_info("💾 Sistema híbrido MongoDB+JSON inicializado")
+
+            self.log_info("🔍 Iniciando análise de planilhas...")
+            self.log_info(
+                f"📊 Planilha Base: {parametros.get('planilha_calculo_id')}")
+            self.log_info(
+                f"📋 Planilha Apoio: {parametros.get('planilha_apoio_id')}")
 
             # Valida parâmetros obrigatórios
             planilha_calculo_id = parametros.get("planilha_calculo_id")
@@ -102,6 +119,9 @@ class RPAAnalisePlanilhas(BaseRPA):
                 "timestamp_analise": datetime.now().isoformat()
             }
 
+            # Registra sucesso final
+            await self.rastreamento.registrar_sucesso_rpa(resultado_dados)
+
             return ResultadoRPA(
                 sucesso=True,
                 mensagem=f"Análise concluída - {len(contratos_reajuste)} contratos identificados para reparcelamento",
@@ -109,12 +129,23 @@ class RPAAnalisePlanilhas(BaseRPA):
             )
 
         except Exception as e:
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro_critico(e, {
+                    "fase": "execucao_principal",
+                    "parametros": parametros
+                })
+
             self.log_erro("Erro durante análise das planilhas", e)
             return ResultadoRPA(
                 sucesso=False,
                 mensagem="Falha na análise das planilhas",
                 erro=str(e)
             )
+
+        finally:
+            # ✅ SEMPRE finaliza rastreamento
+            if self.rastreamento:
+                await self.rastreamento.finalizar_rastreamento()
 
     async def _conectar_google_sheets(self, credenciais_google: Optional[str]):
         """
@@ -126,7 +157,8 @@ class RPAAnalisePlanilhas(BaseRPA):
         try:
             # Valida parâmetro de credenciais
             if not credenciais_google:
-                credenciais_google = "credentials/gspread-459713-aab8a657f9b0.json"
+                credenciais_google = os.getenv(
+                    "GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
 
             self.log_progresso(
                 f"Conectando ao Google Sheets: {credenciais_google}")
@@ -164,7 +196,23 @@ class RPAAnalisePlanilhas(BaseRPA):
             if not self.cliente_sheets:
                 raise Exception("Cliente Google Sheets não inicializado")
 
-            planilha_apoio = self.cliente_sheets.open_by_key(planilha_apoio_id)
+            # CORRIGIDO: Adiciona retry para operações Google Sheets
+            max_tentativas = 3
+            for tentativa in range(max_tentativas):
+                try:
+                    planilha_apoio = self.cliente_sheets.open_by_key(
+                        planilha_apoio_id)
+                    break
+                except Exception as e:
+                    if "503" in str(e) and tentativa < max_tentativas - 1:
+                        import time
+                        tempo_espera = (tentativa + 1) * \
+                            30  # 30, 60, 90 segundos
+                        self.log_progresso(
+                            f"⚠️ Erro 503 - aguardando {tempo_espera}s antes da próxima tentativa...")
+                        time.sleep(tempo_espera)
+                        continue
+                    raise e
 
             # Lista abas disponíveis
             abas_disponiveis = [
@@ -647,8 +695,14 @@ class RPAAnalisePlanilhas(BaseRPA):
                                 # Garante que campos essenciais estejam presentes
                                 contrato_processado['cliente'] = cliente or contrato_processado.get(
                                     'Cliente', 'N/A')
-                                contrato_processado['numero_titulo'] = numero_titulo or contrato_processado.get(
-                                    'numero_titulo', 'N/A')
+
+                                # ✅ CORRIGIDO: Garante que numero_titulo seja extraído corretamente
+                                titulo_final = (numero_titulo or
+                                                contrato_processado.get('numero_titulo') or
+                                                contrato_processado.get('Titulo') or
+                                                contrato_processado.get('Título') or
+                                                'N/A')
+                                contrato_processado['numero_titulo'] = titulo_final
 
                                 # Atualiza coluna "Último reajuste" conforme PDD
                                 await self._atualizar_ultimo_reajuste(aba_base_calculo, linha, contrato_processado)
@@ -711,13 +765,21 @@ class RPAAnalisePlanilhas(BaseRPA):
             fila_processamento = []
 
             for contrato in contratos_reajuste:
-                # Cria item da fila com dados necessários para os próximos RPAs
-                numero_titulo = contrato.get(
-                    'numero_titulo') or contrato.get('Titulo') or 'N/A'
-                cliente_nome = contrato.get(
-                    'cliente') or contrato.get('Cliente') or 'N/A'
-                ultimo_reajuste = contrato.get(
-                    'Último reajuste') or contrato.get('ultimo_reajuste') or 'N/A'
+                # ✅ CORRIGIDO: Extrai número do título com múltiplas tentativas
+                numero_titulo = (contrato.get('numero_titulo') or
+                                 contrato.get('Titulo') or
+                                 contrato.get('Título') or
+                                 contrato.get('Número do título') or
+                                 contrato.get('titulo') or
+                                 'N/A')
+
+                cliente_nome = (contrato.get('cliente') or
+                                contrato.get('Cliente') or
+                                'N/A')
+
+                ultimo_reajuste = (contrato.get('Último reajuste') or
+                                   contrato.get('ultimo_reajuste') or
+                                   'N/A')
 
                 item_fila = {
                     "id_fila": f"reajuste_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -788,63 +850,46 @@ class RPAAnalisePlanilhas(BaseRPA):
 
     async def _salvar_fila_mongodb(self, fila_processamento: List[Dict[str, Any]]):
         """
-        Salva fila de processamento no MongoDB para os próximos RPAs
+        Salva fila usando sistema unificado (MongoDB + JSON simultâneo)
 
         Args:
             fila_processamento: Lista de itens da fila
         """
         try:
-            if not self.mongo_manager:
-                self.log_progresso(
-                    "⚠️ MongoDB Manager não disponível - salvando fila localmente")
-                await self._salvar_fila_local(fila_processamento)
-                return
+            from core.data_manager import data_manager
 
-            # Conecta se necessário
-            if not self.mongo_manager.conectado:
-                await self.mongo_manager.conectar()
-
-            if not self.mongo_manager.conectado:
-                self.log_progresso(
-                    "⚠️ MongoDB não conectado - salvando fila localmente")
-                await self._salvar_fila_local(fila_processamento)
-                return
-
-            # Usa estrutura correta do MongoDB Manager
-            collection = self.mongo_manager.database.fila_processamento_sienge
-
-            # Remove fila anterior (se existir)
-            deleted_result = await collection.delete_many({"status_processamento": "pendente"})
-            self.log_progresso(
-                f"🗑️ Removidos {deleted_result.deleted_count} itens antigos da fila")
-
-            # Insere nova fila no formato esperado pelo RPA Sienge
+            # Prepara estrutura da fila para o RPA Sienge
             if fila_processamento:
-                # Cria estrutura da fila com contratos
-                estrutura_fila = {
-                    "timestamp_criacao": datetime.now().isoformat(),
-                    "total_contratos": len(fila_processamento),
-                    "status_geral": "ativo",
-                    "contratos": []
-                }
-
                 for contrato in fila_processamento:
                     contrato["status_processamento"] = "pendente"
                     contrato["timestamp_identificacao"] = datetime.now().isoformat()
                     contrato["processado_em"] = None
                     contrato["erro_processamento"] = None
-                    estrutura_fila["contratos"].append(contrato)
 
-                # Substitui documento existente
-                result = await collection.replace_one({}, estrutura_fila, upsert=True)
-                self.log_progresso(
-                    f"✅ Fila salva no MongoDB: {len(fila_processamento)} itens inseridos")
+                estrutura_fila = {
+                    "total_contratos": len(fila_processamento),
+                    "status_geral": "ativo",
+                    "contratos": fila_processamento
+                }
+
+                # ✅ USA SISTEMA UNIFICADO - MongoDB + JSON simultâneo
+                resultados = await data_manager.salvar_fila_sienge(estrutura_fila)
+
+                if resultados["mongodb"] == "sucesso" and resultados["json"] == "sucesso":
+                    self.log_progresso(
+                        f"✅ Fila salva em MongoDB + JSON: {len(fila_processamento)} contratos")
+                elif resultados["json"] == "sucesso":
+                    self.log_progresso(
+                        f"📄 Fila salva em JSON: {len(fila_processamento)} contratos (MongoDB indisponível)")
+                else:
+                    self.log_progresso(
+                        f"⚠️ Problemas ao salvar fila: {resultados}")
             else:
                 self.log_progresso("⚠️ Nenhum item para salvar na fila")
 
         except Exception as e:
-            self.log_progresso(f"❌ Erro ao salvar fila no MongoDB: {str(e)}")
-            # Fallback para arquivo local
+            self.log_progresso(f"❌ Erro ao salvar fila: {str(e)}")
+            # Último fallback para método local
             await self._salvar_fila_local(fila_processamento)
 
     async def _atualizar_ultimo_reajuste(self, aba_base_calculo, linha: int, contrato: Dict[str, Any]):
@@ -871,14 +916,50 @@ class RPAAnalisePlanilhas(BaseRPA):
                     break
 
             if coluna_ultimo_reajuste:
-                # Atualiza célula específica
-                celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}'
-                aba_base_calculo.update(celula, data_reajuste)
+                # CORRIGIDO: Valida se coluna está dentro do limite válido (A-Z = 1-26)
+                if coluna_ultimo_reajuste <= 26:
+                    celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}'
 
-                cliente = contrato.get(
-                    'Cliente', contrato.get('cliente', 'N/A'))
-                self.log_progresso(
-                    f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
+                    # CORRIGIDO: Tenta atualizar com tratamento robusto de erro
+                    try:
+                        aba_base_calculo.update(celula, data_reajuste)
+                        cliente = contrato.get(
+                            'Cliente', contrato.get('cliente', 'N/A'))
+                        self.log_progresso(
+                            f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
+                    except Exception as update_err:
+                        # Se der erro específico da API, tenta método alternativo
+                        if "Invalid value" in str(update_err):
+                            try:
+                                # Método alternativo usando range de células
+                                range_celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}:{chr(64 + coluna_ultimo_reajuste)}{linha}'
+                                aba_base_calculo.update(
+                                    range_celula, [[data_reajuste]])
+                                cliente = contrato.get(
+                                    'Cliente', contrato.get('cliente', 'N/A'))
+                                self.log_progresso(
+                                    f"✅ Último reajuste atualizado (alt): {cliente} -> {data_reajuste}")
+                            except Exception as alt_err:
+                                self.log_progresso(
+                                    f"⚠️ Falha completa ao atualizar: {str(alt_err)}")
+                        else:
+                            raise update_err
+                else:
+                    # Para colunas além de Z (26), usa notação diferente
+                    if coluna_ultimo_reajuste <= 702:  # Até ZZ
+                        primeira_letra = chr(
+                            64 + ((coluna_ultimo_reajuste - 1) // 26))
+                        segunda_letra = chr(
+                            64 + ((coluna_ultimo_reajuste - 1) % 26) + 1)
+                        celula = f'{primeira_letra}{segunda_letra}{linha}'
+                        aba_base_calculo.update(celula, data_reajuste)
+                        cliente = contrato.get(
+                            'Cliente', contrato.get('cliente', 'N/A'))
+                        self.log_progresso(
+                            f"✅ Último reajuste atualizado (ext): {cliente} -> {data_reajuste}")
+                    else:
+                        self.log_progresso(
+                            f"⚠️ Coluna muito avançada para atualizar: {coluna_ultimo_reajuste}")
             else:
                 self.log_progresso(
                     "⚠️ Coluna 'Último reajuste' não encontrada para atualizar")

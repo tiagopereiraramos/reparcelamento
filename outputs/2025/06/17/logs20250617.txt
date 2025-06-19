@@ -1,0 +1,1585 @@
+2025-06-17 09:06:14 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:06:18 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:06:18 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:06:18 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 09:06:18 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 09:06:25 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 09:06:25 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 09:06:25 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 09:06:34 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 09:06:34 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 09:06:35 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 09:06:35 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 09:06:36 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 09:06:36 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 09:06:36 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-17 09:07:08 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:07:11 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:07:11 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:07:11 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 09:07:11 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 09:07:19 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 09:07:19 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 09:07:19 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 09:07:28 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 09:07:28 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 09:07:29 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 09:07:29 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 09:07:30 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 09:07:30 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 09:07:30 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-17 09:44:35 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:44:37 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:44:37 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./.credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:44:37 - ERROR - ❌ Erro durante coleta de índices: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+2025-06-17 09:44:37 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 128, in _conectar_google_sheets
+    credenciais = Credentials.from_service_account_file(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/oauth2/service_account.py", line 260, in from_service_account_file
+    info, signer = _service_account_info.from_filename(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/auth/_service_account_info.py", line 78, in from_filename
+    with io.open(filename, "r", encoding="utf-8") as json_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 74, in executar
+    await self._conectar_google_sheets(credenciais_path)
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 141, in _conectar_google_sheets
+    raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
+Exception: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+2025-06-17 09:44:38 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 09:47:08 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:47:11 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:47:11 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./.credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:47:11 - ERROR - ❌ Erro durante coleta de índices: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+2025-06-17 09:47:11 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 128, in _conectar_google_sheets
+    credenciais = Credentials.from_service_account_file(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/oauth2/service_account.py", line 260, in from_service_account_file
+    info, signer = _service_account_info.from_filename(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/auth/_service_account_info.py", line 78, in from_filename
+    with io.open(filename, "r", encoding="utf-8") as json_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 74, in executar
+    await self._conectar_google_sheets(credenciais_path)
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 141, in _conectar_google_sheets
+    raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
+Exception: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+2025-06-17 09:47:11 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 09:48:01 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:48:03 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:48:03 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./.credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:48:03 - ERROR - ❌ Erro durante coleta de índices: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+2025-06-17 09:48:03 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 128, in _conectar_google_sheets
+    credenciais = Credentials.from_service_account_file(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/oauth2/service_account.py", line 260, in from_service_account_file
+    info, signer = _service_account_info.from_filename(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/auth/_service_account_info.py", line 78, in from_filename
+    with io.open(filename, "r", encoding="utf-8") as json_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 74, in executar
+    await self._conectar_google_sheets(credenciais_path)
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 141, in _conectar_google_sheets
+    raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
+Exception: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+2025-06-17 09:48:04 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 09:49:03 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:49:06 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:49:06 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./.credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:49:06 - ERROR - ❌ Erro durante coleta de índices: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+2025-06-17 09:49:06 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 128, in _conectar_google_sheets
+    credenciais = Credentials.from_service_account_file(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/oauth2/service_account.py", line 260, in from_service_account_file
+    info, signer = _service_account_info.from_filename(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/auth/_service_account_info.py", line 78, in from_filename
+    with io.open(filename, "r", encoding="utf-8") as json_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 74, in executar
+    await self._conectar_google_sheets(credenciais_path)
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 141, in _conectar_google_sheets
+    raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
+Exception: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+2025-06-17 09:49:06 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 09:52:10 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 09:52:13 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 09:52:13 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 09:52:13 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 09:52:13 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 09:52:28 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 09:52:28 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 09:52:28 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 09:52:36 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 09:52:36 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 09:52:37 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 09:52:38 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 09:52:39 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 09:52:39 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 09:52:39 - INFO - 📈 ✅ Índices salvos no MongoDB
+2025-06-17 09:52:39 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 10:15:17 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 10:15:20 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 10:15:20 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 10:15:20 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 10:15:20 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 10:15:28 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 10:15:28 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 10:15:28 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 10:15:37 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 10:15:37 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 10:15:39 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 10:15:39 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:15:40 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:15:40 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 10:15:40 - INFO - 📈 ✅ Índices salvos localmente em dados_processamento/indices_coletados.json
+2025-06-17 10:15:40 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 10:22:09 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 10:22:11 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 10:22:11 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 10:22:11 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 10:22:11 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 10:22:17 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 10:22:17 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 10:22:17 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 10:22:24 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 10:22:24 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 10:22:26 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 10:22:27 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:22:28 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:22:28 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 10:22:28 - INFO - 📈 ✅ Índices salvos localmente em dados_processamento/indices_coletados.json
+2025-06-17 10:22:28 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 10:30:44 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 10:30:47 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 10:30:47 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./.credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 10:30:47 - ERROR - ❌ Erro durante coleta de índices: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+2025-06-17 10:30:47 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 128, in _conectar_google_sheets
+    credenciais = Credentials.from_service_account_file(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/oauth2/service_account.py", line 260, in from_service_account_file
+    info, signer = _service_account_info.from_filename(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/auth/_service_account_info.py", line 78, in from_filename
+    with io.open(filename, "r", encoding="utf-8") as json_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 74, in executar
+    await self._conectar_google_sheets(credenciais_path)
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 141, in _conectar_google_sheets
+    raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
+Exception: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './.credentials/gspread-459713-aab8a657f9b0.json'
+
+2025-06-17 10:30:47 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 10:31:29 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 10:32:09 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 10:32:12 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 10:32:12 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 10:32:12 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 10:32:12 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 10:32:16 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 10:32:16 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 10:32:16 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 10:32:25 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 10:32:25 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 10:32:27 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 10:32:28 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:32:28 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:32:28 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 10:32:28 - INFO - 📈 ✅ Índices salvos localmente em dados_processamento/indices_coletados.json
+2025-06-17 10:32:29 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 10:48:47 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 10:48:50 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 10:48:50 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 10:48:50 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 10:48:50 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 10:48:53 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 10:48:53 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 10:48:53 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 10:49:01 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 10:49:01 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 10:49:02 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 10:49:03 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:49:03 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 10:49:03 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 10:49:03 - INFO - 📈 ✅ Índices salvos localmente em dados_processamento/indices_coletados.json
+2025-06-17 10:49:04 - INFO - 📈 ✅ RPA Coleta de Índices finalizado com sucesso
+2025-06-17 11:38:11 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 11:39:23 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 11:41:01 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 11:41:04 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 11:41:04 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 11:41:04 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 11:41:04 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 11:41:08 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 11:41:08 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 11:41:08 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 11:41:17 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 11:41:17 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 11:41:18 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 11:41:19 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:41:19 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:41:19 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 11:41:19 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 11:49:31 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 11:49:34 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 11:49:34 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 11:49:34 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 11:49:34 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 11:49:38 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 11:49:38 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 11:49:38 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 11:49:47 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 11:49:47 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 11:49:48 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 11:49:49 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:49:49 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:49:49 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 11:49:49 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 11:57:19 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 11:57:19 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 11:57:22 - INFO - ▶️ Iniciando execução do RPA Coleta_Indices
+2025-06-17 11:57:22 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 11:57:22 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 11:57:22 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 11:57:22 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 11:57:25 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 11:57:25 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 11:57:25 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 11:57:34 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 11:57:34 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 11:57:36 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 11:57:37 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:57:37 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:57:37 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 11:57:37 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 11:57:37 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 11:57:37 - INFO - ✅ RPA Coleta_Indices executado com sucesso em 18.60s
+2025-06-17 11:59:05 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 11:59:05 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 11:59:07 - INFO - ▶️ Iniciando execução do RPA Coleta_Indices
+2025-06-17 11:59:07 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 11:59:07 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 11:59:07 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 11:59:07 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 11:59:12 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 11:59:12 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 11:59:12 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 11:59:19 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 11:59:19 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 11:59:20 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 11:59:21 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:59:21 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 11:59:21 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 11:59:21 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 11:59:21 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 11:59:21 - INFO - ✅ RPA Coleta_Indices executado com sucesso em 16.30s
+2025-06-17 12:02:52 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 12:02:52 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 12:02:55 - INFO - ▶️ Iniciando execução do RPA Coleta_Indices
+2025-06-17 12:02:55 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 12:02:55 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 12:02:55 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 12:02:55 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 12:02:58 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 12:02:58 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 12:02:58 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 12:03:08 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 12:03:08 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 12:03:08 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 12:03:09 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 12:03:09 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 12:03:09 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 12:03:09 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 12:03:09 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 12:03:09 - INFO - ✅ RPA Coleta_Indices executado com sucesso em 17.27s
+2025-06-17 12:05:24 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 12:05:24 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 12:05:24 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 12:05:24 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 12:05:24 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 12:05:24 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 12:08:30 - ERROR - ❌ Erro ao processar novos contratos: APIError: [503]: The service is currently unavailable.
+2025-06-17 12:08:30 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 173, in _processar_novos_contratos
+    planilha_apoio = self.cliente_sheets.open_by_key(planilha_apoio_id)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/client.py", line 174, in open_by_key
+    raise ex
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/client.py", line 168, in open_by_key
+    spreadsheet = Spreadsheet(self.http_client, {"id": key})
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/spreadsheet.py", line 29, in __init__
+    metadata = self.fetch_sheet_metadata()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/spreadsheet.py", line 230, in fetch_sheet_metadata
+    return self.client.fetch_sheet_metadata(self.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/http_client.py", line 305, in fetch_sheet_metadata
+    r = self.request("get", url, params=params)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/http_client.py", line 128, in request
+    raise APIError(response)
+gspread.exceptions.APIError: APIError: [503]: The service is currently unavailable.
+
+2025-06-17 12:08:35 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 12:08:35 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 190.92s
+2025-06-17 12:35:38 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 12:35:38 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 12:35:38 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 12:35:38 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 12:35:38 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 12:35:38 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 12:35:49 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 12:35:49 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 10.92s
+2025-06-17 12:55:35 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 12:55:36 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 12:55:36 - ERROR - ❌ 🔍 Erro: cannot import name 'garantir_inicializacao' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'garantir_inicializacao' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 12:55:36 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import garantir_inicializacao
+ImportError: cannot import name 'garantir_inicializacao' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 13:26:28 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 13:26:28 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 13:26:28 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 13:26:28 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 13:26:28 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 13:26:28 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 13:26:33 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 13:26:33 - INFO - 💾 Execução salva com sucesso no sistema
+2025-06-17 13:26:33 - ERROR - ❌ 🔍 Erro: unsupported format string passed to NoneType.__format__: unsupported format string passed to NoneType.__format__
+2025-06-17 13:26:33 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 275, in executar_com_monitoramento
+    f"✅ RPA {self.nome_rpa} executado com sucesso em {resultado.tempo_execucao:.2f}s")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unsupported format string passed to NoneType.__format__
+
+2025-06-17 13:28:29 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 13:28:29 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 13:28:29 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 13:28:29 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 13:28:29 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 13:28:29 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 13:28:33 - INFO - 💾 Execução salva com sucesso no sistema (MongoDB + JSON)
+2025-06-17 13:28:33 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 3.56s
+2025-06-17 13:41:34 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 13:41:34 - INFO - 💾 Salvando execução com erro no sistema...
+2025-06-17 13:41:34 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 13:41:34 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 314, in _salvar_execucao_sistema
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 13:41:34 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 13:41:34 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Analise_Planilhas_20250617_134134.json
+2025-06-17 13:41:34 - ERROR - ❌ 🔍 Erro: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 13:41:34 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 14:03:27 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:03:27 - INFO - 💾 Salvando execução com erro no sistema...
+2025-06-17 14:03:27 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 14:03:27 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 314, in _salvar_execucao_sistema
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 14:03:27 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 14:03:27 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Analise_Planilhas_20250617_140327.json
+2025-06-17 14:03:27 - ERROR - ❌ 🔍 Erro: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 14:03:27 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 14:07:12 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:07:12 - INFO - 💾 Salvando execução com erro no sistema...
+2025-06-17 14:07:12 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 14:07:12 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 314, in _salvar_execucao_sistema
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 14:07:12 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 14:07:12 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Analise_Planilhas_20250617_140712.json
+2025-06-17 14:07:12 - ERROR - ❌ 🔍 Erro: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-17 14:07:12 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 245, in executar_com_monitoramento
+    from core.data_manager import data_manager
+ImportError: cannot import name 'data_manager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+2025-06-17 14:07:41 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:07:41 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:07:41 - INFO - 💾 Salvando execução com erro no sistema...
+2025-06-17 14:07:41 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:07:41 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+2025-06-17 14:07:41 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 248, in executar_com_monitoramento
+    await data_manager.inicializar()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 157, in inicializar
+    f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 324, in _salvar_execucao_sistema
+    resultados = await data_manager.salvar_execucao_rpa(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 206, in salvar_execucao_rpa
+    f"   mongodb_manager.database: {'SET' if mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+2025-06-17 14:07:41 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 14:07:41 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Analise_Planilhas_20250617_140741.json
+2025-06-17 14:07:41 - ERROR - ❌ 🔍 Erro: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+2025-06-17 14:07:41 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 248, in executar_com_monitoramento
+    await data_manager.inicializar()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 157, in inicializar
+    f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+2025-06-17 14:12:07 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:12:07 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:12:07 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:12:07 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:12:07 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:12:07 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:12:07 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:12:07 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:12:07 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:12:15 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:12:15 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:12:15 - INFO - 💾 Resultados do salvamento: {'mongodb': 'erro: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None', 'json': 'sucesso'}
+2025-06-17 14:12:15 - INFO - 📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)
+2025-06-17 14:12:15 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 8.70s
+2025-06-17 14:21:17 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:21:17 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:21:17 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:21:17 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:21:17 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:21:17 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:21:17 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:21:17 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:21:17 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:21:21 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:21:21 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:21:21 - INFO - 💾 Resultados do salvamento: {'mongodb': 'nao_tentado: mongodb_ativo=False', 'json': 'sucesso'}
+2025-06-17 14:21:21 - INFO - 📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)
+2025-06-17 14:21:21 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 4.52s
+2025-06-17 14:23:07 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:23:07 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:23:07 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:23:07 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:23:07 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:23:07 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:23:07 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:23:07 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:23:07 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:23:14 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:23:14 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:23:14 - INFO - 💾 Resultados do salvamento: {'mongodb': 'nao_tentado: mongodb_ativo=False', 'json': 'sucesso'}
+2025-06-17 14:23:14 - INFO - 📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)
+2025-06-17 14:23:14 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 6.88s
+2025-06-17 14:24:17 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:24:17 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:24:18 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:24:18 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:24:18 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:24:18 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:24:18 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:24:18 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:24:18 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:24:21 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:24:21 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:24:21 - INFO - 💾 Resultados do salvamento: {'mongodb': 'nao_tentado: mongodb_ativo=False', 'json': 'sucesso'}
+2025-06-17 14:24:21 - INFO - 📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)
+2025-06-17 14:24:21 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 3.86s
+2025-06-17 14:25:56 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:25:56 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:25:56 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:25:56 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:25:56 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:25:56 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:25:56 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:25:56 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:25:56 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:26:00 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:26:00 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:26:00 - INFO - 💾 Resultados do salvamento: {'mongodb': 'nao_tentado: mongodb_ativo=False', 'json': 'sucesso'}
+2025-06-17 14:26:00 - INFO - 📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)
+2025-06-17 14:26:00 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 4.53s
+2025-06-17 14:33:35 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:33:35 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:33:35 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:33:35 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:33:35 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:33:35 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:33:35 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:33:35 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:33:35 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:33:44 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:33:44 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:33:44 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+2025-06-17 14:33:44 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 324, in _salvar_execucao_sistema
+    resultados = await data_manager.salvar_execucao_rpa(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 209, in salvar_execucao_rpa
+    f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+2025-06-17 14:33:44 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 14:33:44 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Analise_Planilhas_20250617_143344.json
+2025-06-17 14:33:44 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 8.49s
+2025-06-17 14:40:26 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:40:26 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:40:26 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:40:26 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:40:26 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:40:26 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:40:26 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:40:26 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:40:26 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:40:34 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:40:34 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:40:34 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+2025-06-17 14:40:34 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 324, in _salvar_execucao_sistema
+    resultados = await data_manager.salvar_execucao_rpa(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 202, in salvar_execucao_rpa
+    f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+2025-06-17 14:40:34 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 14:40:34 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Analise_Planilhas_20250617_144034.json
+2025-06-17 14:40:34 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 8.64s
+2025-06-17 14:51:09 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 14:51:09 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 14:51:09 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 14:51:09 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 14:51:09 - INFO - ▶️ Iniciando execução do RPA Analise_Planilhas
+2025-06-17 14:51:09 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 14:51:09 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 14:51:09 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 14:51:09 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 14:51:18 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 14:51:18 - INFO - 💾 Tentando salvar execução Analise_Planilhas...
+2025-06-17 14:51:18 - INFO - 💾 Resultados do salvamento: {'mongodb': 'sucesso', 'json': 'sucesso'}
+2025-06-17 14:51:18 - INFO - ✅ Execução salva com sucesso no sistema (MongoDB + JSON)
+2025-06-17 14:51:18 - INFO - ✅ RPA Analise_Planilhas executado com sucesso em 9.88s
+2025-06-17 15:53:29 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 15:53:34 - INFO - 📈 Iniciando RPA Sienge - Etapa: CONSULTA
+2025-06-17 15:53:34 - INFO - 📈 Contrato: TEST123456789
+2025-06-17 15:53:34 - INFO - 📈 Cliente: CLIENTE TESTE LTDA
+2025-06-17 15:53:34 - INFO - 📈 Autorização automática: False
+2025-06-17 15:53:34 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 15:53:47 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 15:53:47 - ERROR - ❌ Erro na execução do RPA Sienge: 'RPASienge' object has no attribute '_executar_etapa_consulta': 'RPASienge' object has no attribute '_executar_etapa_consulta'
+2025-06-17 15:53:47 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 101, in executar
+    dados_financeiros = await self._executar_etapa_consulta(contrato)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RPASienge' object has no attribute '_executar_etapa_consulta'
+
+2025-06-17 15:53:47 - INFO - 📈 RPA Sienge finalizado
+2025-06-17 15:55:35 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 15:55:38 - INFO - 📈 Iniciando RPA Sienge - Etapa: CONSULTA
+2025-06-17 15:55:38 - INFO - 📈 Contrato: TEST123456789
+2025-06-17 15:55:38 - INFO - 📈 Cliente: CLIENTE TESTE LTDA
+2025-06-17 15:55:38 - INFO - 📈 Autorização automática: False
+2025-06-17 15:55:38 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 15:55:48 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 15:55:48 - INFO - 📈 🔍 Executando APENAS consulta de relatórios...
+2025-06-17 15:55:48 - INFO - 📈 Consultando saldo devedor presente para: CLIENTE TESTE LTDA
+2025-06-17 15:55:48 - INFO - 📈 Título: TEST123456789
+2025-06-17 15:55:48 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 15:55:51 - INFO - 📈 Pesquisando cliente...
+2025-06-17 15:56:06 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 15:56:09 - INFO - 📈 Iniciando RPA Sienge - Etapa: CONSULTA
+2025-06-17 15:56:09 - INFO - 📈 Contrato: TEST123456789
+2025-06-17 15:56:09 - INFO - 📈 Cliente: CLIENTE TESTE LTDA
+2025-06-17 15:56:09 - INFO - 📈 Autorização automática: False
+2025-06-17 15:56:09 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 15:56:19 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 15:56:19 - INFO - 📈 🔍 Executando APENAS consulta de relatórios...
+2025-06-17 15:56:19 - INFO - 📈 Consultando saldo devedor presente para: CLIENTE TESTE LTDA
+2025-06-17 15:56:19 - INFO - 📈 Título: TEST123456789
+2025-06-17 15:56:19 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 15:56:22 - INFO - 📈 Pesquisando cliente...
+2025-06-17 15:56:55 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 15:56:58 - INFO - 📈 Iniciando RPA Sienge - Etapa: CONSULTA
+2025-06-17 15:56:58 - INFO - 📈 Contrato: TEST123456789
+2025-06-17 15:56:58 - INFO - 📈 Cliente: CLIENTE TESTE LTDA
+2025-06-17 15:56:58 - INFO - 📈 Autorização automática: False
+2025-06-17 15:56:58 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 15:57:44 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 15:57:46 - INFO - 📈 Iniciando RPA Sienge - Etapa: CONSULTA
+2025-06-17 15:57:46 - INFO - 📈 Contrato: TEST123456789
+2025-06-17 15:57:46 - INFO - 📈 Cliente: CLIENTE TESTE LTDA
+2025-06-17 15:57:46 - INFO - 📈 Autorização automática: False
+2025-06-17 15:57:46 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 15:57:59 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 15:57:59 - INFO - 📈 🔍 Executando APENAS consulta de relatórios...
+2025-06-17 15:57:59 - INFO - 📈 Consultando saldo devedor presente para: CLIENTE TESTE LTDA
+2025-06-17 15:57:59 - INFO - 📈 Título: TEST123456789
+2025-06-17 15:57:59 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 15:58:02 - INFO - 📈 Pesquisando cliente...
+2025-06-17 15:58:07 - INFO - 📈 Executando consulta...
+2025-06-17 15:58:11 - INFO - 📈 Gerando relatório...
+2025-06-17 15:58:13 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 15:58:16 - INFO - 📈 Exportando relatório...
+2025-06-17 15:58:21 - INFO - 📈 Processando planilha baixada...
+2025-06-17 15:58:21 - INFO - 📈 Processando arquivo: Material de Apoio - Cadastro de Clientes V_9 1.xlsx
+2025-06-17 15:58:22 - INFO - 📈 Validação PDD concluída:
+2025-06-17 15:58:22 - INFO - 📈   Status: ERRO_DADOS
+2025-06-17 15:58:22 - INFO - 📈   Parcelas CT vencidas: 0
+2025-06-17 15:58:22 - INFO - 📈   Pode reparcelar: False
+2025-06-17 16:01:35 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:01:38 - INFO - 📈 Iniciando RPA Sienge - Etapa: CONSULTA
+2025-06-17 16:01:38 - INFO - 📈 Contrato: TEST123456789
+2025-06-17 16:01:38 - INFO - 📈 Cliente: CLIENTE TESTE LTDA
+2025-06-17 16:01:38 - INFO - 📈 Autorização automática: False
+2025-06-17 16:01:38 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:01:50 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:01:50 - INFO - 📈 🔍 Executando APENAS consulta de relatórios...
+2025-06-17 16:01:50 - INFO - 📈 Consultando saldo devedor presente para: CLIENTE TESTE LTDA
+2025-06-17 16:01:50 - INFO - 📈 Título: TEST123456789
+2025-06-17 16:01:50 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:01:53 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:01:59 - INFO - 📈 Executando consulta...
+2025-06-17 16:02:02 - INFO - 📈 Gerando relatório...
+2025-06-17 16:08:55 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:08:58 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:09:10 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:09:10 - INFO - 📈 Consultando saldo devedor presente para: JAIR CIGERCE / ALDEMIR PASA
+2025-06-17 16:09:10 - INFO - 📈 Título: 2302
+2025-06-17 16:09:10 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:09:13 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:09:20 - INFO - 📈 Executando consulta...
+2025-06-17 16:09:23 - INFO - 📈 Gerando relatório...
+2025-06-17 16:09:26 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 16:09:29 - INFO - 📈 Exportando relatório...
+2025-06-17 16:09:34 - INFO - 📈 Processando planilha baixada...
+2025-06-17 16:09:34 - INFO - 📈 Processando arquivo: Material de Apoio - Cadastro de Clientes V_9 1.xlsx
+2025-06-17 16:09:35 - ERROR - ❌ Erro no processamento da planilha: [Errno 2] No such file or directory: 'dados_extraidos/planilhas_sienge/sienge_JAIR_CIGERCE_/_ALDEMIR_PASA_20250617_160935.xlsx': [Errno 2] No such file or directory: 'dados_extraidos/planilhas_sienge/sienge_JAIR_CIGERCE_/_ALDEMIR_PASA_20250617_160935.xlsx'
+2025-06-17 16:09:35 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 353, in _processar_planilha_baixada
+    shutil.copy2(arquivo_mais_recente, arquivo_destino)
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/shutil.py", line 448, in copy2
+    copyfile(src, dst, follow_symlinks=follow_symlinks)
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/shutil.py", line 258, in copyfile
+    with open(dst, 'wb') as fdst:
+         ^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'dados_extraidos/planilhas_sienge/sienge_JAIR_CIGERCE_/_ALDEMIR_PASA_20250617_160935.xlsx'
+
+2025-06-17 16:09:35 - INFO - 📈 Voltando à tela de consulta para próximo contrato...
+2025-06-17 16:10:52 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:10:54 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:11:07 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:11:07 - INFO - 📈 Consultando saldo devedor presente para: JAIR CIGERCE / ALDEMIR PASA
+2025-06-17 16:11:07 - INFO - 📈 Título: 2302
+2025-06-17 16:11:07 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:11:10 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:19:19 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:19:22 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:19:34 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:19:34 - INFO - 📈 Consultando saldo devedor presente para: JAIR CIGERCE / ALDEMIR PASA
+2025-06-17 16:19:34 - INFO - 📈 Título: 2302
+2025-06-17 16:19:34 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:19:38 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:19:40 - ERROR - ❌ Erro na consulta de relatórios: 'RPASienge' object has no attribute 'send_text_human_like': 'RPASienge' object has no attribute 'send_text_human_like'
+2025-06-17 16:19:40 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 249, in _consultar_relatorios_financeiros
+    self.send_text_human_like(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RPASienge' object has no attribute 'send_text_human_like'
+
+2025-06-17 16:19:43 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 16:19:43 - INFO - 📈 Título: 2239
+2025-06-17 16:19:43 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:19:46 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:19:48 - ERROR - ❌ Erro na consulta de relatórios: 'RPASienge' object has no attribute 'send_text_human_like': 'RPASienge' object has no attribute 'send_text_human_like'
+2025-06-17 16:19:48 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 249, in _consultar_relatorios_financeiros
+    self.send_text_human_like(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RPASienge' object has no attribute 'send_text_human_like'
+
+2025-06-17 16:19:51 - INFO - 📈 Consultando saldo devedor presente para: MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO
+2025-06-17 16:19:51 - INFO - 📈 Título: 2356
+2025-06-17 16:19:51 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:19:54 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:19:56 - ERROR - ❌ Erro na consulta de relatórios: 'RPASienge' object has no attribute 'send_text_human_like': 'RPASienge' object has no attribute 'send_text_human_like'
+2025-06-17 16:19:56 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 249, in _consultar_relatorios_financeiros
+    self.send_text_human_like(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RPASienge' object has no attribute 'send_text_human_like'
+
+2025-06-17 16:19:56 - INFO - 📈 RPA Sienge finalizado
+2025-06-17 16:28:49 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:28:51 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:29:01 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:29:01 - INFO - 📈 Consultando saldo devedor presente para: JAIR CIGERCE / ALDEMIR PASA
+2025-06-17 16:29:01 - INFO - 📈 Título: 2302
+2025-06-17 16:29:01 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:29:05 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:29:35 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:29:38 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:29:51 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:29:51 - INFO - 📈 Consultando saldo devedor presente para: JAIR CIGERCE / ALDEMIR PASA
+2025-06-17 16:29:51 - INFO - 📈 Título: 2302
+2025-06-17 16:29:51 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:29:54 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:32:24 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:32:27 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:32:37 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:32:37 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 16:32:37 - INFO - 📈 Título: 2239
+2025-06-17 16:32:37 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:32:41 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:33:18 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 16:33:21 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 16:33:33 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 16:33:33 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 16:33:33 - INFO - 📈 Título: 2239
+2025-06-17 16:33:33 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 16:33:36 - INFO - 📈 Pesquisando cliente...
+2025-06-17 16:34:04 - INFO - 📈 Executando consulta...
+2025-06-17 16:34:07 - INFO - 📈 Gerando relatório...
+2025-06-17 16:34:10 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 16:34:13 - INFO - 📈 Exportando relatório...
+2025-06-17 16:34:18 - INFO - 📈 Processando planilha baixada...
+2025-06-17 16:34:18 - INFO - 📈 Processando arquivo: Material de Apoio - Cadastro de Clientes V_9 1.xlsx
+2025-06-17 16:34:18 - INFO - 📈 Validação PDD concluída:
+2025-06-17 16:34:18 - INFO - 📈   Status: ERRO_DADOS
+2025-06-17 16:34:18 - INFO - 📈   Parcelas CT vencidas: 0
+2025-06-17 16:34:18 - INFO - 📈   Pode reparcelar: False
+2025-06-17 16:34:18 - INFO - 📈 Voltando à tela de consulta para próximo contrato...
+2025-06-17 20:22:52 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:23:08 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:24:16 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:24:22 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 20:24:35 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 20:24:35 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 20:24:35 - INFO - 📈 Título: 2239
+2025-06-17 20:24:35 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 20:24:38 - INFO - 📈 Pesquisando cliente...
+2025-06-17 20:24:54 - INFO - 📈 Executando consulta...
+2025-06-17 20:25:00 - INFO - 📈 Gerando relatório...
+2025-06-17 20:25:07 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 20:25:16 - INFO - 📈 Exportando relatório...
+2025-06-17 20:25:27 - INFO - 📈 Processando planilha baixada...
+2025-06-17 20:25:41 - INFO - 📈 Processando arquivo: Material de Apoio - Cadastro de Clientes V_9 1.xlsx
+2025-06-17 20:28:47 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:28:49 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 20:29:03 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 20:29:03 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 20:29:03 - INFO - 📈 Título: 2239
+2025-06-17 20:29:03 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 20:29:06 - INFO - 📈 Pesquisando cliente...
+2025-06-17 20:29:18 - INFO - 📈 Executando consulta...
+2025-06-17 20:29:22 - INFO - 📈 Gerando relatório...
+2025-06-17 20:29:24 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 20:29:27 - INFO - 📈 Exportando relatório...
+2025-06-17 20:29:32 - INFO - 📈 Processando planilha baixada...
+2025-06-17 20:45:19 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:45:19 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 20:45:50 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:45:50 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 20:47:59 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:47:59 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 20:52:48 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 20:52:50 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 20:53:06 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 20:53:06 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 20:53:06 - INFO - 📈 Título: 2239
+2025-06-17 20:53:06 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 20:53:09 - INFO - 📈 Pesquisando cliente...
+2025-06-17 20:53:17 - INFO - 📈 Executando consulta...
+2025-06-17 20:53:20 - INFO - 📈 Gerando relatório...
+2025-06-17 20:53:22 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 20:53:25 - INFO - 📈 Exportando relatório...
+2025-06-17 20:53:31 - INFO - 📈 Processando planilha baixada...
+2025-06-17 20:53:31 - INFO - 📈 Localizando planilha na pasta de downloads: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-17 20:54:02 - INFO - 📈 Processando arquivo: saldo_devedor_presente-20250617-205325.xlsx
+2025-06-17 21:18:11 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 21:18:13 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 21:18:28 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 21:18:28 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 21:18:28 - INFO - 📈 Título: 2239
+2025-06-17 21:18:28 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 21:18:31 - INFO - 📈 Pesquisando cliente...
+2025-06-17 21:18:39 - INFO - 📈 Executando consulta...
+2025-06-17 21:18:42 - INFO - 📈 Selecionando todos os registros...
+2025-06-17 21:18:53 - INFO - 📈 Gerando relatório...
+2025-06-17 21:18:55 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 21:18:58 - INFO - 📈 Exportando relatório...
+2025-06-17 21:19:03 - INFO - 📈 Processando planilha baixada...
+2025-06-17 21:19:18 - INFO - 📈 Localizando planilha na pasta de downloads: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-17 21:19:30 - INFO - 📈 Processando arquivo: saldo_devedor_presente-20250617-211858.xlsx
+2025-06-17 21:21:48 - INFO - 📈 Validação PDD concluída:
+2025-06-17 21:21:53 - INFO - 📈   Status: ADIMPLENTE
+2025-06-17 21:21:59 - INFO - 📈   Parcelas CT vencidas: 0
+2025-06-17 21:22:03 - INFO - 📈   Pode reparcelar: True
+2025-06-17 21:44:38 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 21:44:41 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 21:44:54 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 21:44:54 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 21:44:54 - INFO - 📈 Título: 2239
+2025-06-17 21:44:54 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 21:44:57 - INFO - 📈 Pesquisando cliente...
+2025-06-17 21:45:05 - INFO - 📈 Executando consulta...
+2025-06-17 21:45:08 - INFO - 📈 Selecionando todos os registros...
+2025-06-17 21:45:18 - INFO - 📈 Gerando relatório...
+2025-06-17 21:45:21 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 21:45:30 - INFO - 📈 Exportando relatório...
+2025-06-17 21:45:35 - INFO - 📈 Processando planilha baixada...
+2025-06-17 21:45:44 - INFO - 📈 Localizando planilha na pasta de downloads: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-17 21:45:51 - INFO - 📈 Processando arquivo: saldo_devedor_presente-20250617-214530.xlsx
+2025-06-17 22:25:24 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:25:24 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 22:25:24 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 22:25:24 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 22:25:27 - INFO - ▶️ Iniciando execução do RPA Coleta_Indices
+2025-06-17 22:25:27 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:25:27 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:25:27 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:25:27 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:25:31 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:25:31 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 22:25:31 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 22:25:40 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 22:25:40 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:25:42 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:25:42 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:25:43 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:25:43 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 22:25:43 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 22:25:43 - INFO - 💾 Salvando execução com erro no sistema...
+2025-06-17 22:25:43 - INFO - 💾 Tentando salvar execução Coleta_Indices...
+2025-06-17 22:25:43 - ERROR - ❌ ❌ Erro ao salvar execução no sistema: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+2025-06-17 22:25:43 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 268, in executar_com_monitoramento
+    resultado = await self.executar(parametros)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 166, in executar
+    await self.rastreamento.finalizar_rastreamento()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/rastreamento_unificado.py", line 263, in finalizar_rastreamento
+    await data_manager.salvar_execucao_rpa(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 202, in salvar_execucao_rpa
+    f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 324, in _salvar_execucao_sistema
+    resultados = await data_manager.salvar_execucao_rpa(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 202, in salvar_execucao_rpa
+    f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+2025-06-17 22:25:43 - INFO - 🔄 Tentando fallback direto para JSON...
+2025-06-17 22:25:43 - INFO - 📄 Fallback salvo em: dados_processamento/execucao_fallback_Coleta_Indices_20250617_222543.json
+2025-06-17 22:25:43 - ERROR - ❌ 🔍 Erro: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+2025-06-17 22:25:43 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 268, in executar_com_monitoramento
+    resultado = await self.executar(parametros)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 166, in executar
+    await self.rastreamento.finalizar_rastreamento()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/rastreamento_unificado.py", line 263, in finalizar_rastreamento
+    await data_manager.salvar_execucao_rpa(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py", line 202, in salvar_execucao_rpa
+    f"   mongodb_manager.database: {'SET' if mongodb_manager and mongodb_manager.database else 'NOT SET'}")
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/pymongo/database.py", line 1342, in __bool__
+    raise NotImplementedError(
+NotImplementedError: Database objects do not implement truth value testing or bool(). Please compare with None instead: database is not None
+
+2025-06-17 22:29:53 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:29:53 - INFO - 🔧 Inicializando sistema de dados...
+2025-06-17 22:29:53 - INFO - ✅ Sistema de dados inicializado
+2025-06-17 22:29:53 - INFO - 🔧 Inicializando recursos do RPA...
+2025-06-17 22:29:56 - INFO - ▶️ Iniciando execução do RPA Coleta_Indices
+2025-06-17 22:29:56 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:29:56 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:29:56 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:29:56 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:29:59 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:30:00 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 22:30:00 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 22:30:09 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 22:30:09 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:30:09 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:30:10 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:30:10 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:30:10 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 22:30:10 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 22:30:11 - INFO - 💾 Salvando execução no sistema...
+2025-06-17 22:30:11 - INFO - 💾 Tentando salvar execução Coleta_Indices...
+2025-06-17 22:30:11 - INFO - 💾 Resultados do salvamento: {'mongodb': 'sucesso', 'json': 'sucesso'}
+2025-06-17 22:30:11 - INFO - ✅ Execução salva com sucesso no sistema (MongoDB + JSON)
+2025-06-17 22:30:11 - INFO - ✅ RPA Coleta_Indices executado com sucesso em 17.35s
+2025-06-17 22:39:14 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:39:14 - INFO - 🚀 Iniciando execução de Coleta_Indices
+2025-06-17 22:39:14 - INFO - 📋 Parâmetros: {
+  "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:39:14 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:39:14 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:39:14 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:39:14 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:39:14 - ERROR - ❌ Erro durante coleta de índices: Erro na coleta do IPCA: Browser não foi inicializado corretamente.
+2025-06-17 22:39:14 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 213, in _coletar_ipca_ibge
+    raise Exception("Browser não foi inicializado corretamente.")
+Exception: Browser não foi inicializado corretamente.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 102, in executar
+    dados_ipca = await self._coletar_ipca_ibge()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_coleta_indices/rpa_coleta_indices.py", line 242, in _coletar_ipca_ibge
+    raise Exception(f"Erro na coleta do IPCA: {str(e)}")
+Exception: Erro na coleta do IPCA: Browser não foi inicializado corretamente.
+
+2025-06-17 22:39:14 - ERROR - ❌ 💥 Erro crítico em Coleta_Indices: BaseRPA.log_erro() missing 1 required positional argument: 'erro'
+2025-06-17 22:39:14 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/base_rpa.py", line 272, in executar_com_monitoramento
+    self.log_erro(
+TypeError: BaseRPA.log_erro() missing 1 required positional argument: 'erro'
+
+2025-06-17 22:41:30 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:41:30 - INFO - 🚀 Iniciando execução de Coleta_Indices
+2025-06-17 22:41:30 - INFO - 📋 Parâmetros: {
+  "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:41:30 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:41:33 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:41:33 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:41:33 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:41:37 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:41:37 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 22:41:37 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 22:41:46 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 22:41:46 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:41:48 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:41:48 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:41:49 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:41:49 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 22:41:49 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 22:41:49 - INFO - ✅ Coleta_Indices executado com sucesso em 18.67s
+2025-06-17 22:41:49 - INFO - 📊 Resultado: Índices coletados com sucesso - IPCA: 5,32%, IGPM: 7,02%
+2025-06-17 22:41:49 - INFO - 📈 Dados retornados: {
+  "ipca": {
+    "tipo": "IPCA",
+    "valor": "5,32",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "IBGE",
+    "url": "https://www.ibge.gov.br/explica/inflacao.php",
+    "metodo": "webscraping_selenium",
+    "timestamp": "2025-06-17T22:41:37.219818"
+  },
+  "igpm": {
+    "tipo": "IGPM",
+    "valor": "7,02",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "FGV",
+    "url": "https://portalibre.fgv.br/taxonomy/term/94",
+    "metodo": "webscraping_selenium_download",
+    "timestamp": "2025-06-17T22:41:46.497955"
+  },
+  "planilha_atualizada": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "timestamp_coleta": "2025-06-17T22:41:49.333537"
+}
+2025-06-17 22:45:31 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:45:31 - INFO - 🚀 Iniciando execução de Coleta_Indices
+2025-06-17 22:45:31 - INFO - 📋 Parâmetros: {
+  "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:45:31 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:45:34 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:45:34 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:45:34 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:45:38 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:45:38 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 22:45:38 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 22:45:47 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 22:45:47 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:45:48 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:45:48 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:45:49 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:45:49 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 22:45:49 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 22:45:49 - INFO - ✅ Coleta_Indices executado com sucesso em 17.81s
+2025-06-17 22:45:49 - INFO - 📊 Resultado: Índices coletados com sucesso - IPCA: 5,32%, IGPM: 7,02%
+2025-06-17 22:45:49 - INFO - 📈 Dados retornados: {
+  "ipca": {
+    "tipo": "IPCA",
+    "valor": "5,32",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "IBGE",
+    "url": "https://www.ibge.gov.br/explica/inflacao.php",
+    "metodo": "webscraping_selenium",
+    "timestamp": "2025-06-17T22:45:38.684343"
+  },
+  "igpm": {
+    "tipo": "IGPM",
+    "valor": "7,02",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "FGV",
+    "url": "https://portalibre.fgv.br/taxonomy/term/94",
+    "metodo": "webscraping_selenium_download",
+    "timestamp": "2025-06-17T22:45:47.786728"
+  },
+  "planilha_atualizada": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "timestamp_coleta": "2025-06-17T22:45:49.475497"
+}
+2025-06-17 22:47:55 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:47:55 - INFO - 🚀 Iniciando execução de Coleta_Indices
+2025-06-17 22:47:55 - INFO - 📋 Parâmetros: {
+  "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:47:55 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:47:58 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:47:58 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:47:58 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:48:01 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:48:01 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 22:48:01 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 22:48:11 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 22:48:11 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:48:12 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:48:12 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:48:13 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:48:13 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 22:48:13 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 22:48:13 - INFO - ✅ Coleta_Indices executado com sucesso em 18.03s
+2025-06-17 22:48:13 - INFO - 📊 Resultado: Índices coletados com sucesso - IPCA: 5,32%, IGPM: 7,02%
+2025-06-17 22:48:13 - INFO - 📈 Dados retornados: {
+  "ipca": {
+    "tipo": "IPCA",
+    "valor": "5,32",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "IBGE",
+    "url": "https://www.ibge.gov.br/explica/inflacao.php",
+    "metodo": "webscraping_selenium",
+    "timestamp": "2025-06-17T22:48:01.866525"
+  },
+  "igpm": {
+    "tipo": "IGPM",
+    "valor": "7,02",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "FGV",
+    "url": "https://portalibre.fgv.br/taxonomy/term/94",
+    "metodo": "webscraping_selenium_download",
+    "timestamp": "2025-06-17T22:48:11.074685"
+  },
+  "planilha_atualizada": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "timestamp_coleta": "2025-06-17T22:48:13.133934"
+}
+2025-06-17 22:50:42 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-17 22:50:42 - INFO - 🚀 Iniciando execução de Coleta_Indices
+2025-06-17 22:50:42 - INFO - 📋 Parâmetros: {
+  "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:50:42 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-17 22:50:45 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-17 22:50:45 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-17 22:50:45 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-17 22:50:49 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-17 22:50:49 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-17 22:50:49 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-17 22:50:58 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-17 22:50:58 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-17 22:50:59 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-17 22:50:59 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:51:00 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-17 22:51:00 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-17 22:51:00 - INFO - 📈 ✅ Índices salvos com sucesso (sistema híbrido)
+2025-06-17 22:51:00 - INFO - ✅ Coleta_Indices executado com sucesso em 17.75s
+2025-06-17 22:51:00 - INFO - 📊 Resultado: Índices coletados com sucesso - IPCA: 5,32%, IGPM: 7,02%
+2025-06-17 22:51:00 - INFO - 📈 Dados retornados: {
+  "ipca": {
+    "tipo": "IPCA",
+    "valor": "5,32",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "IBGE",
+    "url": "https://www.ibge.gov.br/explica/inflacao.php",
+    "metodo": "webscraping_selenium",
+    "timestamp": "2025-06-17T22:50:49.586276"
+  },
+  "igpm": {
+    "tipo": "IGPM",
+    "valor": "7,02",
+    "mes": "mai.-25",
+    "periodo": "acumulado_12_meses",
+    "fonte": "FGV",
+    "url": "https://portalibre.fgv.br/taxonomy/term/94",
+    "metodo": "webscraping_selenium_download",
+    "timestamp": "2025-06-17T22:50:58.772689"
+  },
+  "planilha_atualizada": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "timestamp_coleta": "2025-06-17T22:51:00.564401"
+}
+2025-06-17 22:53:53 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 22:53:53 - INFO - 🚀 Iniciando execução de Analise_Planilhas
+2025-06-17 22:53:53 - INFO - 📋 Parâmetros: {
+  "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:53:53 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 22:53:53 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 22:53:53 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 22:53:53 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 22:54:00 - INFO - ✅ Analise_Planilhas executado com sucesso em 7.78s
+2025-06-17 22:54:00 - INFO - 📊 Resultado: Análise concluída - 3 contratos identificados para reparcelamento
+2025-06-17 22:54:00 - INFO - 📈 Dados retornados: {
+  "novos_contratos_processados": 0,
+  "pendencias_iptu_atualizadas": 10,
+  "contratos_para_reajuste": 3,
+  "fila_processamento": [
+    {
+      "id_fila": "reajuste_2302_20250617_225400",
+      "numero_titulo": 2302,
+      "cliente": "JAIR CIGERCE / ALDEMIR PASA",
+      "empreendimento": "MARCELY",
+      "cnpj_unidade": "BVRB",
+      "indexador": "",
+      "ultimo_reajuste": "jun.-24",
+      "dias_desde_ultimo_reajuste": 0,
+      "linha_planilha": 46,
+      "status_processamento": "pendente",
+      "prioridade": 11,
+      "timestamp_identificacao": "2025-06-17T22:54:00.838459",
+      "dados_completos": {
+        "Empresa": "BVRB",
+        "Loteamento": "MARCELY",
+        "Cliente": "JAIR CIGERCE / ALDEMIR PASA",
+        "Quadra": 36,
+        "Lote": 517,
+        "Titulo": 2302,
+        "Data de consulta  IPTU ": "",
+        "PENDENCIAS PMFI ": "",
+        "PENDENCIAS SIENGE INAD ": "",
+        "PENDENCIAS SIENGE": "",
+        "Assinatura ultimo Contrato": "07/05/2019",
+        "1 º vencimento": "20/06/2019",
+        "Índice": "IGPM",
+        "Juros": "8,0%",
+        "Tipo reajuste": "anual",
+        "\"original ou corrigido\"": "original",
+        "Último reajuste": "jun.-24",
+        "Valor da Parcela Base": "",
+        "Parcelas a vencer": "",
+        "Saldo devedor Base": "",
+        "Dia de vencimento de parcelas": "",
+        "Mês reajuste": "jun.-25",
+        "1º vencimento carnê": "",
+        "% Reajuste total": "#N/A",
+        "Parcela final": "#N/A",
+        "Saldo devedor final": "#N/A",
+        "Próximo reajuste": "",
+        "linha_planilha": 46,
+        "mes_reajuste_original": "jun.-25",
+        "mes_reajuste_numerico": 6,
+        "ano_reajuste": 2025,
+        "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+        "cliente": "JAIR CIGERCE / ALDEMIR PASA",
+        "numero_titulo": 2302
+      },
+      "processado_em": null,
+      "erro_processamento": null
+    },
+    {
+      "id_fila": "reajuste_2239_20250617_225400",
+      "numero_titulo": 2239,
+      "cliente": "SANDRO RIZZON VIEIRA",
+      "empreendimento": "MARCELY",
+      "cnpj_unidade": "BVRB",
+      "indexador": "",
+      "ultimo_reajuste": "jun.-24",
+      "dias_desde_ultimo_reajuste": 0,
+      "linha_planilha": 51,
+      "status_processamento": "pendente",
+      "prioridade": 11,
+      "timestamp_identificacao": "2025-06-17T22:54:00.838465",
+      "dados_completos": {
+        "Empresa": "BVRB",
+        "Loteamento": "MARCELY",
+        "Cliente": "SANDRO RIZZON VIEIRA",
+        "Quadra": 36,
+        "Lote": 128,
+        "Titulo": 2239,
+        "Data de consulta  IPTU ": "",
+        "PENDENCIAS PMFI ": "",
+        "PENDENCIAS SIENGE INAD ": "",
+        "PENDENCIAS SIENGE": "",
+        "Assinatura ultimo Contrato": "01/06/2018",
+        "1 º vencimento": "05/07/2018",
+        "Índice": "IGPM",
+        "Juros": "8,0%",
+        "Tipo reajuste": "anual",
+        "\"original ou corrigido\"": "original",
+        "Último reajuste": "jun.-24",
+        "Valor da Parcela Base": "",
+        "Parcelas a vencer": "",
+        "Saldo devedor Base": "",
+        "Dia de vencimento de parcelas": "",
+        "Mês reajuste": "jun.-25",
+        "1º vencimento carnê": "",
+        "% Reajuste total": "#N/A",
+        "Parcela final": "#N/A",
+        "Saldo devedor final": "#N/A",
+        "Próximo reajuste": "",
+        "linha_planilha": 51,
+        "mes_reajuste_original": "jun.-25",
+        "mes_reajuste_numerico": 6,
+        "ano_reajuste": 2025,
+        "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+        "cliente": "SANDRO RIZZON VIEIRA",
+        "numero_titulo": 2239
+      },
+      "processado_em": null,
+      "erro_processamento": null
+    },
+    {
+      "id_fila": "reajuste_2356_20250617_225400",
+      "numero_titulo": 2356,
+      "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+      "empreendimento": "MARCELY",
+      "cnpj_unidade": "BVRB",
+      "indexador": "",
+      "ultimo_reajuste": "jun.-24",
+      "dias_desde_ultimo_reajuste": 0,
+      "linha_planilha": 72,
+      "status_processamento": "pendente",
+      "prioridade": 11,
+      "timestamp_identificacao": "2025-06-17T22:54:00.838469",
+      "dados_completos": {
+        "Empresa": "BVRB",
+        "Loteamento": "MARCELY",
+        "Cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+        "Quadra": 38,
+        "Lote": 258,
+        "Titulo": 2356,
+        "Data de consulta  IPTU ": "",
+        "PENDENCIAS PMFI ": "",
+        "PENDENCIAS SIENGE INAD ": "",
+        "PENDENCIAS SIENGE": "",
+        "Assinatura ultimo Contrato": "07/05/2018",
+        "1 º vencimento": "10/06/2018",
+        "Índice": "IGPM",
+        "Juros": "8,0%",
+        "Tipo reajuste": "anual",
+        "\"original ou corrigido\"": "original",
+        "Último reajuste": "jun.-24",
+        "Valor da Parcela Base": "",
+        "Parcelas a vencer": "",
+        "Saldo devedor Base": "",
+        "Dia de vencimento de parcelas": "",
+        "Mês reajuste": "jun.-25",
+        "1º vencimento carnê": "",
+        "% Reajuste total": "#N/A",
+        "Parcela final": "#N/A",
+        "Saldo devedor final": "#N/A",
+        "Próximo reajuste": "",
+        "linha_planilha": 72,
+        "mes_reajuste_original": "jun.-25",
+        "mes_reajuste_numerico": 6,
+        "ano_reajuste": 2025,
+        "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+        "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+        "numero_titulo": 2356
+      },
+      "processado_em": null,
+      "erro_processamento": null
+    }
+  ],
+  "detalhes_contratos": [
+    {
+      "Empresa": "BVRB",
+      "Loteamento": "MARCELY",
+      "Cliente": "JAIR CIGERCE / ALDEMIR PASA",
+      "Quadra": 36,
+      "Lote": 517,
+      "Titulo": 2302,
+      "Data de consulta  IPTU ": "",
+      "PENDENCIAS PMFI ": "",
+      "PENDENCIAS SIENGE INAD ": "",
+      "PENDENCIAS SIENGE": "",
+      "Assinatura ultimo Contrato": "07/05/2019",
+      "1 º vencimento": "20/06/2019",
+      "Índice": "IGPM",
+      "Juros": "8,0%",
+      "Tipo reajuste": "anual",
+      "\"original ou corrigido\"": "original",
+      "Último reajuste": "jun.-24",
+      "Valor da Parcela Base": "",
+      "Parcelas a vencer": "",
+      "Saldo devedor Base": "",
+      "Dia de vencimento de parcelas": "",
+      "Mês reajuste": "jun.-25",
+      "1º vencimento carnê": "",
+      "% Reajuste total": "#N/A",
+      "Parcela final": "#N/A",
+      "Saldo devedor final": "#N/A",
+      "Próximo reajuste": "",
+      "linha_planilha": 46,
+      "mes_reajuste_original": "jun.-25",
+      "mes_reajuste_numerico": 6,
+      "ano_reajuste": 2025,
+      "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+      "cliente": "JAIR CIGERCE / ALDEMIR PASA",
+      "numero_titulo": 2302
+    },
+    {
+      "Empresa": "BVRB",
+      "Loteamento": "MARCELY",
+      "Cliente": "SANDRO RIZZON VIEIRA",
+      "Quadra": 36,
+      "Lote": 128,
+      "Titulo": 2239,
+      "Data de consulta  IPTU ": "",
+      "PENDENCIAS PMFI ": "",
+      "PENDENCIAS SIENGE INAD ": "",
+      "PENDENCIAS SIENGE": "",
+      "Assinatura ultimo Contrato": "01/06/2018",
+      "1 º vencimento": "05/07/2018",
+      "Índice": "IGPM",
+      "Juros": "8,0%",
+      "Tipo reajuste": "anual",
+      "\"original ou corrigido\"": "original",
+      "Último reajuste": "jun.-24",
+      "Valor da Parcela Base": "",
+      "Parcelas a vencer": "",
+      "Saldo devedor Base": "",
+      "Dia de vencimento de parcelas": "",
+      "Mês reajuste": "jun.-25",
+      "1º vencimento carnê": "",
+      "% Reajuste total": "#N/A",
+      "Parcela final": "#N/A",
+      "Saldo devedor final": "#N/A",
+      "Próximo reajuste": "",
+      "linha_planilha": 51,
+      "mes_reajuste_original": "jun.-25",
+      "mes_reajuste_numerico": 6,
+      "ano_reajuste": 2025,
+      "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+      "cliente": "SANDRO RIZZON VIEIRA",
+      "numero_titulo": 2239
+    },
+    {
+      "Empresa": "BVRB",
+      "Loteamento": "MARCELY",
+      "Cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+      "Quadra": 38,
+      "Lote": 258,
+      "Titulo": 2356,
+      "Data de consulta  IPTU ": "",
+      "PENDENCIAS PMFI ": "",
+      "PENDENCIAS SIENGE INAD ": "",
+      "PENDENCIAS SIENGE": "",
+      "Assinatura ultimo Contrato": "07/05/2018",
+      "1 º vencimento": "10/06/2018",
+      "Índice": "IGPM",
+      "Juros": "8,0%",
+      "Tipo reajuste": "anual",
+      "\"original ou corrigido\"": "original",
+      "Último reajuste": "jun.-24",
+      "Valor da Parcela Base": "",
+      "Parcelas a vencer": "",
+      "Saldo devedor Base": "",
+      "Dia de vencimento de parcelas": "",
+      "Mês reajuste": "jun.-25",
+      "1º vencimento carnê": "",
+      "% Reajuste total": "#N/A",
+      "Parcela final": "#N/A",
+      "Saldo devedor final": "#N/A",
+      "Próximo reajuste": "",
+      "linha_planilha": 72,
+      "mes_reajuste_original": "jun.-25",
+      "mes_reajuste_numerico": 6,
+      "ano_reajuste": 2025,
+      "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+      "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+      "numero_titulo": 2356
+    }
+  ],
+  "timestamp_analise": "2025-06-17T22:54:00.846270"
+}
+2025-06-17 22:58:18 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-17 22:58:18 - INFO - 🚀 Iniciando execução de Analise_Planilhas
+2025-06-17 22:58:18 - INFO - 📋 Parâmetros: {
+  "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+  "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+  "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+}
+2025-06-17 22:58:18 - INFO - 💾 Sistema híbrido MongoDB+JSON inicializado
+2025-06-17 22:58:18 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-17 22:58:18 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-17 22:58:18 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-17 22:58:23 - INFO - ✅ Analise_Planilhas executado com sucesso em 4.78s
+2025-06-17 22:58:23 - INFO - 📊 Resultado: Análise concluída - 0 contratos identificados para reparcelamento
+2025-06-17 22:58:23 - INFO - 📈 Dados retornados: {
+  "novos_contratos_processados": 0,
+  "pendencias_iptu_atualizadas": 10,
+  "contratos_para_reajuste": 0,
+  "fila_processamento": [],
+  "detalhes_contratos": [],
+  "timestamp_analise": "2025-06-17T22:58:23.533090"
+}
+2025-06-17 22:59:10 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 23:01:37 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 23:01:40 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 23:01:53 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 23:01:53 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 23:01:53 - INFO - 📈 Título: 2239
+2025-06-17 23:01:53 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 23:01:56 - INFO - 📈 Pesquisando cliente...
+2025-06-17 23:02:04 - INFO - 📈 Executando consulta...
+2025-06-17 23:02:07 - INFO - 📈 Selecionando todos os registros...
+2025-06-17 23:02:21 - INFO - 📈 Gerando relatório...
+2025-06-17 23:02:23 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 23:02:26 - INFO - 📈 Exportando relatório...
+2025-06-17 23:02:31 - INFO - 📈 Processando planilha baixada...
+2025-06-17 23:02:31 - INFO - 📈 Localizando planilha na pasta de downloads: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-17 23:02:31 - INFO - 📈 Voltando à tela de consulta para próximo contrato...
+2025-06-17 23:02:33 - INFO - 📈 Webscraping concluído - Aguardando processamento da planilha
+2025-06-17 23:02:36 - INFO - 📈 Consultando saldo devedor presente para: MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO
+2025-06-17 23:02:36 - INFO - 📈 Título: 2356
+2025-06-17 23:02:36 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 23:02:39 - INFO - 📈 Pesquisando cliente...
+2025-06-17 23:04:31 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 23:04:34 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 23:06:02 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 23:06:05 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 23:06:18 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-17 23:06:18 - INFO - 📈 Consultando saldo devedor presente para: SANDRO RIZZON VIEIRA
+2025-06-17 23:06:18 - INFO - 📈 Título: 2239
+2025-06-17 23:06:18 - INFO - 📈 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-17 23:06:22 - INFO - 📈 Pesquisando cliente...
+2025-06-17 23:06:30 - INFO - 📈 Executando consulta...
+2025-06-17 23:06:33 - INFO - 📈 Selecionando todos os registros...
+2025-06-17 23:06:39 - INFO - 📈 Gerando relatório...
+2025-06-17 23:06:41 - INFO - 📈 Selecionando formato Excel...
+2025-06-17 23:06:44 - INFO - 📈 Exportando relatório...
+2025-06-17 23:06:50 - INFO - 📈 Processando planilha baixada...
+2025-06-17 23:06:50 - INFO - 📈 Localizando planilha na pasta de downloads: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-17 23:06:50 - INFO - 📈 Processando arquivo: saldo_devedor_presente-20250617-230644.xlsx
+2025-06-17 23:07:24 - INFO - 📈 ✅ Validação PDD 9.1.1 concluída:
+2025-06-17 23:07:28 - INFO - 📈   📊 Status: ADIMPLENTE
+2025-06-17 23:07:30 - INFO - 📈   🔢 Parcelas CT vencidas: 0
+2025-06-17 23:07:32 - INFO - 📈   ✔️ Pode reparcelar: True
+2025-06-17 23:07:38 - INFO - 📈   📅 Dia vencimento identificado: 1
+2025-06-17 23:07:40 - INFO - 📈   💰 Valor parcela atual: R$ 2,288.42
+2025-06-17 23:07:42 - INFO - 📈   🗓️ 1º vencimento carnê: 01/06/2026
+2025-06-17 23:07:51 - INFO - 📈   ⚠️ Parcelas divergentes: 1
+2025-06-17 23:08:25 - INFO - 📈 📋 Auditoria PDD salva: dados_extraidos/auditoria_pdd/auditoria_SANDRO_RIZZON_VIEIRA_20250617_230701.json
+2025-06-17 23:08:56 - INFO - 📈 Voltando à tela de consulta para próximo contrato...
+2025-06-17 23:09:18 - INFO - 📈 Webscraping concluído - Aguardando processamento da planilha
+2025-06-17 23:12:49 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 23:12:52 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-17 23:13:39 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-17 23:13:42 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/

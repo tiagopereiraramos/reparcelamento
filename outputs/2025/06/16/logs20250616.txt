@@ -1,0 +1,215 @@
+2025-06-16 14:08:09 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-16 14:08:09 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-16 14:08:09 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8Uß
+2025-06-16 14:08:09 - INFO - 📋 Planilha Apoio: 1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk
+2025-06-16 14:08:12 - ERROR - ❌ Erro durante análise das planilhas: Erro ao atualizar planilha principal: <Response [404]>
+2025-06-16 14:08:12 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/client.py", line 168, in open_by_key
+    spreadsheet = Spreadsheet(self.http_client, {"id": key})
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/spreadsheet.py", line 29, in __init__
+    metadata = self.fetch_sheet_metadata()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/spreadsheet.py", line 230, in fetch_sheet_metadata
+    return self.client.fetch_sheet_metadata(self.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/http_client.py", line 305, in fetch_sheet_metadata
+    r = self.request("get", url, params=params)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/http_client.py", line 128, in request
+    raise APIError(response)
+gspread.exceptions.APIError: APIError: [404]: Requested entity was not found.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 304, in _atualizar_planilha_principal
+    planilha_principal = self.cliente_sheets.open_by_key(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/client.py", line 171, in open_by_key
+    raise SpreadsheetNotFound(ex.response) from ex
+gspread.exceptions.SpreadsheetNotFound: <Response [404]>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 88, in executar
+    await self._atualizar_planilha_principal(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 323, in _atualizar_planilha_principal
+    raise Exception(f"Erro ao atualizar planilha principal: {str(e)}")
+Exception: Erro ao atualizar planilha principal: <Response [404]>
+
+2025-06-16 14:14:28 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-16 14:14:28 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-16 14:14:28 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8Uß
+2025-06-16 14:14:28 - INFO - 📋 Planilha Apoio: 1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk
+2025-06-16 14:14:31 - ERROR - ❌ Erro durante análise das planilhas: Erro ao atualizar planilha principal: <Response [404]>
+2025-06-16 14:14:31 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/client.py", line 168, in open_by_key
+    spreadsheet = Spreadsheet(self.http_client, {"id": key})
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/spreadsheet.py", line 29, in __init__
+    metadata = self.fetch_sheet_metadata()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/spreadsheet.py", line 230, in fetch_sheet_metadata
+    return self.client.fetch_sheet_metadata(self.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/http_client.py", line 305, in fetch_sheet_metadata
+    r = self.request("get", url, params=params)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/http_client.py", line 128, in request
+    raise APIError(response)
+gspread.exceptions.APIError: APIError: [404]: Requested entity was not found.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 304, in _atualizar_planilha_principal
+    planilha_principal = self.cliente_sheets.open_by_key(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/gspread/client.py", line 171, in open_by_key
+    raise SpreadsheetNotFound(ex.response) from ex
+gspread.exceptions.SpreadsheetNotFound: <Response [404]>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 88, in executar
+    await self._atualizar_planilha_principal(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 323, in _atualizar_planilha_principal
+    raise Exception(f"Erro ao atualizar planilha principal: {str(e)}")
+Exception: Erro ao atualizar planilha principal: <Response [404]>
+
+2025-06-16 14:20:09 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-16 14:20:09 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-16 14:20:09 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-16 14:20:09 - INFO - 📋 Planilha Apoio: 1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk
+2025-06-16 15:05:26 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-16 15:05:30 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-16 15:05:30 - INFO - 📈    📋 Contrato: N/A
+2025-06-16 15:05:30 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-16 15:05:30 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-16 15:05:42 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-16 15:05:42 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-16 15:05:42 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-16 15:05:42 - INFO - 📈    📋 Título: N/A
+2025-06-16 15:05:42 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-16 15:05:45 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-16 15:05:52 - INFO - 📈 📋 Executando consulta...
+2025-06-16 15:05:55 - INFO - 📈 📊 Gerando relatório...
+2025-06-16 15:05:58 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-16 15:11:06 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-16 15:11:09 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-16 15:11:09 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-16 15:11:09 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-16 15:11:09 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-16 15:11:13 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-16 15:11:13 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-16 15:11:13 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-16 15:11:21 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-16 15:11:21 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-16 15:11:22 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025_old
+2025-06-16 15:11:22 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-16 15:11:23 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-16 15:11:23 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-16 15:11:23 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-16 15:50:39 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-16 15:50:43 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-16 15:50:43 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-16 15:50:43 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-16 15:50:43 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-16 15:50:46 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-16 15:50:46 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-16 15:50:46 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-16 15:50:56 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-16 15:50:56 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-16 15:50:57 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025_old
+2025-06-16 15:50:57 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-16 15:50:58 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-16 15:50:58 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-16 15:50:58 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-16 15:51:29 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-16 15:51:31 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-16 15:51:31 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-16 15:51:31 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-16 15:51:31 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-16 15:51:36 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-16 15:51:36 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-16 15:51:36 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-16 15:51:45 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-16 15:51:45 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-16 15:51:46 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-16 15:51:47 - INFO - 📈 ➕ IPCA mai.-25: Mês não encontrado na planilha, criando nova linha
+2025-06-16 15:51:47 - INFO - 📈 ✅ IPCA 5,32% inserido na linha 27 para o mês mai.-25
+2025-06-16 15:51:48 - INFO - 📈 ➕ IGPM mai.-25: Mês não encontrado na planilha, criando nova linha
+2025-06-16 15:51:49 - INFO - 📈 ✅ IGPM 7,02% inserido na linha 27 para o mês mai.-25
+2025-06-16 15:51:49 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-16 15:51:49 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-16 17:16:23 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-16 17:16:23 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-16 17:16:23 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-16 17:16:23 - INFO - 📋 Planilha Apoio: 1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk
+2025-06-16 19:39:31 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-16 19:39:31 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-16 19:39:31 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-16 19:39:31 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-16 19:39:31 - ERROR - ❌ Erro durante análise das planilhas: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './gspread-credentials.json'
+2025-06-16 19:39:31 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 141, in _conectar_google_sheets
+    credenciais = Credentials.from_service_account_file(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/oauth2/service_account.py", line 260, in from_service_account_file
+    info, signer = _service_account_info.from_filename(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/.venv/lib/python3.11/site-packages/google/auth/_service_account_info.py", line 78, in from_filename
+    with io.open(filename, "r", encoding="utf-8") as json_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './gspread-credentials.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 73, in executar
+    await self._conectar_google_sheets(parametros.get("credenciais_google"))
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_analise_planilhas/rpa_analise_planilhas.py", line 153, in _conectar_google_sheets
+    raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
+Exception: Falha na conexão com Google Sheets: [Errno 2] No such file or directory: './gspread-credentials.json'
+
+2025-06-16 19:40:26 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-16 19:40:26 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-16 19:40:26 - INFO - 📊 Planilha Base: 1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U
+2025-06-16 19:40:26 - INFO - 📋 Planilha Apoio: 1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY
+2025-06-16 19:42:39 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-16 19:42:43 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-16 19:42:43 - INFO - 📈 Conectando ao Google Sheets com credenciais: ./credentials/gspread-459713-aab8a657f9b0.json
+2025-06-16 19:42:43 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-16 19:42:43 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-16 19:42:46 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-16 19:42:46 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-16 19:42:46 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-16 19:42:55 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-16 19:42:55 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-16 19:42:56 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025
+2025-06-16 19:42:56 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-16 19:42:57 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-16 19:42:57 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-16 19:42:57 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-16 21:51:51 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-16 21:51:54 - INFO - 📈 🚀 INICIANDO RPA SIENGE - ETAPA: CONSULTA
+2025-06-16 21:51:54 - INFO - 📈    📋 Contrato: TEST123456789
+2025-06-16 21:51:54 - INFO - 📈    👤 Cliente: CLIENTE TESTE LTDA
+2025-06-16 21:51:54 - INFO - 📈    🔐 Autorização automática: False
+2025-06-16 21:51:54 - INFO - 📈 🔐 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-16 21:51:59 - INFO - 📈 📝 Preenchendo credenciais iniciais...
+2025-06-16 21:52:04 - INFO - 📈 📧 Confirmando email...
+2025-06-16 21:52:04 - INFO - 📈 🔑 Inserindo senha final...
+2025-06-16 21:52:12 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-16 21:52:12 - INFO - 📈 📊 ETAPA 1: CONSULTA DE RELATÓRIOS FINANCEIROS
+2025-06-16 21:52:12 - INFO - 📈 🔍 Consultando relatórios do cliente: CLIENTE TESTE LTDA
+2025-06-16 21:52:12 - INFO - 📈 📊 Consultando saldo devedor presente para: CLIENTE TESTE LTDA
+2025-06-16 21:52:12 - INFO - 📈    📋 Título: TEST123456789
+2025-06-16 21:52:12 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-16 21:52:15 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-16 21:52:22 - INFO - 📈 📋 Executando consulta...
+2025-06-16 21:52:25 - INFO - 📈 📊 Gerando relatório...
+2025-06-16 21:52:27 - INFO - 📈 📁 Selecionando formato Excel...

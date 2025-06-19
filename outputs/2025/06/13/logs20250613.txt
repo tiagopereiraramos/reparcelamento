@@ -1,0 +1,311 @@
+2025-06-13 15:02:06 - INFO - 🤖 Inicializando RPA: Coleta_Indices
+2025-06-13 15:02:11 - INFO - 📊 Iniciando coleta de índices econômicos...
+2025-06-13 15:02:11 - INFO - 📈 Conectando ao Google Sheets com credenciais: credentials/gspread-459713-aab8a657f9b0.json
+2025-06-13 15:02:11 - INFO - 📈 ✅ Conectado ao Google Sheets com sucesso
+2025-06-13 15:02:11 - INFO - 📈 Coletando IPCA do site oficial do IBGE
+2025-06-13 15:02:14 - INFO - 📈 Capturando o IPCA do IBGE
+2025-06-13 15:02:14 - INFO - 📈 ✅ IPCA coletado: 5,32%%
+2025-06-13 15:02:14 - INFO - 📈 Coletando IGPM do site oficial da FGV
+2025-06-13 15:02:23 - INFO - 📈 ✅ IGPM coletado: 7.02%
+2025-06-13 15:02:23 - INFO - 📈 Atualizando planilha Google Sheets
+2025-06-13 15:02:24 - INFO - 📈 ✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025_old
+2025-06-13 15:02:25 - INFO - 📈 📋 IPCA mai.-25: Valor coletado (5,32%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-13 15:02:26 - INFO - 📈 📋 IGPM mai.-25: Valor coletado (7,02%) é igual ao valor existente na planilha. Nenhuma alteração necessária.
+2025-06-13 15:02:26 - INFO - 📈 ✅ Planilha Google Sheets atualizada com sucesso
+2025-06-13 15:02:26 - INFO - ✅ Índices salvos localmente: dados_processamento/indices_coletados.json
+2025-06-13 15:03:26 - INFO - 🤖 Inicializando RPA: Analise_Planilhas
+2025-06-13 15:03:26 - INFO - 🔍 Iniciando análise de planilhas...
+2025-06-13 15:03:26 - INFO - 📊 Planilha Base: 1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk
+2025-06-13 15:03:26 - INFO - 📋 Planilha Apoio: 1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk
+2025-06-13 15:15:21 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 15:15:25 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 15:15:25 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 15:15:25 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:15:25 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 15:15:36 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 15:15:36 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 15:15:36 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 15:15:36 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:15:36 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 15:15:39 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 15:15:46 - INFO - 📈 📋 Executando consulta...
+2025-06-13 15:15:49 - INFO - 📈 📊 Gerando relatório...
+2025-06-13 15:15:52 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-13 15:19:19 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 15:19:21 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 15:19:21 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 15:19:21 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:19:21 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 15:19:34 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 15:19:34 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 15:19:34 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 15:19:34 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:19:34 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 15:19:37 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 15:19:44 - INFO - 📈 📋 Executando consulta...
+2025-06-13 15:19:47 - INFO - 📈 📊 Gerando relatório...
+2025-06-13 15:19:49 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-13 15:19:53 - INFO - 📈 💾 Exportando relatório...
+2025-06-13 15:19:58 - INFO - 📈 📋 Processando planilha baixada...
+2025-06-13 15:19:58 - INFO - 📁 Etapa 1: Localizando arquivo baixado mais recente...
+2025-06-13 15:19:58 - ERROR - ❌ Erro no processamento da planilha: name 'pasta_downloads' is not defined: name 'pasta_downloads' is not defined
+2025-06-13 15:19:58 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 829, in _processar_planilha_baixada
+    self.log_info(f"   📂 Pasta Downloads: {pasta_downloads}")
+                                            ^^^^^^^^^^^^^^^
+NameError: name 'pasta_downloads' is not defined
+
+2025-06-13 15:30:40 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 15:30:42 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 15:30:42 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 15:30:42 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:30:42 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 15:30:54 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 15:30:54 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 15:30:54 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 15:30:54 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:30:54 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 15:30:57 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 15:31:04 - INFO - 📈 📋 Executando consulta...
+2025-06-13 15:31:08 - INFO - 📈 📊 Gerando relatório...
+2025-06-13 15:31:10 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-13 15:31:13 - INFO - 📈 💾 Exportando relatório...
+2025-06-13 15:31:18 - INFO - 📈 📋 Processando planilha baixada...
+2025-06-13 15:31:18 - INFO - 📈 Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: /Users/tiagopereiraramos/Downloads
+2025-06-13 15:31:18 - INFO - 📁 Etapa 1: Localizando arquivo baixado mais recente...
+2025-06-13 15:31:18 - INFO -    📂 Pasta Downloads RPA: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-13 15:31:18 - INFO - 📈    📄 Arquivo: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-153113.xlsx
+2025-06-13 15:31:18 - INFO - 📈    🕐 Modificado: 13/06/2025 15:31:14
+2025-06-13 15:31:18 - INFO -    ✅ Arquivo encontrado: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-153113.xlsx
+2025-06-13 15:31:18 - INFO - 📊 Etapa 2: Lendo planilha Excel...
+2025-06-13 15:31:18 - INFO - 📈    📊 Planilha carregada: 26 registros, 39 colunas
+2025-06-13 15:31:18 - INFO - 📈    ✅ Estrutura da planilha validada
+2025-06-13 15:31:18 - INFO - 💾 Etapa 3: Salvando cópia para auditoria...
+2025-06-13 15:31:18 - ERROR - ❌ Erro ao salvar planilha para auditoria: [Errno 2] No such file or directory: 'dados_extraidos/planilhas_sienge/2025/06/sienge_N/A_20250613_153118.xlsx'
+2025-06-13 15:31:18 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 1047, in _salvar_planilha_auditoria
+    shutil.copy2(arquivo_original, caminho_auditoria)
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/shutil.py", line 448, in copy2
+    copyfile(src, dst, follow_symlinks=follow_symlinks)
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/shutil.py", line 258, in copyfile
+    with open(dst, 'wb') as fdst:
+         ^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'dados_extraidos/planilhas_sienge/2025/06/sienge_N/A_20250613_153118.xlsx'
+
+2025-06-13 15:31:18 - INFO - 🔄 Etapa 4: Processando dados conforme PDD...
+2025-06-13 15:31:18 - INFO - 📈    📊 Processamento PDD concluído:
+2025-06-13 15:31:18 - INFO - 📈       💰 Saldo total: R$ 0.00
+2025-06-13 15:31:18 - INFO - 📈       📋 Parcelas CT: 0
+2025-06-13 15:31:18 - INFO - 📈       📋 Parcelas REC/FAT: 0
+2025-06-13 15:31:18 - INFO - 📈       ⚠️ CT vencidas: 0
+2025-06-13 15:31:18 - INFO - 📈       🎯 Status: ADIMPLENTE
+2025-06-13 15:31:18 - INFO - 📈    ✅ Auditoria salva no MongoDB
+2025-06-13 15:31:18 - ERROR - ❌ Erro ao registrar auditoria: [Errno 2] No such file or directory: 'dados_processamento/auditoria_planilhas/auditoria_N/A_20250613_153118.json'
+2025-06-13 15:31:18 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 1272, in _registrar_auditoria_planilha
+    with open(arquivo_json, 'w', encoding='utf-8') as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'dados_processamento/auditoria_planilhas/auditoria_N/A_20250613_153118.json'
+
+2025-06-13 15:31:18 - INFO - 📈 ✅ Planilha processada com sucesso!
+2025-06-13 15:31:18 - INFO - 📈 ✅ Webscraping concluído - Aguardando processamento da planilha
+2025-06-13 15:31:18 - INFO - 📈 ✅ Cliente aprovado para reparcelamento
+2025-06-13 15:31:18 - INFO - 📈 Processando reparcelamento no Sienge
+2025-06-13 15:31:18 - INFO - 📈 🔄 PROCESSANDO REPARCELAMENTO SIENGE
+2025-06-13 15:31:18 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:31:18 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:31:18 - INFO - 📈    💰 Saldo atual: R$ 0.00
+2025-06-13 15:31:18 - INFO - 📈 🧭 Etapa 1: Navegando para Reparcelamento > Inclusão
+2025-06-13 15:31:18 - ERROR - ❌ Erro no processamento de reparcelamento: 'RPASienge' object has no attribute '_navegar_reparcelamento_inclusao': 'RPASienge' object has no attribute '_navegar_reparcelamento_inclusao'
+2025-06-13 15:31:18 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 470, in _processar_reparcelamento
+    await self._navegar_reparcelamento_inclusao()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RPASienge' object has no attribute '_navegar_reparcelamento_inclusao'
+
+2025-06-13 15:31:18 - ERROR - ❌ Erro ao finalizar RPA: 'RPABrowser' object has no attribute 'quit'
+2025-06-13 15:31:18 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 149, in finalizar
+    await self.browser.quit()
+          ^^^^^^^^^^^^^^^^^
+AttributeError: 'RPABrowser' object has no attribute 'quit'
+
+2025-06-13 15:35:10 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 15:35:13 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 15:35:13 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 15:35:13 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:35:13 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 15:35:23 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 15:35:23 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 15:35:23 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 15:35:23 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:35:23 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 15:35:27 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 15:35:42 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 15:35:44 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 15:35:44 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 15:35:44 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:35:44 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 15:35:56 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 15:35:56 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 15:35:56 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 15:35:56 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:35:56 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 15:35:59 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 15:36:06 - INFO - 📈 📋 Executando consulta...
+2025-06-13 15:36:09 - INFO - 📈 📊 Gerando relatório...
+2025-06-13 15:36:11 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-13 15:36:14 - INFO - 📈 💾 Exportando relatório...
+2025-06-13 15:36:20 - INFO - 📈 📋 Processando planilha baixada...
+2025-06-13 15:36:20 - INFO - 📈 Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: /Users/tiagopereiraramos/Downloads
+2025-06-13 15:36:20 - INFO - 📁 Etapa 1: Localizando arquivo baixado mais recente...
+2025-06-13 15:36:20 - INFO -    📂 Pasta Downloads RPA: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-13 15:36:20 - INFO - 📈    📄 Arquivo: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-153614.xlsx
+2025-06-13 15:36:20 - INFO - 📈    🕐 Modificado: 13/06/2025 15:36:15
+2025-06-13 15:36:20 - INFO -    ✅ Arquivo encontrado: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-153614.xlsx
+2025-06-13 15:36:20 - INFO - 📊 Etapa 2: Lendo planilha Excel...
+2025-06-13 15:36:20 - INFO - 📈    📊 Planilha carregada: 26 registros, 39 colunas
+2025-06-13 15:36:20 - INFO - 📈    ✅ Estrutura da planilha validada
+2025-06-13 15:36:20 - INFO - 💾 Etapa 3: Salvando cópia para auditoria...
+2025-06-13 15:36:20 - INFO - 📈    💾 Cópia salva: dados_extraidos/planilhas_sienge/2025/06/sienge_N_A_20250613_153620.xlsx
+2025-06-13 15:36:20 - INFO - 🔄 Etapa 4: Processando dados conforme PDD...
+2025-06-13 15:36:20 - INFO - 📈    📊 Processamento PDD concluído:
+2025-06-13 15:36:20 - INFO - 📈       💰 Saldo total: R$ 0.00
+2025-06-13 15:36:20 - INFO - 📈       📋 Parcelas CT: 0
+2025-06-13 15:36:20 - INFO - 📈       📋 Parcelas REC/FAT: 0
+2025-06-13 15:36:20 - INFO - 📈       ⚠️ CT vencidas: 0
+2025-06-13 15:36:20 - INFO - 📈       🎯 Status: ADIMPLENTE
+2025-06-13 15:36:20 - INFO - 📈    ✅ Auditoria salva no MongoDB
+2025-06-13 15:36:20 - INFO - 📈    💾 Auditoria salva: dados_processamento/auditoria_planilhas/auditoria_N_A_20250613_153620.json
+2025-06-13 15:36:20 - INFO - 📈 ✅ Planilha processada com sucesso!
+2025-06-13 15:36:49 - INFO - 📈 ✅ Webscraping concluído - Aguardando processamento da planilha
+2025-06-13 15:37:30 - INFO - 📈 ✅ Cliente aprovado para reparcelamento
+2025-06-13 15:58:25 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 15:58:28 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 15:58:28 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 15:58:28 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 15:58:28 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 15:58:40 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 15:58:40 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 15:58:40 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 15:58:40 - INFO - 📈    📋 Título: N/A
+2025-06-13 15:58:40 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 15:58:43 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 15:58:50 - INFO - 📈 📋 Executando consulta...
+2025-06-13 15:58:53 - INFO - 📈 📊 Gerando relatório...
+2025-06-13 15:58:55 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-13 15:58:58 - INFO - 📈 💾 Exportando relatório...
+2025-06-13 15:59:15 - INFO - 📈 📋 Processando planilha baixada...
+2025-06-13 15:59:18 - INFO - 📈 Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: /Users/tiagopereiraramos/Downloads
+2025-06-13 15:59:18 - INFO - 📁 Etapa 1: Localizando arquivo baixado mais recente...
+2025-06-13 15:59:18 - INFO -    📂 Pasta Downloads RPA: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-13 15:59:18 - INFO - 📈    📄 Arquivo: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-155858.xlsx
+2025-06-13 15:59:18 - INFO - 📈    🕐 Modificado: 13/06/2025 15:58:59
+2025-06-13 15:59:18 - INFO -    ✅ Arquivo encontrado: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-155858.xlsx
+2025-06-13 15:59:18 - INFO - 📊 Etapa 2: Lendo planilha Excel...
+2025-06-13 15:59:18 - INFO - 📈    📊 Planilha carregada: 26 registros, 39 colunas
+2025-06-13 15:59:18 - INFO - 📈    ✅ Estrutura da planilha validada
+2025-06-13 15:59:18 - INFO - 💾 Etapa 3: Salvando cópia para auditoria...
+2025-06-13 15:59:18 - INFO - 📈    💾 Cópia salva: dados_extraidos/planilhas_sienge/2025/06/sienge_N_A_20250613_155918.xlsx
+2025-06-13 15:59:18 - INFO - 🔄 Etapa 4: Processando dados conforme PDD...
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 10*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 11*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 12*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 13*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 98*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 99*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 100*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 101*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 102*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 103*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 104*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 105*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 106*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 107*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 108*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 109*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 182*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 183*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 184*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 185*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 186*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 187*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 188*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 189*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: 190*
+2025-06-13 15:59:18 - INFO - 📈       ⚪ Outras classificada: NAN
+2025-06-13 15:59:18 - INFO - 📈    📊 PROCESSAMENTO PDD CONCLUÍDO:
+2025-06-13 15:59:18 - INFO - 📈       💰 Saldo total: R$ 0.00
+2025-06-13 15:59:18 - INFO - 📈       📋 Total parcelas CT: 0
+2025-06-13 15:59:18 - INFO - 📈       📋 Total parcelas REC/FAT: 0
+2025-06-13 15:59:18 - INFO - 📈       📋 Outras parcelas: 26
+2025-06-13 15:59:18 - INFO - 📈       🚨 CT vencidas NÃO quitadas: 0
+2025-06-13 15:59:18 - INFO - 📈       🎯 STATUS FINAL: ADIMPLENTE
+2025-06-13 15:59:18 - INFO - 📈    ✅ Auditoria salva no MongoDB
+2025-06-13 15:59:18 - INFO - 📈    💾 Auditoria salva: dados_processamento/auditoria_planilhas/auditoria_N_A_20250613_155918.json
+2025-06-13 15:59:18 - INFO - 📈 ✅ Planilha processada com sucesso!
+2025-06-13 15:59:54 - INFO - 📈 ✅ Webscraping concluído - Aguardando processamento da planilha
+2025-06-13 15:59:58 - INFO - 📈 🔍 VALIDAÇÃO RIGOROSA PDD - Cliente: Cheila Soares Paiva
+2025-06-13 15:59:58 - INFO - 📈    📊 Total parcelas CT encontradas: 0
+2025-06-13 15:59:58 - INFO - 📈    🎯 RESULTADO CONTAGEM: 0 parcelas CT vencidas não quitadas
+2025-06-13 15:59:58 - INFO - 📈    ✅ CLASSIFICAÇÃO: Cliente apto para reparcelamento - 0 parcelas CT vencidas (< 3 limite PDD)
+2025-06-13 16:10:57 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-13 16:11:00 - INFO - 📈 🚀 INICIANDO RPA SIENGE
+2025-06-13 16:11:00 - INFO - 📈    📋 Contrato: N/A
+2025-06-13 16:11:00 - INFO - 📈    👤 Cliente: Cheila Soares Paiva
+2025-06-13 16:11:00 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-13 16:11:11 - INFO - 📈 ✅ Login no Sienge realizado com sucesso
+2025-06-13 16:11:11 - INFO - 📈 Consultando relatórios do cliente: Cheila Soares Paiva
+2025-06-13 16:11:11 - INFO - 📈 📊 Consultando saldo devedor presente para: Cheila Soares Paiva
+2025-06-13 16:11:11 - INFO - 📈    📋 Título: N/A
+2025-06-13 16:11:11 - INFO - 📈 🧭 Navegando para: https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor
+2025-06-13 16:11:14 - INFO - 📈 🔍 Pesquisando cliente...
+2025-06-13 16:11:22 - INFO - 📈 📋 Executando consulta...
+2025-06-13 16:11:25 - INFO - 📈 📊 Gerando relatório...
+2025-06-13 16:11:27 - INFO - 📈 📁 Selecionando formato Excel...
+2025-06-13 16:11:30 - INFO - 📈 💾 Exportando relatório...
+2025-06-13 16:11:43 - INFO - 📈 📋 Processando planilha baixada...
+2025-06-13 16:11:45 - INFO - 📈 Variável RPA_DOWNLOADS_PATH não definida. Usando pasta Downloads padrão: /Users/tiagopereiraramos/Downloads
+2025-06-13 16:11:45 - INFO - 📁 Etapa 1: Localizando arquivo baixado mais recente...
+2025-06-13 16:11:45 - INFO -    📂 Pasta Downloads RPA: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS
+2025-06-13 16:11:45 - INFO - 📈    📄 Arquivo: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-161136.xlsx
+2025-06-13 16:11:45 - INFO - 📈    🕐 Modificado: 13/06/2025 16:11:37
+2025-06-13 16:11:45 - INFO -    ✅ Arquivo encontrado: /Users/tiagopereiraramos/Downloads/RPA_DOWNLOADS/saldo_devedor_presente-20250613-161136.xlsx
+2025-06-13 16:11:45 - INFO - 📊 Etapa 2: Lendo planilha Excel...
+2025-06-13 16:11:45 - INFO - 📈    📊 Planilha carregada: 26 registros, 39 colunas
+2025-06-13 16:11:45 - INFO - 📈    ✅ Estrutura da planilha validada
+2025-06-13 16:11:45 - INFO - 💾 Etapa 3: Salvando cópia para auditoria...
+2025-06-13 16:11:45 - INFO - 📈    💾 Cópia salva: dados_extraidos/planilhas_sienge/2025/06/sienge_N_A_20250613_161145.xlsx
+2025-06-13 16:11:45 - INFO - 🔄 Etapa 4: Processando dados conforme PDD...
+2025-06-13 16:11:45 - INFO - 📈    🔍 APLICANDO REGRAS PDD OFICIAIS (Seção 9.1.1):
+2025-06-13 16:11:45 - INFO - 📈       📋 Total de registros: 26
+2025-06-13 16:11:45 - INFO - 📈       📊 Colunas disponíveis: ['Título', 'Parcela/Sequencial', 'Parcela/Condição', 'Cód. empresa', 'Empresa', 'Cód. centro de custo', 'Centro de custo', 'Documento', 'Nº documento', 'Cód. cliente', 'Cliente', 'Status da parcela', 'Tipo condição', 'Data vencimento', 'Valor original', 'Indexador', 'Correção monetária', 'Juros contratuais', 'Valor atualizado', 'Taxa administrativa', 'Seguro', 'Valor corrigido', 'Data base de juros', 'Juros %', 'Tipo de juros', 'Data base correção', 'Data correção', 'Dias para desconto VP', 'Juros VP %', 'Valor presente', 'Valor desconto comercial', 'Dias de atraso', 'Multa %', 'Juros de mora', 'Valor de acréscimo', 'Valor a receber', 'Data da baixa', 'Valor da baixa', 'Recebimento líquido']
+2025-06-13 16:11:45 - INFO - 📈       📊 Status encontrados: ['Paga']
+2025-06-13 16:11:45 - INFO - 📈       📋 Tipos de documento: ['CT']
+2025-06-13 16:11:45 - INFO - 📈    📋 REGRA 1 PDD: Filtrando Status 'A vencer'...
+2025-06-13 16:11:45 - INFO - 📈       ✅ Parcelas 'A vencer': 0 de 26
+2025-06-13 16:11:45 - INFO - 📈    📋 REGRA 2 PDD: Classificando por coluna 'Documento'...
+2025-06-13 16:11:45 - INFO - 📈       🔶 Parcelas CT identificadas: 0
+2025-06-13 16:11:45 - INFO - 📈       🔷 Parcelas REC/FAT identificadas: 0
+2025-06-13 16:11:45 - INFO - 📈       ⚪ Outras parcelas: 0
+2025-06-13 16:11:45 - INFO - 📈    🚨 REGRA 3 PDD: Verificando inadimplência CT...
+2025-06-13 16:11:45 - INFO - 📈       🚨 CT vencidas encontradas: 0
+2025-06-13 16:11:45 - INFO - 📈    💰 REGRA 4 PDD: Calculando valores conforme PDD...
+2025-06-13 16:11:45 - INFO - 📈    📊 REGRA 5 PDD: Contando parcelas conforme PDD...
+2025-06-13 16:11:45 - INFO - 📈    📊 PROCESSAMENTO PDD CONCLUÍDO:
+2025-06-13 16:11:45 - INFO - 📈       💰 Saldo total: R$ 0.00
+2025-06-13 16:11:45 - INFO - 📈       📋 Total parcelas CT: 0
+2025-06-13 16:11:45 - INFO - 📈       📋 Total parcelas REC/FAT: 0
+2025-06-13 16:11:45 - INFO - 📈       📋 Outras parcelas: 0
+2025-06-13 16:11:45 - INFO - 📈       🚨 CT vencidas NÃO quitadas: 0
+2025-06-13 16:11:45 - INFO - 📈       🎯 STATUS FINAL: ADIMPLENTE
+2025-06-13 16:11:45 - INFO - 📈       📅 Dia comum de vencimento: N/A
+2025-06-13 16:11:45 - INFO - 📈    ⚠️ MongoDB indisponível: cannot encode object: np.int64(0), of type: <class 'numpy.int64'>
+2025-06-13 16:11:45 - INFO - 📈    💾 Auditoria salva: dados_processamento/auditoria_planilhas/auditoria_N_A_20250613_161145.json
+2025-06-13 16:11:45 - INFO - 📈 ✅ Planilha processada com sucesso!
+2025-06-13 16:12:03 - INFO - 📈 ✅ Webscraping concluído - Aguardando processamento da planilha
+2025-06-13 16:12:08 - INFO - 📈 🔍 VALIDAÇÃO RIGOROSA PDD - Cliente: Cheila Soares Paiva
+2025-06-13 16:12:08 - INFO - 📈    📊 Total parcelas CT encontradas: 0
+2025-06-13 16:12:08 - INFO - 📈    🎯 RESULTADO CONTAGEM: 0 parcelas CT vencidas não quitadas
+2025-06-13 16:12:08 - INFO - 📈    ✅ CLASSIFICAÇÃO: Cliente apto para reparcelamento - 0 parcelas CT vencidas (< 3 limite PDD)
+2025-06-13 16:12:28 - INFO - 📈 Processando reparcelamento no Sienge

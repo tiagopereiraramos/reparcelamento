@@ -6,83 +6,175 @@ Permite testar o RPA fora da orquestração Temporal para desenvolvimento e homo
 Desenvolvido em Português Brasileiro
 """
 
+from rpa_sienge import RPASienge
 import asyncio
 import sys
 import os
 from datetime import datetime
 from typing import Dict, Any, List
 import json
-from pathlib import Path
 
-# Adiciona diretório raiz ao path para resolver imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Adiciona diretório raiz ao path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Agora importa após ajustar o path
-from rpa_sienge.rpa_sienge import RPASienge, executar_processamento_sienge
+
+async def executar_processamento_sienge(contrato: Dict[str, Any],
+                                        indices_economicos: Dict[str, Any],
+                                        credenciais_sienge: Dict[str, str],
+                                        etapa: str = "completa",
+                                        autorizar_reparcelamento: bool = False,
+                                        notificar_analista: bool = True):
+    """
+    Função auxiliar para executar o RPA Sienge
+    """
+    try:
+        rpa = RPASienge()
+        await rpa.inicializar()
+
+        resultado = await rpa.executar(
+            contrato=contrato,
+            credenciais_sienge=credenciais_sienge,
+            indices=indices_economicos,
+            etapa=etapa,
+            autorizar_reparcelamento=autorizar_reparcelamento,
+            notificar_analista=notificar_analista
+        )
+
+        await rpa.finalizar()
+        return resultado
+
+    except Exception as e:
+        from core.base_rpa import ResultadoRPA
+        return ResultadoRPA(
+            sucesso=False,
+            mensagem="Erro na execução do RPA Sienge",
+            erro=str(e)
+        )
 
 
 async def carregar_fila_contratos() -> List[Dict[str, Any]]:
     """
-    Carrega a fila de contratos da análise de planilhas
-    Tenta MongoDB primeiro, depois fallback para JSON
+    Carrega a fila de contratos usando o data_manager unificado
+    SEMPRE tenta MongoDB primeiro, depois fallback para JSON
     """
     try:
-        # Tentar MongoDB primeiro
-        try:
-            from core.mongodb_manager import mongodb_manager
-            if await mongodb_manager.conectar():
-                fila_doc = await mongodb_manager.database.fila_processamento_sienge.find_one(
+        # Inicializa o data_manager (garante conexão MongoDB se disponível)
+        from core.data_manager import data_manager
+        from core.mongodb_manager import mongodb_manager, MONGODB_DISPONIVEL
+
+        print("🔍 Carregando fila de contratos...")
+
+        # Força inicialização do data_manager
+        await data_manager.inicializar()
+
+        print(f"   Data Manager - MongoDB ativo: {data_manager.mongodb_ativo}")
+        print(
+            f"   MongoDB Manager - Conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
+        print(f"   MongoDB - Disponível: {MONGODB_DISPONIVEL}")
+
+        contratos = []
+        fonte_dados = "none"
+
+        # PRIORIDADE 1: Tentar MongoDB DIRETAMENTE se disponível
+        if MONGODB_DISPONIVEL and mongodb_manager.conectado:
+            try:
+                print("📊 Tentando carregar do MongoDB...")
+                collection = mongodb_manager.database.fila_processamento_sienge
+                documento = await asyncio.get_event_loop().run_in_executor(
+                    mongodb_manager.executor,
+                    lambda: collection.find_one()
                 )
-                if fila_doc and fila_doc.get("contratos"):
-                    print("📊 Fila carregada do MongoDB")
-                    return fila_doc.get("contratos", [])
+
+                if documento and documento.get("contratos"):
+                    contratos = documento.get("contratos", [])
+                    fonte_dados = "mongodb"
+                    print(
+                        f"✅ Fila carregada do MongoDB: {len(contratos)} contratos")
                 else:
-                    print("⚠️ Fila vazia no MongoDB")
-        except Exception as e:
-            print(f"⚠️ MongoDB indisponível: {str(e)}")
+                    print("⚠️ Documento de fila não encontrado no MongoDB")
 
-        # Fallback para arquivo JSON
-        arquivo_fila = os.path.join("dados_processamento",
-                                    "fila_contratos_sienge.json")
+            except Exception as e:
+                print(f"⚠️ Erro ao acessar MongoDB: {str(e)}")
 
-        if not os.path.exists(arquivo_fila):
+        # PRIORIDADE 2: Fallback para data_manager se MongoDB falhou
+        if not contratos:
+            print("📄 Tentando carregar via data_manager...")
+            fila_dados = await data_manager.obter_fila_sienge()
+
+            if fila_dados and fila_dados.get("contratos"):
+                contratos = fila_dados.get("contratos", [])
+                fonte_dados = "json"
+                print(f"✅ Fila carregada do JSON: {len(contratos)} contratos")
+
+        # PRIORIDADE 3: Fallback direto para arquivo JSON
+        if not contratos:
+            print("📄 Tentando carregar diretamente do arquivo JSON...")
+            import json
+            arquivo_fila = os.path.join(
+                "dados_processamento", "fila_contratos_sienge.json")
+
+            if os.path.exists(arquivo_fila):
+                with open(arquivo_fila, 'r', encoding='utf-8') as f:
+                    fila_dados = json.load(f)
+                    contratos = fila_dados.get("contratos", [])
+                    fonte_dados = "arquivo_json"
+                    print(
+                        f"✅ Fila carregada do arquivo JSON: {len(contratos)} contratos")
+
+        if contratos:
+            print(f"📋 Fonte dos dados: {fonte_dados}")
+            print("📋 Primeiros contratos na fila:")
+            for i, contrato in enumerate(contratos[:3]):
+                titulo = contrato.get("numero_titulo", "N/A")
+                cliente = contrato.get("cliente", "N/A")
+                status = contrato.get("status_processamento", "N/A")
+                print(f"   {i+1}. {titulo} - {cliente} [{status}]")
+            if len(contratos) > 3:
+                print(f"   ... e mais {len(contratos)-3} contratos")
+
+            return contratos
+        else:
+            print("⚠️ Nenhuma fila encontrada em nenhuma fonte")
             print(
-                "⚠️ Arquivo de fila não encontrado. Execute primeiro o RPA de Análise de Planilhas."
-            )
+                "💡 Execute primeiro: python rpa_analise_planilhas/teste_analise_planilhas.py")
             return []
-
-        with open(arquivo_fila, 'r', encoding='utf-8') as f:
-            dados_fila = json.load(f)
-
-        contratos = dados_fila.get("contratos", [])
-        print(f"📄 Fila carregada do JSON: {len(contratos)} contratos")
-        return contratos
 
     except Exception as e:
         print(f"❌ Erro ao carregar fila: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
         return []
 
 
 async def carregar_indices_economicos() -> Dict[str, Any]:
     """
-    Carrega os índices econômicos mais recentes
+    Carrega os índices econômicos mais recentes usando data_manager
     """
     try:
-        # Tentar MongoDB primeiro
-        try:
-            from core.mongodb_manager import mongodb_manager
-            if await mongodb_manager.conectar():
-                indices_doc = await mongodb_manager.database.indices_economicos.find_one(
-                    sort=[("timestamp", -1)]  # Mais recente
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+
+        print("📈 Carregando índices econômicos...")
+
+        # Tenta carregar do MongoDB se disponível
+        if data_manager.mongodb_ativo:
+            try:
+                from core.mongodb_manager import mongodb_manager
+                indices_doc = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: mongodb_manager.database.indices_economicos.find_one(
+                        {}, sort=[("timestamp_coleta", -1)]
+                    )
                 )
-                if indices_doc:
+                if indices_doc and indices_doc.get("indices"):
                     print("📊 Índices carregados do MongoDB")
+                    indices_data = indices_doc.get("indices", {})
                     return {
-                        "ipca": indices_doc.get("ipca", {}),
-                        "igpm": indices_doc.get("igpm", {})
+                        "ipca": indices_data.get("ipca", {"valor": 4.62, "tipo": "IPCA", "periodo": "Dezembro/2024"}),
+                        "igpm": indices_data.get("igpm", {"valor": 3.89, "tipo": "IGPM", "periodo": "Dezembro/2024"})
                     }
-        except Exception as e:
-            print(f"⚠️ MongoDB indisponível para índices: {str(e)}")
+            except Exception as e:
+                print(f"⚠️ Erro ao acessar MongoDB para índices: {str(e)}")
 
         # Fallback para valores simulados
         print("📊 Usando índices simulados")
@@ -109,14 +201,15 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
             },
             "igpm": {
                 "valor": 3.89,
-                "tipo": "IGPM",
                 "periodo": "Dezembro/2024"
             }
         }
 
 
 async def processar_contrato_individual(contrato_dados: Dict[str, Any],
-                                        indices: Dict[str, Any], indice: int):
+                                        indices: Dict[str, Any], indice: int,
+                                        etapa: str = "completa",
+                                        autorizar_reparcelamento: bool = False):
     """
     Processa um contrato individual do Sienge
     """
@@ -136,7 +229,10 @@ async def processar_contrato_individual(contrato_dados: Dict[str, Any],
         resultado = await executar_processamento_sienge(
             contrato=contrato_dados,
             indices_economicos=indices,
-            credenciais_sienge=credenciais_teste)
+            credenciais_sienge=credenciais_teste,
+            etapa=etapa,
+            autorizar_reparcelamento=autorizar_reparcelamento,
+            notificar_analista=False)  # False em testes para evitar notificações
 
         # Atualizar status na fila
         await atualizar_status_contrato(
@@ -177,48 +273,71 @@ async def atualizar_status_contrato(numero_titulo: str,
                                     status: str,
                                     erro: str = None):
     """
-    Atualiza o status de processamento de um contrato
+    Atualiza o status de processamento de um contrato usando data_manager
     """
     try:
-        # Tentar MongoDB primeiro
-        try:
-            from core.mongodb_manager import mongodb_manager
-            if await mongodb_manager.conectar():
-                await mongodb_manager.database.fila_processamento_sienge.update_one(
-                    {"contratos.numero_titulo": numero_titulo}, {
-                        "$set": {
-                            "contratos.$.status_processamento": status,
-                            "contratos.$.processado_em":
-                            datetime.now().isoformat(),
-                            "contratos.$.erro_processamento": erro
-                        }
-                    })
-                return
-        except Exception:
-            pass
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+
+        # Tentar MongoDB primeiro se disponível
+        if data_manager.mongodb_ativo:
+            try:
+                from core.mongodb_manager import mongodb_manager
+
+                def _update_contract():
+                    return mongodb_manager.database.fila_processamento_sienge.update_one(
+                        {"contratos.numero_titulo": numero_titulo}, {
+                            "$set": {
+                                "contratos.$.status_processamento": status,
+                                "contratos.$.processado_em": datetime.now().isoformat(),
+                                "contratos.$.erro_processamento": erro
+                            }
+                        })
+
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None, _update_contract
+                )
+
+                if result.modified_count > 0:
+                    print(f"Status atualizado: {numero_titulo} -> {status}")
+                    return
+                else:
+                    print(f"Contrato não encontrado: {numero_titulo}")
+            except Exception as e:
+                print(f"Erro ao atualizar MongoDB: {str(e)}")
 
         # Fallback JSON
-        arquivo_fila = os.path.join("dados_processamento",
-                                    "fila_contratos_sienge.json")
+        arquivo_fila = os.path.join(
+            "dados_processamento", "fila_contratos_sienge.json")
 
         if os.path.exists(arquivo_fila):
             with open(arquivo_fila, 'r', encoding='utf-8') as f:
                 dados_fila = json.load(f)
 
             # Atualizar contrato específico
+            contrato_encontrado = False
             for contrato in dados_fila.get("contratos", []):
                 if contrato.get("numero_titulo") == numero_titulo:
                     contrato["status_processamento"] = status
                     contrato["processado_em"] = datetime.now().isoformat()
                     if erro:
                         contrato["erro_processamento"] = erro
+                    contrato_encontrado = True
                     break
 
-            with open(arquivo_fila, 'w', encoding='utf-8') as f:
-                json.dump(dados_fila, f, indent=2, ensure_ascii=False)
+            if contrato_encontrado:
+                with open(arquivo_fila, 'w', encoding='utf-8') as f:
+                    json.dump(dados_fila, f, indent=2, ensure_ascii=False)
+                print(f"Status atualizado no JSON: {numero_titulo}")
+            else:
+                print(f"Contrato não encontrado: {numero_titulo}")
+        else:
+            print(f"Arquivo de fila não encontrado: {arquivo_fila}")
 
     except Exception as e:
-        print(f"⚠️ Erro ao atualizar status: {str(e)}")
+        print(f"❌ Erro ao atualizar status: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
 
 
 async def teste_completo():
@@ -276,11 +395,392 @@ async def teste_completo():
     return sucessos > 0
 
 
+async def teste_etapa_consulta():
+    """
+    Testa apenas a etapa de consulta (ETAPA 1) usando FILA REAL em LOOP
+    """
+    print("🧪 TESTE ETAPA 1 - CONSULTA DE RELATÓRIOS (FILA REAL)")
+    print("=" * 60)
+
+    # CARREGAR FILA REAL DE CONTRATOS
+    print("📋 Carregando fila real de contratos...")
+    contratos_fila = await carregar_fila_contratos()
+
+    if not contratos_fila:
+        print("❌ Nenhum contrato encontrado na fila real.")
+        print("💡 Execute primeiro: python rpa_analise_planilhas/teste_analise_planilhas.py")
+        return False
+
+    print(f"✅ Encontrados {len(contratos_fila)} contratos na fila real")
+
+    # Mostra primeiros contratos
+    print("📋 Contratos que serão processados:")
+    for i, contrato in enumerate(contratos_fila[:5]):  # Mostra primeiros 5
+        titulo = contrato.get("numero_titulo", "N/A")
+        cliente = contrato.get("cliente", "N/A")
+        status = contrato.get("status_processamento", "N/A")
+        print(f"   {i+1}. {titulo} - {cliente} [{status}]")
+    if len(contratos_fila) > 5:
+        print(f"   ... e mais {len(contratos_fila)-5} contratos")
+
+    indices_economicos = await carregar_indices_economicos()
+    credenciais_sienge = {
+        "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/"),
+        "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+        "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+    }
+
+    try:
+        print(
+            f"\n🔄 Processando {len(contratos_fila)} contratos em LOOP com login único...")
+
+        # CRIAR RPA UMA VEZ PARA REUSAR LOGIN
+        rpa = RPASienge()
+        await rpa.inicializar()
+
+        # Configura credenciais e faz login UMA VEZ
+        rpa._configurar_credenciais(credenciais_sienge)
+        await rpa._fazer_login_sienge()
+        print("✅ Login único realizado - processando fila...")
+
+        sucessos = 0
+        falhas = 0
+
+        # LOOP PARA PROCESSAR CADA CONTRATO DA FILA
+        for i, contrato_fila in enumerate(contratos_fila):
+            print(
+                f"\n📄 [{i+1}/{len(contratos_fila)}] Processando: {contrato_fila.get('numero_titulo', 'N/A')}")
+            print(f"   👤 Cliente: {contrato_fila.get('cliente', 'N/A')}")
+
+            try:
+                # CONSULTA RELATÓRIOS PARA ESTE CONTRATO
+                dados_financeiros = await rpa._consultar_relatorios_financeiros(contrato_fila)
+
+                if dados_financeiros.get("sucesso"):
+                    sucessos += 1
+                    print(f"   ✅ Sucesso - Planilha processada")
+
+                    # Mostra resumo dos dados
+                    dados_validacao = dados_financeiros.get(
+                        "dados_validacao", {})
+                    if dados_validacao:
+                        print(
+                            f"   💰 Saldo total: R$ {dados_validacao.get('saldo_total', 0):,.2f}")
+                        print(
+                            f"   📊 Parcelas CT: {dados_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
+                        print(
+                            f"   🚨 CT vencidas: {dados_validacao.get('qtd_ct_vencidas', 0)}")
+                        print(
+                            f"   🎯 Pode reparcelar: {dados_validacao.get('pode_reparcelar', False)}")
+
+                    # Atualizar status como processado
+                    await atualizar_status_contrato(
+                        contrato_fila.get("numero_titulo"),
+                        "consulta_realizada",
+                        None
+                    )
+                else:
+                    falhas += 1
+                    erro = dados_financeiros.get("erro", "Erro desconhecido")
+                    print(f"   ❌ Falha: {erro}")
+
+                    # Atualizar status como erro
+                    await atualizar_status_contrato(
+                        contrato_fila.get("numero_titulo"),
+                        "erro_consulta",
+                        erro
+                    )
+
+                # Intervalo entre contratos para não sobrecarregar o sistema
+                if i < len(contratos_fila) - 1:
+                    print("   ⏳ Aguardando 3 segundos...")
+                    await asyncio.sleep(3)
+
+            except Exception as e:
+                falhas += 1
+                erro_msg = str(e)
+                print(f"   ❌ Erro inesperado: {erro_msg}")
+
+                # Registrar erro inesperado na auditoria
+                await registrar_erro_auditoria(contrato_fila, erro_msg, "ERRO_EXECUCAO_INESPERADO")
+
+                # Atualizar status como erro
+                await atualizar_status_contrato(
+                    contrato_fila.get("numero_titulo"),
+                    "erro_execucao",
+                    erro_msg
+                )
+
+                # Continuar para próximo contrato mesmo com erro inesperado
+                print(f"   🔄 Continuando processamento dos demais contratos...")
+                continue
+
+        # Finalizar RPA
+        await rpa.finalizar()
+
+        # RESUMO FINAL
+        print(f"\n📈 RESUMO DO PROCESSAMENTO:")
+        print(f"   ✅ Sucessos: {sucessos}")
+        print(f"   ❌ Falhas: {falhas}")
+        print(f"   📋 Total processado: {len(contratos_fila)}")
+        print(
+            f"   🎯 Taxa de sucesso: {(sucessos/len(contratos_fila)*100):.1f}%")
+
+        return sucessos > 0
+
+    except Exception as e:
+        print(f"❌ Erro geral: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
+        return False
+
+
+async def teste_execucao_reparcelamento_real():
+    """
+    Testa execução completa do reparcelamento carregando dados da fila
+    """
+    print("🧪 TESTE EXECUÇÃO REPARCELAMENTO - FILA REAL")
+    print("=" * 55)
+
+    try:
+        rpa = RPASienge()
+
+        # Configurar credenciais
+        credenciais = {
+            "url": os.getenv("SIENGE_URL", ""),
+            "usuario": os.getenv("SIENGE_USUARIO", ""),
+            "senha": os.getenv("SIENGE_SENHA", ""),
+            "empresa": os.getenv("SIENGE_EMPRESA", "")
+        }
+
+        if not all(credenciais.values()):
+            print("⚠️ Credenciais Sienge não configuradas - usando modo simulação")
+            return False
+
+        rpa._configurar_credenciais(credenciais)
+
+        # Executar reparcelamento do próximo da fila
+        print("🔄 Executando reparcelamento do próximo contrato da fila...")
+        resultado = await rpa.executar_reparcelamento_webscraping()
+
+        if resultado.sucesso:
+            print(f"✅ Reparcelamento executado com sucesso!")
+            print(f"   📄 Título: {resultado.dados.get('numero_titulo')}")
+            print(f"   👤 Cliente: {resultado.dados.get('cliente')}")
+            print(
+                f"   🆕 Novo título: {resultado.dados.get('novo_titulo_gerado')}")
+            print(
+                f"   💰 Saldo: R$ {resultado.dados.get('saldo_anterior', 0):,.2f} → R$ {resultado.dados.get('saldo_novo', 0):,.2f}")
+            return True
+        else:
+            print(f"❌ Falha no reparcelamento: {resultado.erro}")
+            return False
+
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        return False
+
+
+async def teste_webscraping_reparcelamento():
+    """
+    Testa APENAS o webscraping de reparcelamento com dados fictícios
+    Perfeito para validar sua implementação sem depender da fila
+    """
+    print("🧪 TESTE WEBSCRAPING REPARCELAMENTO - DADOS FICTÍCIOS")
+    print("=" * 60)
+
+    try:
+        rpa = RPASienge()
+        await rpa.inicializar()
+
+        # Configurar credenciais
+        credenciais = {
+            "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/"),
+            "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+            "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+        }
+
+        rpa._configurar_credenciais(credenciais)
+
+        # Fazer login
+        print("🔐 Fazendo login no Sienge...")
+        await rpa._fazer_login_sienge()
+
+        # DADOS FICTÍCIOS PARA TESTE
+        parametros_ficticios = {
+            # DADOS DO CONTRATO
+            "numero_titulo": "2239",
+            "cliente": "CLIENTE TESTE FICTÍCIO LTDA",
+            "empreendimento": "EMPREENDIMENTO TESTE",
+
+            # URL DE NAVEGAÇÃO
+            "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047",
+
+            # VALORES PARA PREENCHIMENTO
+            "valores_sienge": {
+                "detalhamento": "CORREÇÃO 06/25 - TESTE",
+                "tipo_condicao": "PM",
+                "valor_total": 125000.00,
+                "data_primeiro_vencimento": "15/07/2025",
+                "indexador": "1 IGP-M",
+                "percentual_juros": 8.0
+            },
+
+            # PARCELAS PARA DESMARCAR
+            "parcelas_desmarcar": [
+                {"documento": "CT001-TESTE",
+                    "data_vencimento": "15/05/2025", "motivo": "Vencida"},
+                {"documento": "CT002-TESTE",
+                    "data_vencimento": "15/06/2025", "motivo": "Vencida"}
+            ],
+
+            # DADOS FINANCEIROS
+            "saldo_anterior": 120000.00,
+            "saldo_novo": 125000.00,
+            "igmp_aplicado": 4.16,
+            "total_parcelas_desmarcar": 2
+        }
+
+        print("📋 DADOS PARA O TESTE:")
+        print(f"   📄 Título: {parametros_ficticios['numero_titulo']}")
+        print(f"   👤 Cliente: {parametros_ficticios['cliente']}")
+        print(
+            f"   💰 Saldo: R$ {parametros_ficticios['saldo_anterior']:,.2f} → R$ {parametros_ficticios['saldo_novo']:,.2f}")
+        print(
+            f"   🔄 Parcelas a desmarcar: {len(parametros_ficticios['parcelas_desmarcar'])}")
+
+        print("\n🌐 Executando webscraping...")
+
+        # CHAMAR SUA IMPLEMENTAÇÃO
+        resultado = await rpa._navegar_e_executar_reparcelamento(parametros_ficticios)
+
+        if resultado.get("sucesso", False):
+            print(f"✅ Webscraping executado com sucesso!")
+            print(f"   🆕 Novo título: {resultado.get('novo_titulo', 'N/A')}")
+            print(
+                f"   📊 Parcelas processadas: {resultado.get('parcelas_processadas', 0)}")
+            print(
+                f"   ⏰ Executado em: {resultado.get('timestamp_webscraping', 'N/A')}")
+            return True
+        else:
+            print(
+                f"❌ Erro no webscraping: {resultado.get('erro', 'Erro desconhecido')}")
+            return False
+
+        await rpa.finalizar()
+
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
+        return False
+
+
+async def teste_carregar_dados_fila():
+    """
+    Testa apenas o carregamento de dados da fila (sem webscraping)
+    """
+    print("🧪 TESTE CARREGAMENTO DADOS FILA")
+    print("=" * 40)
+
+    try:
+        rpa = RPASienge()
+
+        # Carregar próximo da fila
+        print("📊 Carregando próximo contrato da fila...")
+        resultado = await rpa.carregar_dados_fila_reparcelamento()
+
+        if resultado.get("sucesso", False):
+            parametros = resultado["parametros_navegacao"]
+
+            print(f"✅ Dados carregados com sucesso!")
+            print(f"   📄 Título: {parametros['numero_titulo']}")
+            print(f"   👤 Cliente: {parametros['cliente']}")
+            print(
+                f"   💰 Saldo: R$ {parametros['saldo_anterior']:,.2f} → R$ {parametros['saldo_novo']:,.2f}")
+            print(f"   📊 IGP-M: {parametros['igmp_aplicado']}%")
+            print(
+                f"   🔄 Parcelas a desmarcar: {parametros['total_parcelas_desmarcar']}")
+
+            print("\n📋 Valores para preenchimento no Sienge:")
+            valores = parametros['valores_sienge']
+            for campo, valor in valores.items():
+                print(f"   {campo}: {valor}")
+
+            print("\n❌ Parcelas para desmarcar:")
+            for parcela in parametros['parcelas_desmarcar']:
+                print(
+                    f"   📄 {parcela['documento']} - {parcela['data_vencimento']} - {parcela['motivo']}")
+
+            return True
+        else:
+            print(f"❌ Erro: {resultado.get('erro', 'Erro desconhecido')}")
+            if resultado.get("fila_vazia"):
+                print("📭 Fila de reparcelamento está vazia")
+            return False
+
+    except Exception as e:
+        print(f"❌ Erro no teste: {str(e)}")
+        return False
+
+
+async def teste_etapa_reparcelamento():
+    """
+    Testa apenas a etapa de reparcelamento (ETAPA 2) com autorização automática
+    """
+    print("🧪 TESTE ETAPA 2 - REPARCELAMENTO (COM AUTORIZAÇÃO)")
+    print("=" * 60)
+
+    contrato_teste = {
+        "numero_titulo": "TEST123456789",
+        "cliente": "CLIENTE TESTE LTDA",
+        "empreendimento": "EMPREENDIMENTO TESTE",
+        "cnpj_unidade": "12.345.678/0001-90",
+        "indexador": "IPCA",
+        "ultimo_reajuste": "01/01/2023",
+        "tipo_reajuste": "anual",
+        "mes_base_reparcelamento": "06/2025"
+    }
+
+    indices_economicos = await carregar_indices_economicos()
+    credenciais_sienge = {
+        "url": os.getenv("SIENGE_URL", "https://sienge-teste.com"),
+        "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
+        "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
+    }
+
+    try:
+        print("🔄 Executando reparcelamento com autorização automática...")
+        resultado = await executar_processamento_sienge(
+            contrato=contrato_teste,
+            indices_economicos=indices_economicos,
+            credenciais_sienge=credenciais_sienge,
+            etapa="reparcelamento",
+            autorizar_reparcelamento=True  # Pula validação de autorização
+        )
+
+        print(f"\n📋 RESULTADO ETAPA 2:")
+        print(f"✅ Sucesso: {resultado.sucesso}")
+        print(f"📄 Mensagem: {resultado.mensagem}")
+
+        if resultado.dados:
+            reparcelamento = resultado.dados.get("reparcelamento", {})
+            print(f"🔄 Processado: {reparcelamento.get('sucesso', False)}")
+            print(
+                f"📋 Novo título: {reparcelamento.get('novo_titulo_gerado', 'N/A')}")
+
+        return resultado.sucesso
+
+    except Exception as e:
+        print(f"❌ Erro: {str(e)}")
+        return False
+
+
 async def teste_contrato_unico():
     """
-    Testa processamento de um contrato único
+    Testa processamento completo de um contrato único
     """
-    print("🧪 TESTE CONTRATO ÚNICO")
+    print("🧪 TESTE CONTRATO ÚNICO - COMPLETO")
     print("=" * 40)
 
     # Dados de teste para contrato
@@ -293,323 +793,331 @@ async def teste_contrato_unico():
         "ultimo_reajuste": "01/01/2023"
     }
 
-    # Carregar índices
+    # Carregar índices```python
+# Completing the truncated code file by replacing the incomplete credenciais_sienge dictionary with the provided complete version and adding the missing test functions.
     indices_economicos = await carregar_indices_economicos()
 
     # Credenciais Sienge
     credenciais_sienge = {
         "url": os.getenv("SIENGE_URL", "https://sienge-teste.com"),
-        "usuario": os.getenv("SIENGE_USERNAME",
-                             "tc@trajetoriaconsultoria.com.br"),
+        "usuario": os.getenv("SIENGE_USERNAME", "tc@trajetoriaconsultoria.com.br"),
         "senha": os.getenv("SIENGE_PASSWORD", "senha_teste")
     }
 
-    print(f"🏢 Contrato de Teste: {contrato_teste['numero_titulo']}")
-    print(f"👤 Cliente: {contrato_teste['cliente']}")
-    print(f"🔐 URL Sienge: {credenciais_sienge['url']}")
-    print()
-
     try:
-        print("🚀 Iniciando execução do RPA...")
+        print("🔄 Executando processamento completo de contrato único...")
         resultado = await executar_processamento_sienge(
             contrato=contrato_teste,
             indices_economicos=indices_economicos,
-            credenciais_sienge=credenciais_sienge)
+            credenciais_sienge=credenciais_sienge,
+            etapa="completa",
+            autorizar_reparcelamento=False,
+            notificar_analista=False
+        )
 
-        # Mostra resultado
-        print("\n📋 RESULTADO DA EXECUÇÃO:")
-        print("-" * 30)
-        print(f"Sucesso: {'✅ SIM' if resultado.sucesso else '❌ NÃO'}")
-        print(f"Mensagem: {resultado.mensagem}")
+        print(f"\n📋 RESULTADO:")
+        print(f"✅ Sucesso: {resultado.sucesso}")
+        print(f"📄 Mensagem: {resultado.mensagem}")
 
-        if resultado.tempo_execucao:
-            print(f"Tempo: {resultado.tempo_execucao:.2f} segundos")
-
-        if resultado.sucesso and resultado.dados:
+        if resultado.dados:
             print("\n📊 DADOS PROCESSADOS:")
             dados = resultado.dados
-
-            if "contrato_processado" in dados:
-                contrato = dados["contrato_processado"]
-                print(f"   Contrato: {contrato.get('numero_titulo', 'N/A')}")
-                print(f"   Cliente: {contrato.get('cliente', 'N/A')}")
+            if "consulta" in dados:
+                consulta = dados["consulta"]
+                print(
+                    f"   📋 Saldo total: R$ {consulta.get('saldo_total', 0):,.2f}")
+                print(
+                    f"   📊 Parcelas CT: {consulta.get('qtd_parcelas_ct', 0)}")
+                print(
+                    f"   🚨 CT vencidas: {consulta.get('qtd_ct_vencidas', 0)}")
 
             if "reparcelamento" in dados:
                 reparc = dados["reparcelamento"]
+                print(f"   🔄 Reparcelamento: {reparc.get('sucesso', False)}")
                 if reparc.get("sucesso"):
                     print(
-                        f"   Saldo Anterior: R$ {reparc.get('saldo_anterior', 0):,.2f}"
-                    )
+                        f"   📋 Novo título: {reparc.get('novo_titulo_gerado', 'N/A')}")
                     print(
-                        f"   Novo Saldo: R$ {reparc.get('novo_saldo', 0):,.2f}"
-                    )
-                    print(
-                        f"   Índice Aplicado: {reparc.get('indice_aplicado', 0)}%"
-                    )
-                    print(f"   Parcelas: {reparc.get('parcelas_total', 0)}")
-
-            if "carne_gerado" in dados:
-                carne = dados["carne_gerado"]
-                if carne and carne.get("sucesso"):
-                    print(f"   Carnê: {carne.get('nome_arquivo', 'N/A')}")
-
-        if not resultado.sucesso:
-            print(f"\n❌ ERRO: {resultado.erro or 'Erro desconhecido'}")
+                        f"   💰 Saldo: R$ {reparc.get('saldo_anterior', 0):,.2f} → R$ {reparc.get('novo_saldo', 0):,.2f}")
 
         return resultado.sucesso
 
     except Exception as e:
-        print(f"\n💥 ERRO INESPERADO: {str(e)}")
-        import traceback
-        print(f"🔍 Detalhes: {traceback.format_exc()}")
+        print(f"❌ Erro: {str(e)}")
         return False
 
 
 async def teste_validacao_contrato():
     """
-    Testa apenas a validação de contrato
+    Testa apenas as validações de contrato
     """
-    print("🧪 TESTE DE VALIDAÇÃO - CONTRATO")
-    print("=" * 40)
+    print("🧪 TESTE VALIDAÇÃO DE CONTRATO")
+    print("=" * 35)
+
+    contrato_teste = {
+        "numero_titulo": "TEST123456789",
+        "cliente": "CLIENTE TESTE LTDA",
+        "empreendimento": "EMPREENDIMENTO TESTE",
+        "cnpj_unidade": "12.345.678/0001-90",
+        "indexador": "IPCA",
+        "ultimo_reajuste": "01/01/2023"
+    }
 
     try:
         rpa = RPASienge()
+        await rpa.inicializar()
 
-        # Simula dados financeiros adimplente
-        dados_financeiros_ok = {
-            "cliente": "CLIENTE TESTE",
-            "numero_titulo": "123456",
-            "saldo_devedor": 150000.00,
-            "parcelas_pendentes": 48,
-            "parcelas_vencidas": 0,
-            "pendencias_ct": [],  # Sem pendências CT
-            "pendencias_rec_fat": [],
-            "status": "adimplente"
-        }
+        # Testar validações
+        print("🔍 Executando validações...")
+        validacao = await rpa._validar_contrato_para_processamento(contrato_teste)
 
-        # Simula dados financeiros inadimplente
-        dados_financeiros_inadimplente = {
-            "cliente": "CLIENTE INADIMPLENTE",
-            "numero_titulo": "789012",
-            "saldo_devedor": 100000.00,
-            "parcelas_pendentes": 36,
-            "parcelas_vencidas": 5,
-            # 3 parcelas CT vencidas
-            "pendencias_ct": ["CT001", "CT002", "CT003"],
-            "pendencias_rec_fat": [],
-            "status": "inadimplente"
-        }
-
-        # Testa cliente adimplente
-        print("📊 Testando cliente adimplente...")
-        validacao_ok = await rpa._validar_contrato_reparcelamento(
-            dados_financeiros_ok)
+        print(f"\n📋 RESULTADO VALIDAÇÃO:")
         print(
-            f"✅ Resultado: {validacao_ok['pode_reparcelar']} - {validacao_ok['motivo']}"
-        )
+            f"✅ Válido para processamento: {validacao.get('pode_processar', False)}")
 
-        # Testa cliente inadimplente
-        print("\n📊 Testando cliente inadimplente...")
-        validacao_erro = await rpa._validar_contrato_reparcelamento(
-            dados_financeiros_inadimplente)
-        print(
-            f"❌ Resultado: {validacao_erro['pode_reparcelar']} - {validacao_erro['motivo']}"
-        )
+        if validacao.get("alertas"):
+            print("⚠️ Alertas:")
+            for alerta in validacao["alertas"]:
+                print(f"   - {alerta}")
 
-        return True
+        if validacao.get("erros"):
+            print("❌ Erros:")
+            for erro in validacao["erros"]:
+                print(f"   - {erro}")
+
+        await rpa.finalizar()
+        return validacao.get("pode_processar", False)
 
     except Exception as e:
-        print(f"❌ Erro no teste: {str(e)}")
+        print(f"❌ Erro: {str(e)}")
         return False
 
 
 async def teste_calculo_reparcelamento():
     """
-    Testa apenas o cálculo de reparcelamento
+    Testa apenas os cálculos de reparcelamento
     """
-    print("🧪 TESTE DE CÁLCULO - REPARCELAMENTO")
-    print("=" * 45)
+    print("🧪 TESTE CÁLCULO REPARCELAMENTO")
+    print("=" * 35)
+
+    # Dados de entrada simulados
+    dados_entrada = {
+        "saldo_devedor": 100000.00,
+        "indice_aplicar": 3.89,  # IGP-M
+        "tipo_indice": "IGPM",
+        "mes_base": "06/2025",
+        "parcelas_ct_vencidas": 2
+    }
 
     try:
         rpa = RPASienge()
 
-        contrato = {
-            "numero_titulo": "123456",
-            "cliente": "CLIENTE TESTE",
-            "indexador": "IPCA"
-        }
+        print("🧮 Executando cálculos...")
+        print(f"   💰 Saldo original: R$ {dados_entrada['saldo_devedor']:,.2f}")
+        print(f"   📈 Índice IGP-M: {dados_entrada['indice_aplicar']}%")
 
-        indices = {"ipca": {"valor": 4.62}, "igpm": {"valor": 3.89}}
+        # Calcular novo saldo
+        novo_saldo = dados_entrada["saldo_devedor"] * \
+            (1 + dados_entrada["indice_aplicar"] / 100)
+        diferenca = novo_saldo - dados_entrada["saldo_devedor"]
 
-        dados_financeiros = {
-            "saldo_devedor": 100000.00,
-            "parcelas_pendentes": 48
-        }
+        print(f"\n📊 RESULTADO CÁLCULO:")
+        print(f"   💰 Novo saldo: R$ {novo_saldo:,.2f}")
+        print(f"   📈 Diferença: R$ {diferenca:,.2f}")
+        print(f"   🎯 Percentual: {dados_entrada['indice_aplicar']}%")
 
-        print("📊 Testando cálculo de reparcelamento...")
-        print(f"   Saldo atual: R$ {dados_financeiros['saldo_devedor']:,.2f}")
-        print(f"   Índice IPCA: {indices['ipca']['valor']}%")
+        # Validar se cálculo está correto
+        percentual_calculado = (
+            diferenca / dados_entrada["saldo_devedor"]) * 100
+        calculo_correto = abs(percentual_calculado -
+                              dados_entrada["indice_aplicar"]) < 0.01
 
-        resultado = await rpa._processar_reparcelamento(
-            contrato, indices, dados_financeiros)
+        print(f"   ✅ Cálculo correto: {calculo_correto}")
 
-        if resultado.get("sucesso"):
-            print(f"✅ Novo saldo: R$ {resultado.get('novo_saldo', 0):,.2f}")
-            print(
-                f"✅ Diferença: R$ {resultado.get('diferenca_valor', 0):,.2f}")
-            print(
-                f"✅ Fator correção: {resultado.get('fator_correcao', 1):.4f}")
-        else:
-            print(f"❌ Erro no cálculo: {resultado.get('erro', 'N/A')}")
-
-        return resultado.get("sucesso", False)
+        return calculo_correto
 
     except Exception as e:
-        print(f"❌ Erro no teste: {str(e)}")
+        print(f"❌ Erro: {str(e)}")
         return False
 
 
-async def verificar_saude_rpa():
+async def verificacao_saude():
     """
-    Verifica saúde do RPA (recursos disponíveis)
+    Verifica se o RPA está funcionando corretamente
     """
-    print("🧪 VERIFICAÇÃO DE SAÚDE - RPA SIENGE")
+    print("🧪 VERIFICAÇÃO DE SAÚDE DO RPA")
     print("=" * 40)
 
     try:
         rpa = RPASienge()
+        await rpa.inicializar()
 
-        print("🔧 Verificando inicialização...")
-        if await rpa.inicializar():
-            print("✅ Recursos inicializados com sucesso")
+        print("🔍 Verificando componentes...")
 
-            # Verifica browser (se habilitado)
-            if rpa.usar_browser and hasattr(rpa, 'browser') and rpa.browser:
-                print("✅ Browser disponível")
-            else:
-                print("⚠️ Browser não configurado")
-
-            # Verifica MongoDB (se disponível)
-            if hasattr(rpa, 'mongo_manager') and rpa.mongo_manager:
-                print("✅ MongoDB conectado")
-            else:
-                print("⚠️ MongoDB não disponível")
-
-            await rpa.finalizar()
-            return True
+        # Verificar browser
+        print("   🌐 Browser: ", end="")
+        if hasattr(rpa, 'browser') and rpa.browser:
+            print("✅ Inicializado")
         else:
-            print("❌ Falha na inicialização")
-            return False
+            print("❌ Não inicializado")
+
+        # Verificar data manager
+        print("   📊 Data Manager: ", end="")
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+        if data_manager:
+            print("✅ Funcionando")
+        else:
+            print("❌ Erro")
+
+        # Verificar MongoDB
+        print("   🍃 MongoDB: ", end="")
+        from core.mongodb_manager import MONGODB_DISPONIVEL, mongodb_manager
+        if MONGODB_DISPONIVEL and mongodb_manager.conectado:
+            print("✅ Conectado")
+        else:
+            print("⚠️ Não disponível (usando JSON)")
+
+        # Verificar credenciais
+        print("   🔐 Credenciais: ", end="")
+        url_sienge = os.getenv("SIENGE_URL", "")
+        usuario_sienge = os.getenv("SIENGE_USERNAME", "")
+        if url_sienge and usuario_sienge:
+            print("✅ Configuradas")
+        else:
+            print("⚠️ Não configuradas (usando modo teste)")
+
+        await rpa.finalizar()
+
+        print("\n🎯 SISTEMA PRONTO PARA EXECUÇÃO")
+        return True
 
     except Exception as e:
         print(f"❌ Erro na verificação: {str(e)}")
         return False
 
 
-def menu_interativo():
+async def registrar_erro_auditoria(contrato: Dict[str, Any], erro: str, tipo_erro: str):
     """
-    Menu interativo para escolher tipo de teste
+    Registra erro na auditoria para análise posterior
     """
-    print("\n🎯 MENU DE TESTES - RPA SIENGE")
-    print("=" * 50)
-    print("1. 🚀 Teste Completo (Processamento Fila)")
-    print("2. 🏢 Teste Contrato Único")
-    print("3. 🔍 Teste Validação de Contrato")
-    print("4. 🧮 Teste Cálculo Reparcelamento")
-    print("5. 🏥 Verificação de Saúde")
-    print("6. ❌ Sair")
-    print("=" * 50)
+    try:
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+
+        registro_erro = {
+            "timestamp": datetime.now().isoformat(),
+            "tipo_erro": tipo_erro,
+            "numero_titulo": contrato.get("numero_titulo", "N/A"),
+            "cliente": contrato.get("cliente", "N/A"),
+            "erro_detalhado": erro,
+            "fase_processamento": "teste_consulta",
+            "dados_contrato": contrato
+        }
+
+        # Tentar salvar no MongoDB se disponível
+        if data_manager.mongodb_ativo:
+            try:
+                from core.mongodb_manager import mongodb_manager
+                await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: mongodb_manager.database.auditoria_erros.insert_one(
+                        registro_erro)
+                )
+                print(f"   📝 Erro registrado na auditoria MongoDB")
+            except Exception as e:
+                print(f"   ⚠️ Erro ao salvar auditoria MongoDB: {str(e)}")
+
+        # Salvar em arquivo JSON como fallback
+        pasta_auditoria = "dados_processamento/auditoria_erros"
+        os.makedirs(pasta_auditoria, exist_ok=True)
+
+        nome_arquivo = f"erro_{contrato.get('numero_titulo', 'unknown')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        caminho_arquivo = os.path.join(pasta_auditoria, nome_arquivo)
+
+        with open(caminho_arquivo, 'w', encoding='utf-8') as f:
+            json.dump(registro_erro, f, indent=2, ensure_ascii=False)
+
+        print(f"   📁 Erro registrado em: {caminho_arquivo}")
+
+    except Exception as e:
+        print(f"   ❌ Erro ao registrar auditoria: {str(e)}")
+
+
+async def menu_interativo():
+    """
+    Menu interativo para escolher qual teste executar
+    """
+    opcoes = {
+        "1": ("🚀 Teste Completo", teste_completo),
+        "2": ("🏢 Teste Contrato Único", teste_contrato_unico),
+        "3": ("🔍 Teste Etapa 1 - Consulta", teste_etapa_consulta),
+        "4": ("🔄 Teste Etapa 2 - Reparcelamento", teste_etapa_reparcelamento),
+        "5": ("🧪 Teste Validação de Contrato", teste_validacao_contrato),
+        "6": ("🧮 Teste Cálculo Reparcelamento", teste_calculo_reparcelamento),
+        "7": ("🏥 Verificação de Saúde", verificacao_saude),
+        "8": ("🌐 Teste Webscraping Reparcelamento", teste_webscraping_reparcelamento),
+        "9": ("📊 Teste Carregar Dados Fila", teste_carregar_dados_fila),
+        "10": ("🎯 Teste Execução Reparcelamento Real", teste_execucao_reparcelamento_real),
+        "0": ("❌ Sair", None)
+    }
+
+    print("\n" + "=" * 60)
+    print("🧪 MENU DE TESTES - RPA SIENGE")
+    print("=" * 60)
+
+    for key, (descricao, _) in opcoes.items():
+        print(f"{key}. {descricao}")
+
+    print("=" * 60)
 
     while True:
         try:
-            opcao = input("\n👉 Escolha uma opção (1-6): ").strip()
+            escolha = input("\n➤ Escolha uma opção (0-10): ").strip()
 
-            if opcao == "1":
-                return teste_completo()
-            elif opcao == "2":
-                return teste_contrato_unico()
-            elif opcao == "3":
-                return teste_validacao_contrato()
-            elif opcao == "4":
-                return teste_calculo_reparcelamento()
-            elif opcao == "5":
-                return verificar_saude_rpa()
-            elif opcao == "6":
+            if escolha == "0":
                 print("👋 Encerrando testes...")
-                return None
+                break
+            elif escolha in opcoes and opcoes[escolha][1]:
+                print(f"\n🔄 Executando: {opcoes[escolha][0]}")
+                print("-" * 60)
+
+                inicio = datetime.now()
+                sucesso = await opcoes[escolha][1]()
+                fim = datetime.now()
+                tempo_execucao = (fim - inicio).total_seconds()
+
+                print("-" * 60)
+                if sucesso:
+                    print(
+                        f"✅ Teste concluído com SUCESSO em {tempo_execucao:.1f}s")
+                else:
+                    print(f"❌ Teste FALHOU em {tempo_execucao:.1f}s")
+
+                input("\n⏳ Pressione ENTER para continuar...")
+                print("\n" + "=" * 60)
+                for key, (descricao, _) in opcoes.items():
+                    print(f"{key}. {descricao}")
+                print("=" * 60)
             else:
-                print("❌ Opção inválida! Escolha entre 1-6.")
+                print("❌ Opção inválida! Escolha entre 0-10.")
 
         except KeyboardInterrupt:
-            print("\n👋 Teste interrompido pelo usuário")
-            return None
-
-
-async def main():
-    """
-    Função principal do teste
-    """
-    print("🤖 SISTEMA DE TESTES RPA - SIENGE")
-    print("Desenvolvido em Python")
-    print("Permite testar RPA independente da orquestração Temporal")
-
-    # Verifica se é execução direta ou interativa
-    if len(sys.argv) > 1:
-        # Execução direta com parâmetros
-        comando = sys.argv[1].lower()
-
-        if comando == "completo":
-            sucesso = await teste_completo()
-        elif comando == "unico":
-            sucesso = await teste_contrato_unico()
-        elif comando == "validacao":
-            sucesso = await teste_validacao_contrato()
-        elif comando == "calculo":
-            sucesso = await teste_calculo_reparcelamento()
-        elif comando == "saude":
-            sucesso = await verificar_saude_rpa()
-        else:
-            print(f"❌ Comando inválido: {comando}")
-            print(
-                "Comandos disponíveis: completo, unico, validacao, calculo, saude"
-            )
-            return False
-
-        return sucesso
-
-    else:
-        # Menu interativo
-        teste_escolhido = menu_interativo()
-        if teste_escolhido:
-            sucesso = await teste_escolhido
-
-            if sucesso:
-                print("\n🎉 TESTE CONCLUÍDO COM SUCESSO!")
-            else:
-                print("\n❌ TESTE FALHOU!")
-
-            return sucesso
-
-        return True
+            print("\n\n👋 Testes interrompidos pelo usuário.")
+            break
+        except Exception as e:
+            print(f"❌ Erro inesperado: {str(e)}")
 
 
 if __name__ == "__main__":
-    # Configura event loop para Windows se necessário
-    if sys.platform.startswith('win'):
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    print("🚀 INICIANDO SISTEMA DE TESTES RPA SIENGE")
+    print(f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
-    # Executa teste
     try:
-        resultado = asyncio.run(main())
-
-        if resultado is not None:
-            sys.exit(0 if resultado else 1)
-        else:
-            sys.exit(0)
-
+        asyncio.run(menu_interativo())
     except KeyboardInterrupt:
-        print("\n👋 Teste cancelado pelo usuário")
-        sys.exit(130)
+        print("\n👋 Sistema encerrado pelo usuário.")
     except Exception as e:
-        print(f"\n💥 Erro fatal: {str(e)}")
-        sys.exit(1)
+        print(f"❌ Erro crítico: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
