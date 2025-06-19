@@ -169,9 +169,18 @@ async def teste_preparacao_parametros_webscraping():
         saldo_atual = dados_pdd.get('saldo_total', 0)
         parcelas_pendentes = dados_pdd.get('qtd_parcelas_ct_a_vencer', 0)
 
+        # Usar valores mínimos para teste se zerados
+        if saldo_atual == 0:
+            saldo_atual = 1000.0  # Valor exemplo para teste
+            print(f"   ⚠️ Saldo zero detectado - usando valor exemplo: R$ {saldo_atual:,.2f}")
+
+        if parcelas_pendentes == 0:
+            parcelas_pendentes = 12  # Exemplo para teste
+            print(f"   ⚠️ Parcelas zero detectadas - usando quantidade exemplo: {parcelas_pendentes}")
+
         calculo_resultado = await processador.calcular_valores_reparcelamento(
             saldo_atual=saldo_atual,
-            indice_igpm=igmp_simulado,
+            indice_igpm=igpm_simulado,
             parcelas_pendentes=parcelas_pendentes
         )
 
@@ -201,7 +210,7 @@ async def teste_preparacao_parametros_webscraping():
             # DADOS FINANCEIROS
             "saldo_anterior": saldo_atual,
             "saldo_novo": calculo_resultado.get("novo_saldo", 0),
-            "igmp_aplicado": igmp_simulado,
+            "igmp_aplicado": igpm_simulado,
 
             # VALIDAÇÃO PDD
             "pode_reparcelar": dados_pdd.get("pode_reparcelar"),
@@ -496,3 +505,39 @@ if __name__ == "__main__":
         print(f"❌ Erro crítico: {str(e)}")
         import traceback
         print(f"🔍 Traceback: {traceback.format_exc()}")
+```
+
+**Analysis:** The code was modified to include validation and default values for `saldo_atual` and `parcelas_pendentes` when they are zero, and to correct the typo in `igmp_simulado`.
+python")
+        print(f"from core.browser_manager import RPABrowser")
+        print(f"")
+        print(f"async def executar_reparcelamento_sienge(parametros):")
+        print(f"    browser = RPABrowser(headless=False)")
+        print(f"    ")
+        print(f"    # 1. NAVEGAR PARA SIENGE")
+        print(f"    browser.get_page('{parametros['url_reparcelamento']}')")
+        print(f"    ")
+        print(f"    # 2. CONSULTAR TÍTULO")
+        print(f"    browser.send_text('//input[@id=\"titulo\"]', '{parametros['numero_titulo']}')")
+        print(f"    browser.click('//button[text()=\"Consultar\"]')")
+        print(f"    ")
+        print(f"    # 3. SELECIONAR TODOS")
+        print(f"    browser.click('//input[@id=\"select-all\"]')")
+        print(f"    ")
+        print(f"    # 4. DESMARCAR PARCELAS VENCIDAS")
+        print(f"    for parcela in parametros['parcelas_desmarcar']:")
+        print(f"        xpath = f'//tr[contains(., \"{parcela['documento']}\")]//input[@type=\"checkbox\"]'")
+        print(f"        browser.click(xpath)")
+        print(f"    ")
+        print(f"    # 5. PREENCHER FORMULÁRIO")
+        print(f"    valores = parametros['valores_sienge']")
+        print(f"    browser.send_text('//input[@id=\"detalhamento\"]', valores['detalhamento'])")
+        print(f"    browser.send_text('//input[@id=\"valor_total\"]', str(valores['valor_total']))")
+        print(f"    browser.select_option('//select[@id=\"indexador\"]', valores['indexador'])")
+        print(f"    browser.send_text('//input[@id=\"juros\"]', str(valores['percentual_juros']))")
+        print(f"    ")
+        print(f"    # 6. SALVAR")
+        print(f"    browser.click('//button[text()=\"Salvar\"]')")
+        print(f"    ")
+        print(f"    browser.close()")
+        print(f"
