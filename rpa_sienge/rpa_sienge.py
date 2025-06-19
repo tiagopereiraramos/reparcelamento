@@ -356,11 +356,9 @@ class RPASienge(BaseRPA):
                 if self.check_for_error(xpath=xpath_erro_botao):
                     erro_msg = "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
                     self.log_erro("Erro ao consultar cliente", erro_msg)
-                    self.log_progresso("Voltando à tela de consulta para próximo contrato...")
-                    return {
-                        "sucesso": False,
-                        "erro": erro_msg
-                    }
+                    self.log_progresso(
+                        "Voltando à tela de consulta para próximo contrato...")
+                    return {"sucesso": False, "erro": erro_msg}
                 # WEBSCRAPING REAL - CLICANDO EM TODOS NA BARRA PARA EXPORTAR TODOS OS REGISTROS
                 self.log_progresso("Selecionando todos os registros...")
                 self.click(
@@ -633,148 +631,156 @@ class RPASienge(BaseRPA):
             self.log_erro(erro_msg, e)
             return {"sucesso": False, "erro": erro_msg}
 
-    async def carregar_dados_fila_reparcelamento(self, numero_titulo: str = None) -> Dict[str, Any]:
+    async def carregar_dados_fila_reparcelamento(self,
+                                                 numero_titulo: str = None
+                                                 ) -> Dict[str, Any]:
         """
         Carrega dados da fila de reparcelamento do MongoDB e prepara parâmetros para webscraping
-        
+
         Args:
             numero_titulo: Número específico do título ou None para próximo da fila
-            
+
         Returns:
             Dict com todos os dados necessários para navegação no Sienge
         """
         try:
             from core.data_manager import DataManager
-            
+
             data_manager = DataManager()
-            
+
             # Se número não especificado, busca próximo da fila
             if numero_titulo is None:
-                self.log_progresso("🔍 Buscando próximo contrato da fila de reparcelamento...")
-                
+                self.log_progresso(
+                    "🔍 Buscando próximo contrato da fila de reparcelamento...")
+
                 # Buscar próximo contrato pendente na fila
                 filtro_fila = {
                     "status_processamento": "pendente",
                     "dados_financeiros.pode_reparcelar": True
                 }
-                
+
                 contrato_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
-                    "fila_reparcelamento", 
-                    filtro_fila,
-                    "timestamp_identificacao"
-                )
-                
+                    "fila_reparcelamento", filtro_fila,
+                    "timestamp_identificacao")
+
                 if not contrato_fila:
                     return {
                         "sucesso": False,
-                        "erro": "Nenhum contrato elegível encontrado na fila de reparcelamento",
+                        "erro":
+                        "Nenhum contrato elegível encontrado na fila de reparcelamento",
                         "fila_vazia": True
                     }
-                    
+
                 numero_titulo = contrato_fila["numero_titulo"]
                 self.log_progresso(f"📄 Próximo da fila: {numero_titulo}")
-            
+
             # Carregar dados completos do contrato
-            self.log_progresso(f"📊 Carregando dados completos para: {numero_titulo}")
-            
+            self.log_progresso(
+                f"📊 Carregando dados completos para: {numero_titulo}")
+
             # 1. Dados da fila de reparcelamento
             dados_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
-                "fila_reparcelamento",
-                {"numero_titulo": numero_titulo}
-            )
-            
+                "fila_reparcelamento", {"numero_titulo": numero_titulo})
+
             if not dados_fila:
                 return {
-                    "sucesso": False,
-                    "erro": f"Contrato {numero_titulo} não encontrado na fila de reparcelamento"
+                    "sucesso":
+                    False,
+                    "erro":
+                    f"Contrato {numero_titulo} não encontrado na fila de reparcelamento"
                 }
-            
+
             # 2. Dados financeiros processados
             dados_financeiros = dados_fila.get("dados_financeiros", {})
-            
+
             # 3. Obter IGPM mais recente do banco
             igpm_valor = await data_manager.obter_igpm_mais_recente()
-            
+
             if igpm_valor is None:
                 return {
                     "sucesso": False,
                     "erro": "IGPM não disponível no banco de dados",
                     "acao_requerida": "EXECUTAR_RPA_COLETA_INDICES"
                 }
-            
+
             # 4. Calcular valores de reparcelamento
             saldo_atual = dados_financeiros.get("saldo_total", 0)
-            parcelas_pendentes = dados_financeiros.get("qtd_parcelas_ct_a_vencer", 0)
-            
+            parcelas_pendentes = dados_financeiros.get(
+                "qtd_parcelas_ct_a_vencer", 0)
+
             calculo_resultado = await self.processador_regras.calcular_valores_reparcelamento(
                 saldo_atual=saldo_atual,
                 indice_igpm=igpm_valor,
-                parcelas_pendentes=parcelas_pendentes
-            )
-            
+                parcelas_pendentes=parcelas_pendentes)
+
             if not calculo_resultado.get("sucesso", False):
                 return {
                     "sucesso": False,
-                    "erro": f"Erro no cálculo: {calculo_resultado.get('erro')}",
+                    "erro":
+                    f"Erro no cálculo: {calculo_resultado.get('erro')}",
                     "dados_fila": dados_fila
                 }
-            
+
             # 5. Determinar parcelas para desmarcar
-            parcelas_ct_a_vencer = dados_financeiros.get("parcelas_ct_a_vencer_detalhes", [])
-            parcelas_desmarcar = self.processador_regras.determinar_parcelas_desmarcar(parcelas_ct_a_vencer)
-            
+            parcelas_ct_a_vencer = dados_financeiros.get(
+                "parcelas_ct_a_vencer_detalhes", [])
+            parcelas_desmarcar = self.processador_regras.determinar_parcelas_desmarcar(
+                parcelas_ct_a_vencer)
+
             # 6. Preparar parâmetros completos para navegação
             parametros_navegacao = {
                 # DADOS DO CONTRATO
                 "numero_titulo": numero_titulo,
                 "cliente": dados_fila.get("cliente", ""),
                 "empreendimento": dados_fila.get("empreendimento", ""),
-                
+
                 # URL DE NAVEGAÇÃO SIENGE
-                "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/reparcelamento/inclusao",
-                
+                "url_reparcelamento":
+                "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/reparcelamento/inclusao",
+
                 # VALORES CALCULADOS PARA PREENCHIMENTO
                 "valores_sienge": calculo_resultado.get("valores_sienge", {}),
-                
+
                 # PARCELAS PARA DESMARCAR
                 "parcelas_desmarcar": parcelas_desmarcar,
                 "total_parcelas_desmarcar": len(parcelas_desmarcar),
-                
+
                 # DADOS FINANCEIROS COMPLETOS
                 "saldo_anterior": saldo_atual,
                 "saldo_novo": calculo_resultado.get("novo_saldo", 0),
                 "fator_correcao": calculo_resultado.get("fator_correcao", 1),
                 "igpm_aplicado": igpm_valor,
-                
+
                 # VALIDAÇÃO PDD
-                "pode_reparcelar": dados_financeiros.get("pode_reparcelar", False),
+                "pode_reparcelar":
+                dados_financeiros.get("pode_reparcelar", False),
                 "status_cliente": dados_financeiros.get("status_cliente", ""),
                 "qtd_ct_vencidas": dados_financeiros.get("qtd_ct_vencidas", 0),
-                
+
                 # METADADOS
                 "id_fila": dados_fila.get("_id"),
                 "timestamp_carregamento": datetime.now().isoformat()
             }
-            
+
             self.log_progresso("✅ Dados carregados e parâmetros preparados")
-            self.log_progresso(f"   💰 Saldo: R$ {saldo_atual:,.2f} → R$ {calculo_resultado.get('novo_saldo', 0):,.2f}")
+            self.log_progresso(
+                f"   💰 Saldo: R$ {saldo_atual:,.2f} → R$ {calculo_resultado.get('novo_saldo', 0):,.2f}"
+            )
             self.log_progresso(f"   📊 IGP-M: {igpm_valor}%")
-            self.log_progresso(f"   🔄 Parcelas a desmarcar: {len(parcelas_desmarcar)}")
-            
+            self.log_progresso(
+                f"   🔄 Parcelas a desmarcar: {len(parcelas_desmarcar)}")
+
             return {
                 "sucesso": True,
                 "parametros_navegacao": parametros_navegacao,
                 "dados_completos": dados_fila,
                 "calculo_detalhado": calculo_resultado
             }
-            
+
         except Exception as e:
             erro_msg = f"Erro ao carregar dados da fila: {str(e)}"
             self.log_erro(erro_msg, e)
-            return {
-                "sucesso": False,
-                "erro": erro_msg
-            }
+            return {"sucesso": False, "erro": erro_msg}
 
     async def _executar_etapa_reparcelamento(
             self, contrato: Dict[str, Any], indices: Dict[str, Any],
@@ -997,147 +1003,185 @@ class RPASienge(BaseRPA):
             self.log_erro(erro_msg, e)
             return {"sucesso": False, "erro": erro_msg}
 
-    async def executar_reparcelamento_webscraping(self, numero_titulo: str = None) -> ResultadoRPA:
+    async def executar_reparcelamento_webscraping(self,
+                                                  numero_titulo: str = None
+                                                  ) -> ResultadoRPA:
         """
         MÉTODO PRINCIPAL PARA EXECUÇÃO DO REPARCELAMENTO
         Carrega dados da fila e executa webscraping no Sienge
-        
+
         Args:
             numero_titulo: Número específico do título ou None para próximo da fila
-            
+
         Returns:
             ResultadoRPA com sucesso/erro do processamento
         """
         try:
             self.log_progresso("🚀 INICIANDO EXECUÇÃO DE REPARCELAMENTO")
             self.log_progresso("=" * 50)
-            
+
             # 1. CARREGAR DADOS DA FILA
-            resultado_carga = await self.carregar_dados_fila_reparcelamento(numero_titulo)
-            
+            resultado_carga = await self.carregar_dados_fila_reparcelamento(
+                numero_titulo)
+
             if not resultado_carga.get("sucesso", False):
-                return ResultadoRPA(
-                    sucesso=False,
-                    mensagem="Falha ao carregar dados da fila",
-                    erro=resultado_carga.get("erro", "Erro desconhecido")
-                )
-            
+                return ResultadoRPA(sucesso=False,
+                                    mensagem="Falha ao carregar dados da fila",
+                                    erro=resultado_carga.get(
+                                        "erro", "Erro desconhecido"))
+
             parametros = resultado_carga["parametros_navegacao"]
-            
+
             self.log_progresso(f"📄 Processando: {parametros['numero_titulo']}")
             self.log_progresso(f"👤 Cliente: {parametros['cliente']}")
-            
+
             # 2. FAZER LOGIN NO SIENGE (se não logado)
             if not self.logado_sienge:
                 await self._fazer_login_sienge()
-            
+
             # 3. EXECUTAR WEBSCRAPING DE REPARCELAMENTO
-            resultado_webscraping = await self._navegar_e_executar_reparcelamento(parametros)
-            
+            resultado_webscraping = await self._navegar_e_executar_reparcelamento(
+                parametros)
+
             if not resultado_webscraping.get("sucesso", False):
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem="Falha no webscraping de reparcelamento",
-                    erro=resultado_webscraping.get("erro", "Erro no webscraping"),
-                    dados={"parametros_utilizados": parametros}
-                )
-            
+                    erro=resultado_webscraping.get("erro",
+                                                   "Erro no webscraping"),
+                    dados={"parametros_utilizados": parametros})
+
             # 4. ATUALIZAR STATUS NA FILA
             await self._atualizar_status_fila_reparcelamento(
-                parametros["numero_titulo"], 
-                "processado",
-                resultado_webscraping
-            )
-            
+                parametros["numero_titulo"], "processado",
+                resultado_webscraping)
+
             # 5. SALVAR NO HISTÓRICO
-            await self._salvar_reparcelamento_historico(parametros, resultado_webscraping)
-            
+            await self._salvar_reparcelamento_historico(
+                parametros, resultado_webscraping)
+
             self.log_progresso("✅ REPARCELAMENTO CONCLUÍDO COM SUCESSO")
-            
+
             return ResultadoRPA(
                 sucesso=True,
-                mensagem=f"Reparcelamento processado: {parametros['numero_titulo']}",
+                mensagem=
+                f"Reparcelamento processado: {parametros['numero_titulo']}",
                 dados={
                     "numero_titulo": parametros["numero_titulo"],
                     "cliente": parametros["cliente"],
-                    "novo_titulo_gerado": resultado_webscraping.get("novo_titulo"),
+                    "novo_titulo_gerado":
+                    resultado_webscraping.get("novo_titulo"),
                     "saldo_anterior": parametros["saldo_anterior"],
                     "saldo_novo": parametros["saldo_novo"],
-                    "parcelas_desmarcadas": len(parametros["parcelas_desmarcar"]),
+                    "parcelas_desmarcadas":
+                    len(parametros["parcelas_desmarcar"]),
                     "timestamp_processamento": datetime.now().isoformat()
-                }
-            )
-            
+                })
+
         except Exception as e:
             erro_msg = f"Erro na execução do reparcelamento: {str(e)}"
             self.log_erro(erro_msg, e)
-            
+
             # Marcar como erro na fila se conseguir identificar o título
             if 'parametros' in locals() and parametros.get("numero_titulo"):
                 await self._atualizar_status_fila_reparcelamento(
-                    parametros["numero_titulo"], 
-                    "erro",
-                    {"erro": erro_msg}
-                )
-            
-            return ResultadoRPA(
-                sucesso=False,
-                mensagem="Falha na execução do reparcelamento",
-                erro=erro_msg
-            )
+                    parametros["numero_titulo"], "erro", {"erro": erro_msg})
 
-    async def _navegar_e_executar_reparcelamento(self, parametros: Dict[str, Any]) -> Dict[str, Any]:
+            return ResultadoRPA(sucesso=False,
+                                mensagem="Falha na execução do reparcelamento",
+                                erro=erro_msg)
+
+    async def _navegar_e_executar_reparcelamento(
+            self, parametros: Dict[str, Any]) -> Dict[str, Any]:
         """
         AQUI VOCÊ IMPLEMENTA O WEBSCRAPING REAL
         Recebe todos os parâmetros calculados e executa navegação no Sienge
-        
+
         Args:
             parametros: Dict com todos os dados necessários para navegação
-            
+
         Returns:
             Dict com resultado do webscraping
         """
         try:
             self.log_progresso("🌐 Iniciando navegação para reparcelamento...")
-            
+
             # NAVEGAR PARA TELA DE REPARCELAMENTO
             url_reparcelamento = parametros["url_reparcelamento"]
             self.log_progresso(f"📍 Navegando para: {url_reparcelamento}")
             self.get_page(url_reparcelamento)
             time.sleep(3)
-            
+
             # CONSULTAR TÍTULO
             numero_titulo = parametros["numero_titulo"]
             self.log_progresso(f"🔍 Consultando título: {numero_titulo}")
-            
-            # TODO: IMPLEMENTAR WEBSCRAPING - SUA RESPONSABILIDADE
+
+            # TODO: IMPLEMENTAR WEBSCRAPING
             # 1. Localizar campo de consulta do título
             # 2. Preencher número do título
             # 3. Clicar em consultar
             # 4. Aguardar carregamento dos documentos
-            
-            # SELECIONAR TODOS OS DOCUMENTOS
-            self.log_progresso("✅ Selecionando TODOS os documentos...")
-            
-            # TODO: IMPLEMENTAR WEBSCRAPING - SUA RESPONSABILIDADE
+            with self.on_iframe(xpath='//iframe[@id="iFramePage"]'):
+                self.log_progresso("Digitando número do título...")
+                self.click(xpath="//input[@id='titulo.tituloPK.nuTitulo']")
+                self.send_text_human_like(
+                    xpath="//input[@id='titulo.tituloPK.nuTitulo']",
+                    text=numero_titulo)
+                self.log_progresso("Clicando em Consultar...")
+                self.click(
+                    xpath="//input[@type='button' and @name='btFiltrar']")
+                # Aguardar carregamento da página
+                time.sleep(4)  # Ajuste conforme necessário
+                self.log_progresso("✅ Título listado com sucesso")
+                self.click(xpath="//input[@type='button' and @name='btNext']")
+                # SELECIONAR TODOS OS DOCUMENTOS
+                self.log_progresso("✅ Selecionando TODOS os documentos...")
+                self.dismiss_alert_if_present(timeout=3)
+                self.log_progresso("   📄 Verificando tabela de títulos...")
+                # Verifica se a tabela de títulos está presente
+                self.log_progresso("   📄 Localizando tabela de títulos...")
+                tabela = self.find_element(xpath='//table[@id="TituloRow"]')
+                if tabela:
+                    self.log_progresso("   📄 Selecionando todos os documentos")
+                    radios = tabela.find_elements(
+                        By.XPATH,
+                        './/input[@type="radio" and contains(@id, "flSelecionado_") and not(ancestor::tr[contains(@style, "display: none")])]'
+                    )
+                    for radio in radios:
+                        self.log_progresso(
+                            f"   📄 Selecionando: {radio.get_attribute('id')}")
+                        radio.click()
+                self.log_progresso("✅ Todos os documentos selecionados")
+                #clicarm em continuar
+                self.log_progresso("Clicando em Próximo...")
+                self.click(
+                    xpath=
+                    '//input[@type="button" and @name="btNext" and @value="Próximo"]'
+                )
+            # DESMARCAR PARCELAS VENCIDAS
+            # TODO: IMPLEMENTAR WEBSCRAPING
             # 1. Marcar checkbox "Selecionar Todos"
-            
+
             # DESMARCAR PARCELAS ESPECÍFICAS
             parcelas_desmarcar = parametros["parcelas_desmarcar"]
-            self.log_progresso(f"❌ Desmarcando {len(parcelas_desmarcar)} parcelas vencidas...")
-            
+            self.log_progresso(
+                f"❌ Desmarcando {len(parcelas_desmarcar)} parcelas vencidas..."
+            )
+
             for parcela in parcelas_desmarcar:
-                self.log_progresso(f"   📄 Desmarcando: {parcela['documento']} - {parcela['data_vencimento']}")
-                
-                # TODO: IMPLEMENTAR WEBSCRAPING - SUA RESPONSABILIDADE
+                self.log_progresso(
+                    f"   📄 Desmarcando: {parcela['documento']} - {parcela['data_vencimento']}"
+                )
+
+                # TODO: IMPLEMENTAR WEBSCRAPING
                 # 1. Localizar checkbox da parcela específica
                 # 2. Desmarcar a parcela
-            
+
             # PREENCHER VALORES CALCULADOS
             valores_sienge = parametros["valores_sienge"]
             self.log_progresso("💰 Preenchendo valores calculados...")
-            
-            # TODO: IMPLEMENTAR WEBSCRAPING - SUA RESPONSABILIDADE
+
+            # TODO: IMPLEMENTAR WEBSCRAPING
             # Usar valores de: parametros["valores_sienge"]
             # {
             #     "detalhamento": "CORREÇÃO 06/25",
@@ -1147,21 +1191,22 @@ class RPASienge(BaseRPA):
             #     "indexador": "1 IGP-M",
             #     "percentual_juros": 8.0
             # }
-            
+
             # CONFIRMAR E SALVAR
             self.log_progresso("💾 Confirmando e salvando reparcelamento...")
-            
-            # TODO: IMPLEMENTAR WEBSCRAPING - SUA RESPONSABILIDADE
+
+            # TODO: IMPLEMENTAR WEBSCRAPING
             # 1. Clicar em Confirmar
             # 2. Aguardar processamento
             # 3. Capturar novo título gerado
             # 4. Clicar em Salvar
-            
+
             # PLACEHOLDER - SUBSTITUA PELA IMPLEMENTAÇÃO REAL
             novo_titulo_gerado = f"REP_{numero_titulo}_{datetime.now().strftime('%Y%m%d')}"
-            
-            self.log_progresso(f"✅ Reparcelamento salvo - Novo título: {novo_titulo_gerado}")
-            
+
+            self.log_progresso(
+                f"✅ Reparcelamento salvo - Novo título: {novo_titulo_gerado}")
+
             return {
                 "sucesso": True,
                 "novo_titulo": novo_titulo_gerado,
@@ -1169,47 +1214,48 @@ class RPASienge(BaseRPA):
                 "valores_aplicados": valores_sienge,
                 "timestamp_webscraping": datetime.now().isoformat()
             }
-            
+
         except Exception as e:
             erro_msg = f"Erro no webscraping: {str(e)}"
             self.log_erro(erro_msg, e)
-            return {
-                "sucesso": False,
-                "erro": erro_msg
-            }
+            return {"sucesso": False, "erro": erro_msg}
 
-    async def _atualizar_status_fila_reparcelamento(self, numero_titulo: str, novo_status: str, dados_resultado: Dict[str, Any]):
+    async def _atualizar_status_fila_reparcelamento(
+            self, numero_titulo: str, novo_status: str,
+            dados_resultado: Dict[str, Any]):
         """Atualiza status do contrato na fila de reparcelamento"""
         try:
             from core.data_manager import DataManager
             data_manager = DataManager()
-            
+
             # Atualizar documento na fila
             def _update_status():
                 collection = data_manager.mongodb_manager.database.fila_reparcelamento
-                collection.update_one(
-                    {"numero_titulo": numero_titulo},
-                    {
-                        "$set": {
-                            "status_processamento": novo_status,
-                            "processado_em": datetime.now(),
-                            "resultado_processamento": dados_resultado
-                        }
+                collection.update_one({"numero_titulo": numero_titulo}, {
+                    "$set": {
+                        "status_processamento": novo_status,
+                        "processado_em": datetime.now(),
+                        "resultado_processamento": dados_resultado
                     }
-                )
-            
-            await asyncio.get_event_loop().run_in_executor(None, _update_status)
-            self.log_progresso(f"📊 Status atualizado na fila: {numero_titulo} → {novo_status}")
-            
+                })
+
+            await asyncio.get_event_loop().run_in_executor(
+                None, _update_status)
+            self.log_progresso(
+                f"📊 Status atualizado na fila: {numero_titulo} → {novo_status}"
+            )
+
         except Exception as e:
             self.log_erro(f"Erro ao atualizar status na fila: {str(e)}", e)
 
-    async def _salvar_reparcelamento_historico(self, parametros: Dict[str, Any], resultado: Dict[str, Any]):
+    async def _salvar_reparcelamento_historico(self, parametros: Dict[str,
+                                                                      Any],
+                                               resultado: Dict[str, Any]):
         """Salva reparcelamento no histórico completo"""
         try:
             from core.data_manager import DataManager
             data_manager = DataManager()
-            
+
             documento_historico = {
                 "numero_titulo": parametros["numero_titulo"],
                 "cliente": parametros["cliente"],
@@ -1225,10 +1271,11 @@ class RPASienge(BaseRPA):
                     "resultado_webscraping": resultado
                 }
             }
-            
-            await data_manager.mongodb_manager.salvar_contrato_processado(documento_historico)
+
+            await data_manager.mongodb_manager.salvar_contrato_processado(
+                documento_historico)
             self.log_progresso("📚 Reparcelamento salvo no histórico")
-            
+
         except Exception as e:
             self.log_erro(f"Erro ao salvar no histórico: {str(e)}", e)
 
