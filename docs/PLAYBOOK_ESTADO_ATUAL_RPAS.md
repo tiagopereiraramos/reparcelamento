@@ -52,28 +52,40 @@ async def atualizar_planilha()     # ✅ Funcional
 
 ### 2️⃣ RPA ANÁLISE DE PLANILHAS
 
-**Status:** ✅ **IMPLEMENTADO COM REGRAS PDD COMPLETAS**
+**Status:** 🟡 **PARCIALMENTE IMPLEMENTADO**
 
 **Arquivo Principal:** `rpa_analise_planilhas/rpa_analise_planilhas.py`
 
 #### ✅ Funcionalidades Implementadas:
-- Leitura de planilhas Google Sheets
-- **TODAS as 8 regras PDD 9.1.1 implementadas**
-- Validação de inadimplência rigorosa
-- Processamento de dados CSV reais do Sienge
-- Sistema de auditoria completo
+- Leitura de planilhas Google Sheets ✅
+- Processamento de novos contratos da Base de Apoio ✅ 
+- Verificação de pendências IPTU ✅
+- Identificação de contratos para reajuste ✅
+- Atualização da planilha principal ✅
 
-#### 📋 Evidências das Regras PDD:
+#### 🟡 Funcionalidades ESTRUTURADAS (mas não integradas):
+- **Regras PDD 9.1.1**: Implementadas no `core/processador_regras_pdd.py` mas **NÃO INTEGRADAS** ao fluxo principal
+- Validação de inadimplência: Existe no core mas **NÃO É CHAMADA**
+- Processamento de dados CSV: Existe no core mas **NÃO É USADO** no RPA principal
+
+#### 📋 Realidade das Regras PDD:
 ```python
-# REGRAS PDD 9.1.1 - IMPLEMENTADAS NO CORE:
-def _regra_1_dia_vencimento_csv()           # ✅ Dia de vencimento
-def _regra_2_primeiro_vencimento_csv()      # ✅ 1º vencimento carnê
-def _regra_3_valor_parcela_atual_csv()      # ✅ Valor parcela atual
-def _regra_4_parcelas_irregulares_csv()     # ✅ Parcelas irregulares
-def _regra_5_parcelas_a_vencer_csv()        # ✅ Quantidade a vencer
-def _regra_6_parcelas_vencidas_ct_csv()     # ✅ CT vencidas
-def _regra_7_pendencias_rec_fat_iptu_csv()  # ✅ Pendências IPTU
-def _regra_8_validacao_inadimplencia()      # ✅ Validação final
+# REGRAS PDD 9.1.1 - EXISTEM NO CORE MAS NÃO INTEGRADAS:
+# Localização: core/processador_regras_pdd.py
+def _regra_1_dia_vencimento_csv()           # 🟡 Implementada mas não usada
+def _regra_2_primeiro_vencimento_csv()      # 🟡 Implementada mas não usada  
+def _regra_3_valor_parcela_atual_csv()      # 🟡 Implementada mas não usada
+def _regra_4_parcelas_irregulares_csv()     # 🟡 Implementada mas não usada
+def _regra_5_parcelas_a_vencer_csv()        # 🟡 Implementada mas não usada
+def _regra_6_parcelas_vencidas_ct_csv()     # 🟡 Implementada mas não usada
+def _regra_7_pendencias_rec_fat_iptu_csv()  # 🟡 Implementada mas não usada
+def _regra_8_validacao_inadimplencia()      # 🟡 Implementada mas não usada
+
+# FLUXO ATUAL DO RPA (rpa_analise_planilhas.py):
+def _processar_novos_contratos()            # ✅ Implementado e usado
+def _processar_pendencias_iptu()            # ✅ Implementado e usado
+def _identificar_contratos_reajuste()       # ✅ Implementado e usado
+# ❌ NÃO chama o processador_regras_pdd.py
 ```
 
 #### 📊 Regra Crítica de Inadimplência:
@@ -88,7 +100,11 @@ if qtd_ct_vencidas >= 3:
 - `teste_analise_planilhas.py` - **TESTE COMPLETO COM CSV REAL**
 - Testado com dados reais: Cliente SANDRO RIZZON VIEIRA - Título 2239
 
-#### 🚨 Pendências: **NENHUMA** (Regras PDD 100% implementadas)
+#### 🚨 Pendências CRÍTICAS:
+1. **INTEGRAR regras PDD ao fluxo principal** - O `processador_regras_pdd.py` existe mas não é usado
+2. **CONECTAR validação de inadimplência** - Existe no core mas não é chamada
+3. **USAR processamento CSV do Sienge** - Lógica existe mas não integrada
+4. **APLICAR as 8 regras PDD 9.1.1** - Implementadas mas órfãs no código
 
 ---
 
@@ -304,6 +320,33 @@ class RPASicredi(BaseRPA):
 
 ---
 
+## ⚠️ PROBLEMA IDENTIFICADO: COMPONENTES DESCONECTADOS
+
+### 🔍 **SITUAÇÃO REAL:**
+
+**Existe uma DESCONEXÃO entre:**
+
+1. **RPA Análise Planilhas** (`rpa_analise_planilhas.py`)
+   - ✅ Funciona com Google Sheets
+   - ✅ Processa novos contratos e IPTU
+   - ❌ **NÃO USA** as regras PDD implementadas
+
+2. **Processador Regras PDD** (`core/processador_regras_pdd.py`)
+   - ✅ Todas as 8 regras implementadas
+   - ✅ Validação de inadimplência funcionando
+   - ✅ Processa CSV do Sienge corretamente
+   - ❌ **NÃO É CHAMADO** pelo RPA principal
+
+3. **Teste Separado** (`teste_analise_planilhas.py`)
+   - ✅ Usa as regras PDD
+   - ✅ Processa dados reais
+   - ❌ **SEPARADO** do fluxo principal
+
+### 🔧 **SOLUÇÃO NECESSÁRIA:**
+**Integrar o `ProcessadorRegrasNegocio` no método `_identificar_contratos_reajuste()` do RPA principal.**
+
+---
+
 ## 🧪 COMANDOS DE TESTE DISPONÍVEIS
 
 ### RPA Individual:
@@ -354,13 +397,14 @@ python dashboard_rpa.py  # http://localhost:5000
 
 ## 🎯 CONCLUSÃO
 
-### **STATUS ATUAL: 70% IMPLEMENTADO**
+### **STATUS ATUAL: 50% IMPLEMENTADO**
 
 **✅ PONTOS FORTES:**
-- **Regras PDD 100% implementadas** e testadas
-- **Arquitetura sólida** e bem estruturada
-- **RPAs 1 e 2 totalmente funcionais**
-- **Dados reais do Sienge já processados**
+- **Regras PDD implementadas no core** (mas não integradas)
+- **Arquitetura sólida** e bem estruturada  
+- **RPA 1 totalmente funcional**
+- **RPA 2 funcionando para Google Sheets** (mas sem regras PDD)
+- **Dados reais do Sienge testados** (em teste separado)
 
 **🟡 PONTOS DE ATENÇÃO:**
 - **RPA Sienge:** Webscraping específico pendente
