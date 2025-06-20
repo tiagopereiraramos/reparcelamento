@@ -16,3 +16,12 @@ mode = "sequential"
 task = "shell.exec"
 args = "python executar_teste_sienge.py"
 
+[[workflows.workflow]]
+name = "Teste Sistema Completo"
+author = 43711956
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python testar_sistema_completo.py"
+
