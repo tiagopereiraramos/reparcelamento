@@ -1,0 +1,22 @@
+{
+  "inicio": "2025-06-20T02:25:27.898227",
+  "testes": {
+    "rpa_sienge": "❌ ERRO: invalid syntax (data_manager.py, line 715)",
+    "data_manager": "❌ ERRO: invalid syntax (data_manager.py, line 715)",
+    "processador_pdd": "✅ FUNCIONANDO",
+    "rastreamento": "❌ ERRO: invalid syntax (data_manager.py, line 715)",
+    "browser_manager": "✅ DISPONÍVEL",
+    "integracao": "❌ RPA não disponível"
+  },
+  "componentes_funcionais": [
+    "Processador PDD",
+    "Browser Manager"
+  ],
+  "problemas_encontrados": [
+    "RPA Sienge: invalid syntax (data_manager.py, line 715)",
+    "Data Manager: invalid syntax (data_manager.py, line 715)",
+    "Rastreamento: invalid syntax (data_manager.py, line 715)"
+  ],
+  "fim": "2025-06-20T02:25:29.687395",
+  "status_geral": "PROBLEMAS"
+}

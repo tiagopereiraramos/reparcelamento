@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["firefox", "geckodriver", "glibcLocales", "libxcrypt"]
 
 [workflows]
-runButton = "Project"
+runButton = "Teste Sistema Completo"
 
 [[workflows.workflow]]
 name = "Teste RPA Sienge"
