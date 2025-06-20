@@ -1,0 +1,38 @@
+================================================================================
+📘 PLAYBOOK RPA 03 - EXECUÇÃO DO REPARCELAMENTO NO SIENGE
+================================================================================
+
+▶ OBJETIVO
+Consultar dados dos contratos no ERP Sienge e realizar o lançamento do novo
+parcelamento conforme regras de negócio e planilha atualizada.
+
+▶ AÇÕES
+
+1. Login no Sienge com credenciais fornecidas.
+2. Navegar até: Financeiro > Relatórios > Saldo Devedor Presente.
+3. Para cada cliente da fila:
+   - Buscar cliente.
+   - Gerar relatório.
+   - Exportar em PDF.
+   - Extrair dados:
+     • Dia de vencimento
+     • Valor da parcela (original ou corrigido)
+     • Qtde de parcelas a vencer/vencidas
+     • Pendências (CT, REC, FAT)
+
+4. Atualizar planilha base nas colunas:
+   - PENDÊNCIAS SIENGE INAD
+   - PENDÊNCIAS SIENGE
+   - Parcelas a vencer
+   - Valor da parcela
+   - 1º vencimento do novo carnê
+
+5. Após validação por e-mail (assunto: “Lançamento de reparcelamentos autorizado”):
+   - Acessar módulo Reparcelamento > Inclusão
+   - Preencher campos com dados da planilha
+   - Confirmar e salvar
+
+▶ EXCEÇÕES
+- Contratos com valores incoerentes: logar e reportar.
+- Sem e-mail de autorização: tentar por até 5 dias, após isso encerrar processo.
+================================================================================
