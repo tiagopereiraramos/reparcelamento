@@ -1,3 +1,24 @@
-Ignora arquivos de credenciais
+#Ignora arquivos de credenciais
 credentials/*.json
 .env
+.replit
+dados_extraidos/*.xlsx
+dados_processados/*.json
+rpa_sienge/planilhas_exemplos/*.xlsx
+# Ignora arquivos de log
+logs/*.log
+# Ignora arquivos temporários
+*.tmp
+*.temp
+# Ignora arquivos de backup
+*.bak
+# Ignora arquivos de cache
+.cache
+
+# Ignora arquivos de sistema
+.DS_Store
+Thumbs.db
+dados_extraidos
+dados_processamento
+
+__pycache__/
