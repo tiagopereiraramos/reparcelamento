@@ -1,0 +1,91 @@
+🧪 INICIANDO TESTE COMPLETO DO RPA SIENGE
+============================================================
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - 
+============================================================
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - 📋 🚀 INICIANDO TESTE COMPLETO RPA SIENGE
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - ============================================================
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - 
+============================================================
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - 📋 INICIALIZAÇÃO DO SISTEMA
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - ============================================================
+2025-06-19 21:44:52,016 - TESTE.RPA.SIENGE - INFO - ℹ️ Inicializando Data Manager...
+2025-06-19 21:44:52,017 - core.data_manager - INFO - Inicializando sistema de dados...
+2025-06-19 21:44:52,017 - core.data_manager - INFO - Conectando ao MongoDB: sistema_rpa
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO - Conectando ao MongoDB...
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO - 🔍 Variáveis de ambiente:
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO -    DATABASE_URL: SET
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO -    MONGODB_URI: NOT SET
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO -    MONGO_URL: NOT SET
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO -    DATABASE_NAME: sistema_rpa
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO -    URI: mongodb://localhost:27017
+2025-06-19 21:44:52,017 - core.mongodb_manager - INFO - 🔌 Criando cliente MongoDB...
+2025-06-19 21:44:52,025 - core.mongodb_manager - INFO - 🏓 Testando conexão com ping...
+2025-06-19 21:44:52,035 - core.mongodb_manager - INFO - ✅ Ping successful: {'ok': 1.0}
+2025-06-19 21:44:52,035 - core.mongodb_manager - INFO - 🗄️ Configurando database: sistema_rpa
+2025-06-19 21:44:52,035 - core.mongodb_manager - INFO - 🧪 Testando operação na database...
+2025-06-19 21:44:52,046 - core.mongodb_manager - INFO - ✅ Teste inserção: 6854bd14ac28e835b3fb155f
+2025-06-19 21:44:52,046 - core.mongodb_manager - INFO - 🧹 Documento de teste removido
+2025-06-19 21:44:52,046 - core.mongodb_manager - INFO - ✅ MongoDB conectado com sucesso: sistema_rpa
+2025-06-19 21:44:52,046 - core.mongodb_manager - INFO - 📊 Criando índices...
+2025-06-19 21:44:52,051 - core.mongodb_manager - INFO - 🎉 MongoDB totalmente inicializado!
+2025-06-19 21:44:52,051 - core.data_manager - INFO - Sistema híbrido MongoDB + JSON ativo
+2025-06-19 21:44:52,058 - core.data_manager - INFO - Data manager inicializado com MongoDB ativo
+2025-06-19 21:44:52,062 - core.data_manager - INFO - ✅ Data manager inicializado - MongoDB ativo: True
+2025-06-19 21:44:52,062 - core.data_manager - INFO - 🔍 Estado final da inicialização:
+2025-06-19 21:44:52,062 - core.data_manager - INFO -    MONGODB_DISPONIVEL: True
+2025-06-19 21:44:52,062 - core.data_manager - INFO -    self.mongodb_ativo: True
+2025-06-19 21:44:52,062 - core.data_manager - INFO -    mongodb_manager.conectado: True
+2025-06-19 21:44:52,062 - core.data_manager - INFO -    mongodb_manager.database: SET
+2025-06-19 21:44:52,062 - TESTE.RPA.SIENGE - INFO - ✅ Data Manager inicializado
+2025-06-19 21:44:52,062 - TESTE.RPA.SIENGE - INFO - ℹ️ Inicializando Sistema de Rastreamento...
+2025-06-19 21:44:52,062 - core.rastreamento_unificado - INFO - 🔍 Rastreamento iniciado: TESTE_SIENGE_COMPLETO_20250619_214452_0626
+2025-06-19 21:44:52,062 - TESTE.RPA.SIENGE - INFO - ❌ Erro na inicialização: 'RastreamentoUnificado' object has no attribute 'iniciar_execucao'
+2025-06-19 21:44:52,062 - TESTE.RPA.SIENGE - INFO - ❌ Erro crítico durante os testes: 'RastreamentoUnificado' object has no attribute 'registrar_erro'
+2025-06-19 21:44:52,063 - TESTE.RPA.SIENGE - ERROR - Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 86, in inicializar_sistema
+    await self.rastreamento.iniciar_execucao({
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RastreamentoUnificado' object has no attribute 'iniciar_execucao'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 594, in executar_todos_testes
+    inicializacao_ok = await self.inicializar_sistema()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 108, in inicializar_sistema
+    await self.rastreamento.registrar_erro(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RastreamentoUnificado' object has no attribute 'registrar_erro'
+
+
+❌ ERRO CRÍTICO NO TESTE: 'RastreamentoUnificado' object has no attribute 'registrar_erro'
+Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 86, in inicializar_sistema
+    await self.rastreamento.iniciar_execucao({
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RastreamentoUnificado' object has no attribute 'iniciar_execucao'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 594, in executar_todos_testes
+    inicializacao_ok = await self.inicializar_sistema()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 108, in inicializar_sistema
+    await self.rastreamento.registrar_erro(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RastreamentoUnificado' object has no attribute 'registrar_erro'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 640, in main
+    relatorio = await teste.executar_todos_testes()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 619, in executar_todos_testes
+    await self.rastreamento.registrar_erro(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RastreamentoUnificado' object has no attribute 'registrar_erro'
+
+tiagopereiraramos@tiago-macbook reparcelamento % 
