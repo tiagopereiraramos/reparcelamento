@@ -1,0 +1,24 @@
+================================================================================
+📘 PLAYBOOK RPA 02 - PREPARAÇÃO DA FILA DE REPARCELAMENTO
+================================================================================
+
+▶ OBJETIVO
+Identificar, validar e preparar a fila de contratos a serem reparcelados conforme
+dados das planilhas auxiliares (Base de Apoio e Cálculo).
+
+▶ EXECUÇÃO
+1. Verificar novos contratos na aba “NOVOS CONTRATOS” da planilha de apoio.
+2. Copiar todos os registros para a aba “Base de Cálculo” da planilha principal.
+3. Validar a aba “Consulta IPTU”:
+   - Confirmar se a data da última consulta é do mês corrente.
+   - Se sim, copiar valor da coluna “IPTU PENDÊNCIAS PMFI” para a planilha principal.
+   - Se não, logar pendência e não incluir título no reparcelamento.
+
+4. Identificar contratos com reajuste agendado no mês corrente:
+   - Usar coluna “mês reajuste” como referência.
+   - Gerar log com títulos válidos e inválidos.
+
+▶ EXCEÇÕES
+- Contratos sem consulta IPTU atual: logar e excluir da fila.
+- Contratos com pendência estrutural ou dados ausentes: logar.
+================================================================================
