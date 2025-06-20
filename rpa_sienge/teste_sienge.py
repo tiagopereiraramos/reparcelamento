@@ -386,9 +386,112 @@ class TesteSiengeCompleto:
                     )
                 return False
 
-    async def teste_5_webscraping_real_opcional(self) -> bool:
+    async def teste_5_metodos_pdd_regras(self) -> bool:
         """
-        TESTE 5: Webscraping real (apenas com credenciais configuradas)
+        TESTE 5: Validação das regras PDD implementadas
+        Testa processamento completo das regras 9.1.1
+        """
+        self._log_secao("TESTE 5 - REGRAS PDD 9.1.1", 1)
+
+        resultados = {}
+
+        try:
+            # Teste 5.1: Processador de regras PDD
+            self._log_passo("Testando processador de regras PDD...")
+            try:
+                from core.processador_regras_pdd import ProcessadorRegrasNegocio
+                processador = ProcessadorRegrasNegocio()
+                
+                resultados["processador_criado"] = True
+                self._log_passo("Processador de regras criado", "SUCESSO")
+            except Exception as e:
+                self._log_passo(f"Erro ao criar processador: {str(e)}", "FALHA")
+                resultados["processador_criado"] = False
+
+            # Teste 5.2: Validação com dados simulados
+            if resultados.get("processador_criado"):
+                self._log_passo("Testando validação de inadimplência...")
+                try:
+                    import pandas as pd
+                    
+                    # Criar DataFrame simulado conforme CSV real
+                    dados_simulados = {
+                        "Título": ["000001234"] * 5,
+                        "Parcela/Condição": ["CT-001", "CT-002", "CT-003", "IPTU-2024", "CT-004"],
+                        "Documento": ["CT-001", "CT-002", "CT-003", "IPTU-2024", "CT-004"],
+                        "Cliente": ["CLIENTE TESTE"] * 5,
+                        "Status da parcela": ["PAGA", "PAGA", "A VENCER", "A VENCER", "A VENCER"],
+                        "Data vencimento": ["01/01/2024", "01/02/2024", "01/06/2025", "15/07/2025", "01/07/2025"],
+                        "Valor a receber": ["1000,00", "1000,00", "1000,00", "500,00", "1000,00"],
+                        "Valor original": ["1000,00", "1000,00", "1000,00", "500,00", "1000,00"]
+                    }
+                    
+                    df_teste = pd.DataFrame(dados_simulados)
+                    
+                    # Aplicar validação PDD
+                    resultado_validacao = processador.processar_dados_cliente_completo(
+                        df_teste, "CLIENTE TESTE", "000001234"
+                    )
+                    
+                    if resultado_validacao.get("sucesso"):
+                        self._log_passo("Validação PDD processada com sucesso", "SUCESSO")
+                        self._log_passo(f"Status cliente: {resultado_validacao.get('status_cliente')}", "INFO")
+                        self._log_passo(f"Pode reparcelar: {resultado_validacao.get('pode_reparcelar')}", "INFO")
+                        resultados["validacao_pdd"] = True
+                    else:
+                        self._log_passo("Falha na validação PDD", "FALHA")
+                        resultados["validacao_pdd"] = False
+                        
+                except Exception as e:
+                    self._log_passo(f"Erro na validação PDD: {str(e)}", "FALHA")
+                    resultados["validacao_pdd"] = False
+
+            # Teste 5.3: Cálculos financeiros
+            if resultados.get("processador_criado"):
+                self._log_passo("Testando cálculos financeiros...")
+                try:
+                    calculo_resultado = await processador.calcular_valores_reparcelamento(
+                        saldo_atual=50000.0,
+                        indice_igpm=0.5,  # 0.5% IGP-M
+                        parcelas_pendentes=12
+                    )
+                    
+                    if calculo_resultado.get("sucesso"):
+                        self._log_passo("Cálculos financeiros OK", "SUCESSO")
+                        novo_saldo = calculo_resultado.get("novo_saldo", 0)
+                        self._log_passo(f"Novo saldo calculado: R$ {novo_saldo:,.2f}", "INFO")
+                        resultados["calculos_financeiros"] = True
+                    else:
+                        erro = calculo_resultado.get("erro", "Erro desconhecido")
+                        self._log_passo(f"Falha nos cálculos: {erro}", "FALHA")
+                        resultados["calculos_financeiros"] = False
+                        
+                except Exception as e:
+                    self._log_passo(f"Erro nos cálculos: {str(e)}", "FALHA")
+                    resultados["calculos_financeiros"] = False
+
+            self.resultados_teste["teste_5_regras_pdd"] = resultados
+
+            if self.rastreamento:
+                await self.rastreamento.registrar_passo(
+                    "TESTE_5_REGRAS_PDD_CONCLUIDO",
+                    resultados
+                )
+
+            return all(resultados.values())
+
+        except Exception as e:
+            self._log_passo(f"Erro geral no teste 5: {str(e)}", "FALHA")
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro_critico(
+                    e,
+                    {"fase": "teste_5_regras_pdd", "traceback": traceback.format_exc()}
+                )
+            return False
+
+    async def teste_6_webscraping_real_opcional(self) -> bool:
+        """
+        TESTE 6: Webscraping real (apenas com credenciais configuradas)
         Executa webscraping real no Sienge se credenciais estiverem disponíveis
         """
         self._log_secao("TESTE 5 - WEBSCRAPING REAL (OPCIONAL)", 1)
@@ -564,7 +667,8 @@ class TesteSiengeCompleto:
             teste_2_ok = await self.teste_2_integracao_data_manager()
             teste_3_ok = await self.teste_3_metodos_rpa_sienge()
             teste_4_ok = await self.teste_4_simulacao_execucao_completa()
-            teste_5_ok = await self.teste_5_webscraping_real_opcional()
+            teste_5_ok = await self.teste_5_metodos_pdd_regras()
+            teste_6_ok = await self.teste_6_webscraping_real_opcional()
 
             # Relatório final
             relatorio = await self.gerar_relatorio_final()
