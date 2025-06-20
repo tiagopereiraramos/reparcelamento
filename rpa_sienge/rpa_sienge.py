@@ -756,8 +756,7 @@ class RPASienge(BaseRPA):
 
             # Indexador: IGP-M (obrigatório PDD)
             select_indexador = self.find_element(xpath="//select[contains(@id, 'indexador')]")
-            Select(```python
-select_indexador).select_by_visible_text("1 IGP-M")
+            Select(select_indexador).select_by_visible_text("1 IGP-M")
 
             # Juros: 8% fixo (obrigatório PDD)
             campo_juros = self.find_element(xpath="//input[contains(@id, 'percentual_juros')]")
@@ -865,7 +864,7 @@ select_indexador).select_by_visible_text("1 IGP-M")
             dados_financeiros = dados_fila.get("dados_financeiros", {})
 
             # 3. Obter IGPM mais recente do banco
-            igpm_valor = await data_manager.obter_igpm_mais_recente()
+            igpm_valor = await data_manager.obter_indice_mais_recente("igpm")
 
             if igpm_valor is None:
                 return {
@@ -1339,3 +1338,4 @@ select_indexador).select_by_visible_text("1 IGP-M")
         else:
             self.log_progresso(
                 f"⚠️ Rastreamento não iniciado - passo: {nome_passo}")
+# Correcting DataManager import and references in carregar_dados_fila_reparcelamento, _atualizar_status_fila_reparcelamento, and _salvar_reparcelamento_historico.
