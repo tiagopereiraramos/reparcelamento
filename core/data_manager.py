@@ -712,7 +712,6 @@ class DataManagerUnificado:
             logger.warning(f"⚠️ Erro ao carregar {arquivo}: {str(e)}")
             return default
 
-    Data manager logs simplified for production use.```text
     def _salvar_json_seguro(self, arquivo: str, dados):
         """Salva JSON com tratamento de erro"""
         try:
