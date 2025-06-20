@@ -819,8 +819,6 @@ select_indexador).select_by_visible_text("1 IGP-M")
         try:
             from core.data_manager import data_manager
 
-            data_manager = data_manager
-
             # Se número não especificado, busca próximo da fila
             if numero_titulo is None:
                 self.log_progresso(
