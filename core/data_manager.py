@@ -67,6 +67,16 @@ class DataManagerUnificado:
         database_url = os.getenv('DATABASE_URL')
         database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
 
+        # MODO TESTE LOCAL - force dados simulados
+        force_simulation = os.getenv('FORCE_SIMULATION', 'false').lower() == 'true'
+        
+        if force_simulation:
+            self.logger.info("🧪 MODO SIMULAÇÃO FORÇADA - MongoDB desabilitado para testes")
+            self.mongodb_ativo = False
+            self._garantir_estrutura_dados()
+            await self._criar_dados_simulados()
+            return
+
         if database_url:
             self.logger.info(f"Conectando ao MongoDB: {database_name}")
 
@@ -720,6 +730,47 @@ class DataManagerUnificado:
         except Exception as e:
             logger.error(f"❌ Erro ao salvar {arquivo}: {str(e)}")
             raise
+
+    async def _criar_dados_simulados(self):
+        """Cria dados simulados para testes locais"""
+        logger.info("🧪 Criando dados simulados para teste...")
+        
+        # Dados simulados de índices
+        indices_simulados = {
+            "timestamp_coleta": datetime.now().isoformat(),
+            "indices": {
+                "igpm": {"valor": "0.45", "periodo": "junho/2024"},
+                "ipca": {"valor": "0.21", "periodo": "junho/2024"}
+            },
+            "fonte_coleta": "simulacao_teste"
+        }
+        
+        # Dados de fila simulados
+        fila_simulada = {
+            "timestamp_ultima_atualizacao": datetime.now().isoformat(),
+            "total_contratos": 3,
+            "status_geral": "ativo",
+            "contratos": [
+                {
+                    "numero_titulo": "123456789",
+                    "cliente": "Cliente Teste 1",
+                    "saldo_devedor": 15000.00,
+                    "status": "pendente"
+                },
+                {
+                    "numero_titulo": "987654321", 
+                    "cliente": "Cliente Teste 2",
+                    "saldo_devedor": 25000.00,
+                    "status": "pendente"
+                }
+            ]
+        }
+        
+        # Salva dados simulados
+        self._salvar_json_seguro(self.arquivo_indices, [indices_simulados])
+        self._salvar_json_seguro(self.arquivo_fila_sienge, fila_simulada)
+        
+        logger.info("✅ Dados simulados criados com sucesso!")
 
 
 # Instância global unificada
