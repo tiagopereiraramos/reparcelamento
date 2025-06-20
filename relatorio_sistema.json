@@ -1,22 +1,22 @@
 {
-  "inicio": "2025-06-20T02:25:27.898227",
+  "inicio": "2025-06-20T02:26:54.752240",
   "testes": {
-    "rpa_sienge": "❌ ERRO: invalid syntax (data_manager.py, line 715)",
-    "data_manager": "❌ ERRO: invalid syntax (data_manager.py, line 715)",
+    "rpa_sienge": "✅ FUNCIONANDO",
+    "data_manager": "✅ FUNCIONANDO",
+    "mongodb": "⚠️ DESCONECTADO",
     "processador_pdd": "✅ FUNCIONANDO",
-    "rastreamento": "❌ ERRO: invalid syntax (data_manager.py, line 715)",
+    "rastreamento": "✅ FUNCIONANDO",
     "browser_manager": "✅ DISPONÍVEL",
-    "integracao": "❌ RPA não disponível"
+    "integracao": "⚠️ LIMITADA: Erro ao carregar dados da fila: 'DataManagerUnificado' object has no attribute 'mongodb_manager'"
   },
   "componentes_funcionais": [
+    "RPA Sienge",
+    "Data Manager",
     "Processador PDD",
+    "Rastreamento",
     "Browser Manager"
   ],
-  "problemas_encontrados": [
-    "RPA Sienge: invalid syntax (data_manager.py, line 715)",
-    "Data Manager: invalid syntax (data_manager.py, line 715)",
-    "Rastreamento: invalid syntax (data_manager.py, line 715)"
-  ],
-  "fim": "2025-06-20T02:25:29.687395",
-  "status_geral": "PROBLEMAS"
+  "problemas_encontrados": [],
+  "fim": "2025-06-20T02:27:00.689506",
+  "status_geral": "FUNCIONAL"
 }
