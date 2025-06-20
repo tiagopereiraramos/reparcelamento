@@ -1,0 +1,55 @@
+🔄 Executando: Reparcelamento Webscraping
+[20:33:31] INFO: 🧪 TESTE: REPARCELAMENTO WEBSCRAPING
+[20:33:31] INFO: ==================================================
+[20:33:31] INFO: 🌐 Testando execução completa de reparcelamento...
+[20:33:31] INFO: 🚀 Executando executar_reparcelamento_webscraping()...
+2025-06-19 20:33:31,853 - RPA.Sienge.Avancado - INFO - 📈 🚀 INICIANDO EXECUÇÃO DE REPARCELAMENTO
+2025-06-19 20:33:31,853 - RPA.Sienge.Avancado - INFO - 📈 ==================================================
+2025-06-19 20:33:31,853 - RPA.Sienge.Avancado - ERROR - ❌ Erro ao carregar dados da fila: cannot import name 'DataManager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py): cannot import name 'DataManager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+2025-06-19 20:33:31,853 - RPA.Sienge.Avancado - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 770, in carregar_dados_fila_reparcelamento
+    from core.data_manager import DataManager
+ImportError: cannot import name 'DataManager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+
+[20:33:31] ERROR: ❌ Erro no reparcelamento: Erro ao carregar dados da fila: cannot import name 'DataManager' from 'core.data_manager' (/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/core/data_manager.py)
+[20:33:31] INFO: ❌ Reparcelamento Webscraping: FALHA
+[20:33:31] INFO: 
+🔄 Executando: Etapa Completa
+[20:33:31] INFO: 🧪 TESTE: PROCESSAMENTO ETAPA COMPLETA
+[20:33:31] INFO: =============================================
+[20:33:31] INFO: 🚀 Executando etapa completa usando rpa_sienge.executar()...
+2025-06-19 20:33:31,855 - RPA.Sienge.Avancado - INFO - 📈 Iniciando RPA Sienge - Etapa: COMPLETA
+2025-06-19 20:33:31,855 - RPA.Sienge.Avancado - INFO - 📈 Contrato: 2239
+2025-06-19 20:33:31,855 - RPA.Sienge.Avancado - INFO - 📈 Cliente: SANDRO RIZZON VIEIRA
+2025-06-19 20:33:31,855 - RPA.Sienge.Avancado - INFO - 📈 Autorização automática: True
+2025-06-19 20:33:31,856 - RPA.Sienge.Avancado - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+⚠️ MongoDB não tentado: mongodb_manager.conectado=False
+2025-06-19 20:33:34,878 - RPA.Sienge.Avancado - ERROR - ❌ Erro na execução do RPA Sienge: Falha no login Sienge: 'NoneType' object has no attribute 'send_keys': Falha no login Sienge: 'NoneType' object has no attribute 'send_keys'
+2025-06-19 20:33:34,879 - RPA.Sienge.Avancado - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 248, in _fazer_login_sienge
+    xpath='(//input[@id="username"])[1]').send_keys(usuario_sienge)
+                                          ^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'send_keys'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 125, in executar
+    await self._fazer_login_sienge()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/rpa_sienge.py", line 296, in _fazer_login_sienge
+    raise Exception(f"Falha no login Sienge: {str(e)}")
+Exception: Falha no login Sienge: 'NoneType' object has no attribute 'send_keys'
+
+⚠️ MongoDB não tentado: mongodb_manager.conectado=False
+[20:33:34] ERROR: ❌ Erro na etapa completa: Erro na execução do RPA Sienge: Falha no login Sienge: 'NoneType' object has no attribute 'send_keys'
+[20:33:34] INFO: ❌ Etapa Completa: FALHA
+[20:33:34] INFO: 
+📈 RESULTADO INTEGRAÇÃO COMPLETA:
+[20:33:34] INFO:    ✅ Sucessos: 1/6
+[20:33:34] INFO:    ❌ Falhas: 5
+[20:33:34] INFO:    📊 Taxa sucesso: 16.7%
+[20:33:34] INFO: 💾 Resultado salvo: rpa_sienge/dados_processamento/testes_implementacao/integracao_completa_20250619_203322.json
+----------------------------------------------------------------------
+❌ Teste FALHOU em 9.1s
+
+⏳ Pressione ENTER para continuar...

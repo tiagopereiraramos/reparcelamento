@@ -19,7 +19,7 @@ import traceback
 # Adiciona o diretório raiz do projeto ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from rpa_sienge.rpa_sienge import RPASienge
+from rpa_sienge import RPASienge
 from core.base_rpa import ResultadoRPA
 
 
