@@ -1130,7 +1130,7 @@ class RPASienge(BaseRPA):
                 self.click(xpath="//input[@type='button' and @name='btNext']")
 
                 # Aguardar carregamento e fazer scroll para "Marcar Todos"
-                self.dismiss_alert_if_present(timeout=3)
+                time.sleep(3)  # Aguardar carregamento
                 self.log_progresso("📄 Localizando botão 'Marcar Todos'...")
 
                 # IMPLEMENTAR: Scroll até o final + "Marcar Todos"
