@@ -19,7 +19,7 @@ import traceback
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import do RPA Sienge real
-from rpa_sienge.rpa_sienge import RPASienge
+from rpa_sienge import RPASienge
 from core.base_rpa import ResultadoRPA
 
 
@@ -29,7 +29,8 @@ class TestadorRPASiengeReal:
     """
 
     def __init__(self):
-        self.pasta_resultados = Path("rpa_sienge/dados_processamento/testes_reais")
+        self.pasta_resultados = Path(
+            "rpa_sienge/dados_processamento/testes_reais")
         self.pasta_resultados.mkdir(parents=True, exist_ok=True)
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -41,10 +42,15 @@ class TestadorRPASiengeReal:
     def obter_credenciais_teste(self) -> Dict[str, str]:
         """Credenciais para teste (configure conforme necessário)"""
         return {
-            "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/8"),
-            "usuario": os.getenv("SIENGE_USUARIO", "tc@trajetoriaconsultoria.com.br"),
-            "senha": os.getenv("SIENGE_SENHA", "sua_senha_aqui"),
-            "empresa": os.getenv("SIENGE_EMPRESA", "BVRB")
+            "url":
+            os.getenv("SIENGE_URL",
+                      "https://jmservicos.sienge.com.br/sienge/8"),
+            "usuario":
+            os.getenv("SIENGE_USUARIO", "tc@trajetoriaconsultoria.com.br"),
+            "senha":
+            os.getenv("SIENGE_SENHA", "sua_senha_aqui"),
+            "empresa":
+            os.getenv("SIENGE_EMPRESA", "BVRB")
         }
 
     def criar_dados_teste(self) -> Dict[str, Any]:
@@ -72,10 +78,14 @@ class TestadorRPASiengeReal:
                 self.log("✅ Dados carregados com sucesso!")
                 self.log(f"📄 Título: {parametros['numero_titulo']}")
                 self.log(f"👤 Cliente: {parametros['cliente']}")
-                self.log(f"💰 Saldo anterior: R$ {parametros['saldo_anterior']:,.2f}")
+                self.log(
+                    f"💰 Saldo anterior: R$ {parametros['saldo_anterior']:,.2f}"
+                )
                 self.log(f"💰 Saldo novo: R$ {parametros['saldo_novo']:,.2f}")
                 self.log(f"📊 IGP-M aplicado: {parametros['igpm_aplicado']}%")
-                self.log(f"❌ Parcelas a desmarcar: {parametros['total_parcelas_desmarcar']}")
+                self.log(
+                    f"❌ Parcelas a desmarcar: {parametros['total_parcelas_desmarcar']}"
+                )
 
                 await self._salvar_resultado("carregamento_fila", resultado)
                 return True
@@ -84,9 +94,11 @@ class TestadorRPASiengeReal:
                 self.log(f"❌ Erro: {erro}", "ERROR")
 
                 if "Fila vazia" in erro:
-                    self.log("💡 Configure dados na fila de reparcelamento", "WARNING")
+                    self.log("💡 Configure dados na fila de reparcelamento",
+                             "WARNING")
                 elif "IGPM não disponível" in erro:
-                    self.log("💡 Execute o RPA de Coleta de Índices primeiro", "WARNING")
+                    self.log("💡 Execute o RPA de Coleta de Índices primeiro",
+                             "WARNING")
 
                 return False
 
@@ -112,11 +124,16 @@ class TestadorRPASiengeReal:
                 self.log("✅ Webscraping executado com sucesso!")
                 self.log(f"📄 Título processado: {dados.get('numero_titulo')}")
                 self.log(f"👤 Cliente: {dados.get('cliente')}")
-                self.log(f"🆕 Novo título gerado: {dados.get('novo_titulo_gerado')}")
-                self.log(f"💰 Valor corrigido: R$ {dados.get('saldo_novo', 0):,.2f}")
-                self.log(f"❌ Parcelas processadas: {dados.get('parcelas_desmarcadas', 0)}")
+                self.log(
+                    f"🆕 Novo título gerado: {dados.get('novo_titulo_gerado')}")
+                self.log(
+                    f"💰 Valor corrigido: R$ {dados.get('saldo_novo', 0):,.2f}")
+                self.log(
+                    f"❌ Parcelas processadas: {dados.get('parcelas_desmarcadas', 0)}"
+                )
 
-                await self._salvar_resultado("webscraping_completo", resultado.dados)
+                await self._salvar_resultado("webscraping_completo",
+                                             resultado.dados)
                 return True
             else:
                 self.log(f"❌ Erro no webscraping: {resultado.erro}", "ERROR")
@@ -140,19 +157,24 @@ class TestadorRPASiengeReal:
             self.log(f"🔍 Consultando título: {contrato['numero_titulo']}")
             self.log(f"👤 Cliente: {contrato['cliente']}")
 
-            resultado = await rpa.executar(
-                contrato=contrato,
-                credenciais_sienge=credenciais,
-                etapa="consulta"
-            )
+            resultado = await rpa.executar(contrato=contrato,
+                                           credenciais_sienge=credenciais,
+                                           etapa="consulta")
 
             if resultado.sucesso:
-                dados_financeiros = resultado.dados.get("dados_financeiros", {})
+                dados_financeiros = resultado.dados.get(
+                    "dados_financeiros", {})
 
                 self.log("✅ Consulta realizada com sucesso!")
-                self.log(f"📊 Status: {dados_financeiros.get('status_cliente', 'N/A')}")
-                self.log(f"💰 Saldo total: R$ {dados_financeiros.get('saldo_total', 0):,.2f}")
-                self.log(f"🔢 Parcelas pendentes: {dados_financeiros.get('parcelas_pendentes', 0)}")
+                self.log(
+                    f"📊 Status: {dados_financeiros.get('status_cliente', 'N/A')}"
+                )
+                self.log(
+                    f"💰 Saldo total: R$ {dados_financeiros.get('saldo_total', 0):,.2f}"
+                )
+                self.log(
+                    f"🔢 Parcelas pendentes: {dados_financeiros.get('parcelas_pendentes', 0)}"
+                )
 
                 await self._salvar_resultado("consulta", resultado.dados)
                 return True
@@ -170,11 +192,10 @@ class TestadorRPASiengeReal:
         self.log("🧪 TESTE: INTEGRAÇÃO COMPLETA")
         self.log("=" * 35)
 
-        testes = [
-            ("Carregamento Fila Real", self.teste_carregamento_fila_real),
-            ("Consulta Relatórios", self.teste_etapa_consulta),
-            ("Webscraping Completo", self.teste_execucao_webscraping)
-        ]
+        testes = [("Carregamento Fila Real",
+                   self.teste_carregamento_fila_real),
+                  ("Consulta Relatórios", self.teste_etapa_consulta),
+                  ("Webscraping Completo", self.teste_execucao_webscraping)]
 
         resultados = {}
 
@@ -223,7 +244,11 @@ class TestadorRPASiengeReal:
             }
 
             with open(arquivo, 'w', encoding='utf-8') as f:
-                json.dump(dados_salvamento, f, indent=2, ensure_ascii=False, default=str)
+                json.dump(dados_salvamento,
+                          f,
+                          indent=2,
+                          ensure_ascii=False,
+                          default=str)
 
             self.log(f"💾 Resultado salvo: {arquivo.name}")
 
@@ -236,10 +261,13 @@ async def menu_principal():
     testador = TestadorRPASiengeReal()
 
     opcoes = {
-        "1": ("🔥 Teste Integração Completa", testador.teste_integracao_completa),
-        "2": ("📊 Teste Carregamento Fila Real", testador.teste_carregamento_fila_real),
+        "1":
+        ("🔥 Teste Integração Completa", testador.teste_integracao_completa),
+        "2": ("📊 Teste Carregamento Fila Real",
+              testador.teste_carregamento_fila_real),
         "3": ("🔍 Teste Consulta Relatórios", testador.teste_etapa_consulta),
-        "4": ("🌐 Teste Webscraping Completo", testador.teste_execucao_webscraping),
+        "4":
+        ("🌐 Teste Webscraping Completo", testador.teste_execucao_webscraping),
         "0": ("❌ Sair", None)
     }
 
