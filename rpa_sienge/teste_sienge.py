@@ -83,10 +83,7 @@ class TesteSiengeCompleto:
 
             self._log_passo("Inicializando Sistema de Rastreamento...")
             self.rastreamento = RastreamentoUnificado("TESTE_SIENGE_COMPLETO")
-            await self.rastreamento.iniciar_execucao({
-                "modo": "teste_completo",
-                "credenciais_configuradas": bool(self.credenciais_teste.get("usuario"))
-            })
+            # O rastreamento já é inicializado automaticamente no construtor
             self._log_passo("Rastreamento inicializado", "SUCESSO")
 
             self._log_passo("Inicializando RPA Sienge...")
@@ -104,10 +101,9 @@ class TesteSiengeCompleto:
         except Exception as e:
             self._log_passo(f"Erro na inicialização: {str(e)}", "FALHA")
             if self.rastreamento:
-                await self.rastreamento.registrar_erro(
-                    "ERRO_INICIALIZACAO_SISTEMA",
-                    str(e),
-                    {"traceback": traceback.format_exc()}
+                await self.rastreamento.registrar_erro_critico(
+                    e,
+                    {"fase": "inicializacao_sistema", "traceback": traceback.format_exc()}
                 )
             return False
 
@@ -162,8 +158,7 @@ class TesteSiengeCompleto:
         if self.rastreamento:
             await self.rastreamento.registrar_passo(
                 "TESTE_1_ESTRUTURA_CONCLUIDO",
-                resultados,
-                categoria="TESTE"
+                resultados
             )
 
         return all(resultados.values())
@@ -182,7 +177,7 @@ class TesteSiengeCompleto:
             self._log_passo("Testando obtenção de índice IGP-M...")
             try:
                 igpm_valor = await data_manager.obter_indice_mais_recente("igpm")
-                resultados["igpm_disponivel"] = igmp_valor is not None
+                resultados["igpm_disponivel"] = igpm_valor is not None
 
                 if igpm_valor:
                     self._log_passo(f"IGP-M obtido: {igpm_valor}%", "SUCESSO")
@@ -230,8 +225,7 @@ class TesteSiengeCompleto:
             if self.rastreamento:
                 await self.rastreamento.registrar_passo(
                     "TESTE_2_DATA_MANAGER_CONCLUIDO",
-                    resultados,
-                    categoria="TESTE"
+                    resultados
                 )
 
             return all(resultados.values())
@@ -239,10 +233,9 @@ class TesteSiengeCompleto:
         except Exception as e:
             self._log_passo(f"Erro geral no teste 2: {str(e)}", "FALHA")
             if self.rastreamento:
-                await self.rastreamento.registrar_erro(
-                    "ERRO_TESTE_2_DATA_MANAGER",
-                    str(e),
-                    {"traceback": traceback.format_exc()}
+                await self.rastreamento.registrar_erro_critico(
+                    e,
+                    {"fase": "teste_2_data_manager", "traceback": traceback.format_exc()}
                 )
             return False
 
@@ -319,8 +312,7 @@ class TesteSiengeCompleto:
             if self.rastreamento:
                 await self.rastreamento.registrar_passo(
                     "TESTE_3_METODOS_RPA_CONCLUIDO",
-                    resultados,
-                    categoria="TESTE"
+                    resultados
                 )
 
             return all(resultados.values())
@@ -328,10 +320,9 @@ class TesteSiengeCompleto:
         except Exception as e:
             self._log_passo(f"Erro geral no teste 3: {str(e)}", "FALHA")
             if self.rastreamento:
-                await self.rastreamento.registrar_erro(
-                    "ERRO_TESTE_3_METODOS_RPA",
-                    str(e),
-                    {"traceback": traceback.format_exc()}
+                await self.rastreamento.registrar_erro_critico(
+                    e,
+                    {"fase": "teste_3_metodos_rpa", "traceback": traceback.format_exc()}
                 )
             return False
 
@@ -358,8 +349,7 @@ class TesteSiengeCompleto:
             if self.rastreamento:
                 await self.rastreamento.registrar_passo(
                     "TESTE_4_SIMULACAO_MOCK_CONCLUIDO",
-                    resultados_mock,
-                    categoria="TESTE"
+                    resultados_mock
                 )
 
             return True
@@ -382,8 +372,7 @@ class TesteSiengeCompleto:
                 if self.rastreamento:
                     await self.rastreamento.registrar_passo(
                         "TESTE_4_SISTEMA_PRONTO_EXECUCAO",
-                        resultados_reais,
-                        categoria="TESTE"
+                        resultados_reais
                     )
 
                 return True
@@ -391,10 +380,9 @@ class TesteSiengeCompleto:
             except Exception as e:
                 self._log_passo(f"Erro na simulação: {str(e)}", "FALHA")
                 if self.rastreamento:
-                    await self.rastreamento.registrar_erro(
-                        "ERRO_TESTE_4_SIMULACAO",
-                        str(e),
-                        {"traceback": traceback.format_exc()}
+                    await self.rastreamento.registrar_erro_critico(
+                        e,
+                        {"fase": "teste_4_simulacao", "traceback": traceback.format_exc()}
                     )
                 return False
 
@@ -456,8 +444,7 @@ class TesteSiengeCompleto:
                 if self.rastreamento:
                     await self.rastreamento.registrar_passo(
                         "TESTE_5_WEBSCRAPING_SUCESSO",
-                        resultado_webscraping,
-                        categoria="TESTE"
+                        resultado_webscraping
                     )
                 
                 return True
@@ -474,9 +461,8 @@ class TesteSiengeCompleto:
                 self.resultados_teste["teste_5_webscraping"] = resultado_erro
                 
                 if self.rastreamento:
-                    await self.rastreamento.registrar_erro(
-                        "ERRO_TESTE_5_WEBSCRAPING",
-                        erro,
+                    await self.rastreamento.registrar_erro_critico(
+                        Exception(erro),
                         resultado_erro
                     )
                 
@@ -487,10 +473,9 @@ class TesteSiengeCompleto:
             self._log_passo(erro_msg, "FALHA")
             
             if self.rastreamento:
-                await self.rastreamento.registrar_erro(
-                    "ERRO_CRITICO_TESTE_5",
-                    erro_msg,
-                    {"traceback": traceback.format_exc()}
+                await self.rastreamento.registrar_erro_critico(
+                    e,
+                    {"fase": "teste_5_webscraping", "traceback": traceback.format_exc()}
                 )
             
             return False
@@ -558,7 +543,7 @@ class TesteSiengeCompleto:
             self._log_passo("❌ SISTEMA REPROVADO", "FALHA")
 
         if self.rastreamento:
-            await self.rastreamento.finalizar_execucao(relatorio)
+            await self.rastreamento.finalizar_rastreamento()
 
         return relatorio
 
@@ -593,15 +578,11 @@ class TesteSiengeCompleto:
             logger.error(f"Traceback: {traceback.format_exc()}")
 
             if self.rastreamento:
-                await self.rastreamento.registrar_erro(
-                    "ERRO_CRITICO_SUITE_TESTES",
-                    str(e),
-                    {"traceback": traceback.format_exc()}
+                await self.rastreamento.registrar_erro_critico(
+                    e,
+                    {"fase": "suite_testes", "traceback": traceback.format_exc()}
                 )
-                await self.rastreamento.finalizar_execucao({
-                    "sucesso": False,
-                    "erro": str(e)
-                })
+                await self.rastreamento.finalizar_rastreamento()
 
 
 async def main():
