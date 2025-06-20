@@ -1,0 +1,50 @@
+tiagopereiraramos@tiago-macbook reparcelamento %  cd /Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento ; /usr/bin/env /Users/tiagopereiraramos/Documents/Projetos/Tragetor
+ia/reparcelamento/.venv/bin/python /Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher 56496 -- /Users/tia
+gopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py 
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/runpy.py", line 198, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/runpy.py", line 88, in _run_code
+    exec(code, run_globals)
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/__main__.py", line 71, in <module>
+    cli.main()
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 501, in main
+    run()
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 351, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 309, in run_path
+    code, fname = _get_code_from_file(run_name, path_name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 283, in _get_code_from_file
+    code = compile(f.read(), fname, "exec")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 180
+    if resultado_carga.get("fila_vazia")):
+                                        ^
+SyntaxError: unmatched ')'
+tiagopereiraramos@tiago-macbook reparcelamento %  cd /Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento ; /usr/bin/env /Users/tiagopereiraramos/Documents/Projetos/Tragetor
+ia/reparcelamento/.venv/bin/python /Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher 56675 -- /Users/tia
+gopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py 
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/runpy.py", line 198, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/.local/share/uv/python/cpython-3.11.9-macos-aarch64-none/lib/python3.11/runpy.py", line 88, in _run_code
+    exec(code, run_globals)
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/__main__.py", line 71, in <module>
+    cli.main()
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 501, in main
+    run()
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 351, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 309, in run_path
+    code, fname = _get_code_from_file(run_name, path_name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/.vscode/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 283, in _get_code_from_file
+    code = compile(f.read(), fname, "exec")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamento/rpa_sienge/teste_sienge.py", line 180
+    if resultado_carga.get("fila_vazia")):
+                                        ^
+SyntaxError: unmatched ')'
