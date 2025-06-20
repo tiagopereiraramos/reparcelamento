@@ -1,0 +1,34 @@
+================================================================================
+📘 PLAYBOOK RPA 04 - EMISSÃO DE BOLETOS NO SICREDI
+================================================================================
+
+▶ OBJETIVO
+Gerar arquivos de remessa no Sienge e realizar a importação dos carnês no portal
+do banco Sicredi, empresa por empresa (CNPJ).
+
+▶ AÇÕES
+
+1. Acesso ao Sienge:
+   - Financeiro > Contas a Receber > Cobrança Escritural > Geração de Arquivos de Remessa
+
+2. Para cada empresa com reparcelamento:
+   - Preencher data inicial = 1º vencimento do carnê
+   - Data final = mesma data mês seguinte ano seguinte
+   - Selecionar unidade (empresa)
+   - Gerar remessa com nome padrão: [5 dígitos da conta][dd][mm].[sequencial]
+
+3. Acesso ao Sicredi:
+   - URL: https://www.sicredi.com.br/home/
+   - Login: Pessoa Jurídica > CNPJ + usuário "Isabella"
+   - Importar arquivo gerado (1 por empresa)
+   - Confirmar envio
+
+4. Para unidades especiais (prefixo):
+   - Rio Almada: 06300
+   - SPE Parque da Lagoa: 01870
+
+▶ EXCEÇÕES
+- Arquivo não gerado por pendência: logar
+- Tentativas de envio falhas: reexecutar com novo nome sequencial
+
+================================================================================

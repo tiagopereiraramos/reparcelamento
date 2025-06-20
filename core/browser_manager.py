@@ -82,8 +82,24 @@ class RPABrowser:
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--no-sandbox")
 
-        # Configurações de download
-        downloads_dir = os.path.expanduser("~/Downloads/RPA_DOWNLOADS")
+        # Configurações de download - usar pasta RPA parametrizada
+        downloads_base = os.path.expanduser("~/Downloads")
+        rpa_downloads_folder = os.getenv('RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+        
+        # Garantir concatenação correta do caminho - todos os casos
+        if downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads/" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder[1:]
+        elif downloads_base.endswith('/') and not rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads/" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder
+        elif not downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder
+        else:
+            # Caso: "/Downloads" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
+        
         os.makedirs(downloads_dir, exist_ok=True)
 
         self.options.set_preference("browser.download.folderList", 2)
@@ -277,13 +293,16 @@ class RPABrowser:
         raise TimeoutException(
             f"Timeout enviando texto para elemento com xpath {xpath}")
 
-    def check_for_error(self,
-                        xpath: str,
-                        condition: Optional[str] = None,
-                        retry: int = 1) -> bool:
+    def check_for_error(
+        self,
+        xpath: str,
+        condition: Optional[str] = None,
+        retry: int = 1,
+        timeout: int = 5
+    ) -> bool:
         """Verifica se elemento de erro está presente"""
         try:
-            self.set_timeout(5)
+            self.set_timeout(timeout)
             self.find_element(xpath, condition or "presence")
             self.reset_timeout()
             return True

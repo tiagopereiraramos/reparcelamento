@@ -1,0 +1,11 @@
+2025-06-20 02:25:29 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-20 02:26:55 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-20 02:26:55 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-20 02:27:00 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-20 02:27:00 - ERROR - ❌ Erro ao carregar dados da fila: 'DataManagerUnificado' object has no attribute 'mongodb_manager': 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+2025-06-20 02:27:00 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/home/runner/workspace/rpa_sienge/rpa_sienge.py", line 653, in carregar_dados_fila_reparcelamento
+    contrato_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+

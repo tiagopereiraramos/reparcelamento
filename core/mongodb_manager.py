@@ -1,124 +1,170 @@
 """
-MongoDB Manager
-Sistema de persistência de dados para os RPAs
+MongoDB Manager - Sistema RPA v2.0
+Gerenciador de conexão e operações MongoDB usando PyMongo com executor assíncrono
 
 Desenvolvido em Português Brasileiro
 """
 
+import os
 import asyncio
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import logging
-from motor.motor_asyncio import AsyncIOMotorClient
-import pymongo
 import json
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+import concurrent.futures
 
 logger = logging.getLogger(__name__)
 
+
 class MongoDBManager:
     """
-    Gerenciador MongoDB para persistência dos dados dos RPAs
+    Gerenciador unificado para operações MongoDB
     """
-    
-    def __init__(self, connection_string: str = None):
-        self.connection_string = connection_string or "mongodb://localhost:27017"
-        self.database_name = "rpa_reparcelamento"
-        self.client = None
+
+    def __init__(self):
+        self.client: Optional[MongoClient] = None
         self.database = None
         self.conectado = False
-    
+        self._url_conexao = None
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
     async def conectar(self) -> bool:
         """
-        Conecta ao MongoDB
+        Conecta ao MongoDB usando variáveis de ambiente do Replit
         """
         try:
-            self.client = AsyncIOMotorClient(self.connection_string)
-            self.database = self.client[self.database_name]
-            
-            # Teste de conexão
-            await self.client.admin.command('ismaster')
-            
+            logger.info("Conectando ao MongoDB...")
+
+            # Tenta variáveis do Replit Database primeiro
+            mongodb_uri = os.getenv('DATABASE_URL') or os.getenv('MONGODB_URI') or os.getenv('MONGO_URL')
+            database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
+
+            logger.info(f"🔍 Variáveis de ambiente:")
+            logger.info(f"   DATABASE_URL: {'SET' if os.getenv('DATABASE_URL') else 'NOT SET'}")
+            logger.info(f"   MONGODB_URI: {'SET' if os.getenv('MONGODB_URI') else 'NOT SET'}")
+            logger.info(f"   MONGO_URL: {'SET' if os.getenv('MONGO_URL') else 'NOT SET'}")
+            logger.info(f"   DATABASE_NAME: {database_name}")
+
+            if not mongodb_uri:
+                # Fallback para conexão local se não tiver Replit Database
+                mongodb_uri = "mongodb://localhost:27017"
+                logger.warning("⚠️ Usando MongoDB local - configure DATABASE_URL para produção")
+            else:
+                # Log da URI mascarada (sem senha)
+                uri_masked = mongodb_uri
+                if '@' in uri_masked:
+                    parts = uri_masked.split('@')
+                    if len(parts) > 1:
+                        credentials = parts[0].split('//')[-1]
+                        if ':' in credentials:
+                            user = credentials.split(':')[0]
+                            uri_masked = uri_masked.replace(credentials, f"{user}:***")
+                logger.info(f"   URI: {uri_masked}")
+
+            self._url_conexao = mongodb_uri
+
+            logger.info("🔌 Criando cliente MongoDB...")
+            # Configura cliente com timeout menor para falhar rápido
+            self.client = MongoClient(
+                mongodb_uri,
+                serverSelectionTimeoutMS=5000,  # 5 segundos
+                connectTimeoutMS=5000,
+                socketTimeoutMS=10000
+            )
+
+            logger.info("🏓 Testando conexão com ping...")
+            # Testa conexão de forma síncrona em executor
+            def _test_connection():
+                ping_result = self.client.admin.command('ping')
+                return ping_result
+
+            ping_result = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _test_connection
+            )
+            logger.info(f"✅ Ping successful: {ping_result}")
+
+            logger.info(f"🗄️ Configurando database: {database_name}")
+            # Define database
+            self.database = self.client[database_name]
+
+            # Teste prático com a database
+            logger.info("🧪 Testando operação na database...")
+            def _test_database():
+                test_collection = self.database.teste_conexao_inicial
+                test_doc = {"teste": True, "timestamp": datetime.now()}
+                result = test_collection.insert_one(test_doc)
+                # Remove documento de teste
+                test_collection.delete_one({"_id": result.inserted_id})
+                return result.inserted_id
+
+            test_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _test_database
+            )
+            logger.info(f"✅ Teste inserção: {test_id}")
+            logger.info("🧹 Documento de teste removido")
+
             self.conectado = True
-            logger.info("✅ Conectado ao MongoDB com sucesso")
-            
-            # Criar índices necessários
+            logger.info(f"✅ MongoDB conectado com sucesso: {database_name}")
+
+            # Cria índices necessários
+            logger.info("📊 Criando índices...")
             await self._criar_indices()
-            
+
+            logger.info("🎉 MongoDB totalmente inicializado!")
             return True
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao conectar MongoDB: {str(e)}")
+
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            logger.warning(f"⚠️ MongoDB não disponível (timeout): {str(e)}")
             self.conectado = False
             return False
-    
-    async def _criar_indices(self):
-        """
-        Cria índices necessários nas collections
-        """
-        try:
-            # Índices para execuções
-            await self.database.execucoes_rpa.create_index([
-                ("nome_rpa", pymongo.ASCENDING),
-                ("timestamp_inicio", pymongo.DESCENDING)
-            ])
-            
-            # Índices para contratos
-            await self.database.contratos_processados.create_index([
-                ("numero_titulo", pymongo.ASCENDING),
-                ("data_processamento", pymongo.DESCENDING)
-            ])
-            
-            # Índices para fila de processamento Sienge
-            await self.database.fila_processamento_sienge.create_index([
-                ("timestamp_criacao", pymongo.DESCENDING),
-                ("contratos.numero_titulo", pymongo.ASCENDING)
-            ])
-            
-            # Índices para fila de reparcelamento
-            await self.database.fila_reparcelamento.create_index([
-                ("timestamp_identificacao", pymongo.DESCENDING),
-                ("numero_titulo", pymongo.ASCENDING),
-                ("status_processamento", pymongo.ASCENDING)
-            ])
-            
-            # Índices para índices econômicos
-            await self.database.indices_economicos.create_index([
-                ("tipo_indice", pymongo.ASCENDING),
-                ("data_coleta", pymongo.DESCENDING)
-            ])
-            
-            # Índices para planilhas extraídas (auditoria)
-            await self.database.planilhas_extraidas.create_index([
-                ("numero_titulo", pymongo.ASCENDING),
-                ("data_extracao", pymongo.DESCENDING)
-            ])
-            
-            await self.database.planilhas_extraidas.create_index([
-                ("cliente", pymongo.ASCENDING),
-                ("data_extracao", pymongo.DESCENDING)
-            ])
-            
-            await self.database.planilhas_extraidas.create_index([
-                ("origem_sistema", pymongo.ASCENDING),
-                ("status_auditoria", pymongo.ASCENDING)
-            ])
-            
-            logger.info("✅ Índices MongoDB criados")
-            
         except Exception as e:
-            logger.error(f"⚠️ Erro ao criar índices: {str(e)}")
-    
+            logger.error(f"❌ Erro ao conectar MongoDB: {str(e)}")
+            logger.error(f"   Tipo do erro: {type(e).__name__}")
+            import traceback
+            logger.error(f"   Traceback completo: {traceback.format_exc()}")
+            self.conectado = False
+            return False
+
+    async def _criar_indices(self):
+        """Cria índices necessários nas collections"""
+        try:
+            def _create_indexes():
+                # Índices para execucoes_rpa
+                self.database.execucoes_rpa.create_index("nome_rpa")
+                self.database.execucoes_rpa.create_index("timestamp_inicio")
+                self.database.execucoes_rpa.create_index("sucesso")
+
+                # Índices para indices_economicos
+                self.database.indices_economicos.create_index("timestamp_coleta")
+                self.database.indices_economicos.create_index("fonte_coleta")
+
+                # Índices para contratos_processados
+                self.database.contratos_processados.create_index("numero_titulo")
+                self.database.contratos_processados.create_index("data_processamento")
+                self.database.contratos_processados.create_index("status_sienge")
+
+            await asyncio.get_event_loop().run_in_executor(
+                self.executor, _create_indexes
+            )
+            logger.debug("📊 Índices MongoDB criados com sucesso")
+
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao criar índices: {str(e)}")
+
     async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any], 
-                                 resultado: Dict[str, Any]) -> str:
+                                  resultado: Dict[str, Any]) -> Optional[str]:
         """
         Salva execução de RPA no MongoDB
-        
+
         Returns:
-            ID da execução salva
+            ID do documento inserido ou None se falhou
         """
         if not self.conectado:
-            await self.conectar()
-        
+            logger.warning("⚠️ MongoDB não conectado - não pode salvar execução")
+            return None
+
         try:
             documento = {
                 "nome_rpa": nome_rpa,
@@ -131,126 +177,92 @@ class MongoDBManager:
                 "mensagem": resultado.get("mensagem", ""),
                 "erro": resultado.get("erro", None)
             }
-            
-            result = await self.database.execucoes_rpa.insert_one(documento)
-            
-            logger.info(f"💾 Execução {nome_rpa} salva no MongoDB: {result.inserted_id}")
-            return str(result.inserted_id)
-            
+
+            def _save_execution():
+                result = self.database.execucoes_rpa.insert_one(documento)
+                return str(result.inserted_id)
+
+            document_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _save_execution
+            )
+
+            logger.info(f"📊 Execução {nome_rpa} salva no MongoDB: {document_id}")
+            return document_id
+
         except Exception as e:
-            logger.error(f"❌ Erro ao salvar execução: {str(e)}")
+            logger.error(f"❌ Erro ao salvar execução no MongoDB: {str(e)}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
             return None
-    
-    async def obter_execucoes_recentes(self, limite: int = 30) -> List[Dict[str, Any]]:
+
+    async def salvar_indices_economicos(self, indices_data: Dict[str, Any]) -> Optional[str]:
         """
-        Obtém execuções recentes dos RPAs
-        """
-        if not self.conectado:
-            await self.conectar()
-        
-        try:
-            cursor = self.database.execucoes_rpa.find().sort(
-                "timestamp_inicio", pymongo.DESCENDING
-            ).limit(limite)
-            
-            execucoes = []
-            async for doc in cursor:
-                doc["_id"] = str(doc["_id"])  # Converter ObjectId para string
-                execucoes.append(doc)
-            
-            return execucoes
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao obter execuções: {str(e)}")
-            return []
-    
-    async def salvar_indices_economicos(self, indices_data: Dict[str, Any]) -> str:
-        """
-        Salva índices econômicos coletados
+        Salva índices econômicos no MongoDB
+
+        Returns:
+            ID do documento inserido ou None se falhou
         """
         if not self.conectado:
-            await self.conectar()
-        
-        try:
-            # Salvar IPCA
-            if "ipca" in indices_data:
-                doc_ipca = {
-                    "tipo_indice": "IPCA",
-                    "valor": indices_data["ipca"]["valor"],
-                    "fonte": indices_data["ipca"]["fonte"],
-                    "data_coleta": datetime.now(),
-                    "periodo": "acumulado_12_meses",
-                    "metodo_coleta": indices_data["ipca"].get("metodo", "webscraping")
-                }
-                await self.database.indices_economicos.insert_one(doc_ipca)
-            
-            # Salvar IGPM
-            if "igpm" in indices_data:
-                doc_igpm = {
-                    "tipo_indice": "IGPM",
-                    "valor": indices_data["igpm"]["valor"],
-                    "fonte": indices_data["igpm"]["fonte"],
-                    "data_coleta": datetime.now(),
-                    "periodo": "acumulado_12_meses",
-                    "metodo_coleta": indices_data["igpm"].get("metodo", "webscraping")
-                }
-                await self.database.indices_economicos.insert_one(doc_igpm)
-            
-            logger.info("💾 Índices econômicos salvos no MongoDB")
-            return "success"
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao salvar índices: {str(e)}")
+            logger.warning("⚠️ MongoDB não conectado - não pode salvar índices")
+            logger.warning(f"   Estado conexão: conectado={self.conectado}, client={self.client is not None}, database={self.database is not None}")
             return None
-    
-    async def obter_indices_historico(self, dias: int = 30) -> Dict[str, List]:
-        """
-        Obtém histórico de índices econômicos
-        """
-        if not self.conectado:
-            await self.conectar()
-        
+
         try:
-            data_limite = datetime.now() - timedelta(days=dias)
-            
-            # IPCA
-            cursor_ipca = self.database.indices_economicos.find({
-                "tipo_indice": "IPCA",
-                "data_coleta": {"$gte": data_limite}
-            }).sort("data_coleta", pymongo.DESCENDING)
-            
-            ipca_historico = []
-            async for doc in cursor_ipca:
-                doc["_id"] = str(doc["_id"])
-                ipca_historico.append(doc)
-            
-            # IGPM
-            cursor_igpm = self.database.indices_economicos.find({
-                "tipo_indice": "IGPM", 
-                "data_coleta": {"$gte": data_limite}
-            }).sort("data_coleta", pymongo.DESCENDING)
-            
-            igpm_historico = []
-            async for doc in cursor_igpm:
-                doc["_id"] = str(doc["_id"])
-                igpm_historico.append(doc)
-            
-            return {
-                "ipca": ipca_historico,
-                "igpm": igpm_historico
+            logger.info(f"🔍 Preparando documento para MongoDB...")
+            logger.info(f"   Dados recebidos: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
+
+            documento = {
+                "timestamp_coleta": datetime.now(),
+                "indices": indices_data,
+                "fonte_coleta": "rpa_coleta_indices"
             }
-            
+
+            logger.info(f"📄 Documento preparado: {json.dumps(documento, indent=2, ensure_ascii=False, default=str)}")
+            logger.info(f"🗄️ Collection alvo: indices_economicos")
+            logger.info(f"🔗 Database: {self.database.name}")
+
+            def _save_indices():
+                logger.info(f"💾 Executando insert_one na collection...")
+                collection = self.database.indices_economicos
+                result = collection.insert_one(documento)
+                logger.info(f"✅ Insert realizado, ID: {result.inserted_id}")
+                return str(result.inserted_id)
+
+            document_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _save_indices
+            )
+
+            logger.info(f"📊 Índices econômicos salvos no MongoDB: {document_id}")
+
+            # Verificação adicional
+            def _verify_save():
+                count = self.database.indices_economicos.count_documents({})
+                last_doc = self.database.indices_economicos.find_one(sort=[("timestamp_coleta", -1)])
+                return count, last_doc
+
+            count, last_doc = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _verify_save
+            )
+            logger.info(f"🔍 Verificação: {count} documentos na collection, último: {last_doc['_id'] if last_doc else 'None'}")
+
+            return document_id
+
         except Exception as e:
-            logger.error(f"❌ Erro ao obter histórico: {str(e)}")
-            return {"ipca": [], "igpm": []}
-    
-    async def salvar_contrato_processado(self, contrato_data: Dict[str, Any]) -> str:
+            logger.error(f"❌ Erro ao salvar índices no MongoDB: {str(e)}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
+            return None
+
+    async def salvar_contrato_processado(self, contrato_data: Dict[str, Any]) -> Optional[str]:
         """
-        Salva dados de contrato processado
+        Salva contrato processado no MongoDB
+
+        Returns:
+            ID do documento inserido ou None se falhou
         """
         if not self.conectado:
-            await self.conectar()
-        
+            return None
+
         try:
             documento = {
                 "numero_titulo": contrato_data.get("numero_titulo"),
@@ -265,204 +277,269 @@ class MongoDBManager:
                 "indexador": contrato_data.get("indexador", ""),
                 "dados_completos": contrato_data
             }
-            
-            # Upsert baseado no número do título
-            result = await self.database.contratos_processados.replace_one(
-                {"numero_titulo": documento["numero_titulo"]},
-                documento,
-                upsert=True
+
+            def _save_contract():
+                # Upsert baseado no número do título
+                result = self.database.contratos_processados.replace_one(
+                    {"numero_titulo": documento["numero_titulo"]},
+                    documento,
+                    upsert=True
+                )
+                return str(result.upserted_id) if result.upserted_id else "updated"
+
+            document_id = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _save_contract
             )
-            
-            logger.info(f"💾 Contrato {documento['numero_titulo']} salvo no MongoDB")
-            return str(result.upserted_id) if result.upserted_id else "updated"
-            
+
+            logger.debug(f"📊 Contrato {documento['numero_titulo']} salvo no MongoDB: {document_id}")
+            return document_id
+
         except Exception as e:
-            logger.error(f"❌ Erro ao salvar contrato: {str(e)}")
+            logger.error(f"❌ Erro ao salvar contrato no MongoDB: {str(e)}")
             return None
-    
-    async def obter_estatisticas_dashboard(self) -> Dict[str, Any]:
+
+    async def obter_execucoes_recentes(self, limite: int = 30) -> List[Dict[str, Any]]:
         """
-        Obtém estatísticas para o dashboard
-        """
-        if not self.conectado:
-            await self.conectar()
-        
-        try:
-            # Total de execuções
-            total_execucoes = await self.database.execucoes_rpa.count_documents({})
-            
-            # Execuções hoje
-            hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            execucoes_hoje = await self.database.execucoes_rpa.count_documents({
-                "timestamp_inicio": {"$gte": hoje}
-            })
-            
-            # Taxa de sucesso últimos 30 dias
-            data_limite = datetime.now() - timedelta(days=30)
-            cursor_recentes = self.database.execucoes_rpa.find({
-                "timestamp_inicio": {"$gte": data_limite}
-            })
-            
-            total_recentes = 0
-            sucessos_recentes = 0
-            
-            async for doc in cursor_recentes:
-                total_recentes += 1
-                if doc.get("sucesso"):
-                    sucessos_recentes += 1
-            
-            taxa_sucesso = (sucessos_recentes / total_recentes * 100) if total_recentes > 0 else 0
-            
-            # Contratos processados últimos 30 dias
-            contratos_processados = await self.database.contratos_processados.count_documents({
-                "data_processamento": {"$gte": data_limite}
-            })
-            
-            return {
-                "total_execucoes": total_execucoes,
-                "execucoes_hoje": execucoes_hoje,
-                "taxa_sucesso": round(taxa_sucesso, 1),
-                "contratos_processados_mes": contratos_processados,
-                "ultima_atualizacao": datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao obter estatísticas: {str(e)}")
-            return {}
-    
-    async def obter_planilhas_cliente(self, numero_titulo: str = None, cliente: str = None, 
-                                     limite: int = 10) -> List[Dict[str, Any]]:
-        """
-        Obtém planilhas extraídas de um cliente específico para auditoria
+        Obtém execuções recentes do MongoDB
         """
         if not self.conectado:
-            await self.conectar()
-        
-        try:
-            # Monta filtro
-            filtro = {"status_auditoria": "ativo"}
-            if numero_titulo:
-                filtro["numero_titulo"] = numero_titulo
-            if cliente:
-                filtro["cliente"] = {"$regex": cliente, "$options": "i"}
-            
-            cursor = self.database.planilhas_extraidas.find(filtro).sort(
-                "data_extracao", pymongo.DESCENDING
-            ).limit(limite)
-            
-            planilhas = []
-            async for doc in cursor:
-                doc["_id"] = str(doc["_id"])
-                # Verifica se arquivo ainda existe
-                doc["arquivo_existe"] = Path(doc.get("caminho_arquivo", "")).exists()
-                planilhas.append(doc)
-            
-            return planilhas
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao obter planilhas do cliente: {str(e)}")
             return []
 
-    async def obter_estatisticas_planilhas(self) -> Dict[str, Any]:
+        try:
+            def _get_executions():
+                cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(limite)
+                execucoes = list(cursor)
+
+                # Converte ObjectId para string
+                for execucao in execucoes:
+                    if "_id" in execucao:
+                        execucao["_id"] = str(execucao["_id"])
+                    # Converte datetime para ISO string para compatibilidade JSON
+                    for campo in ["timestamp_inicio", "timestamp_fim"]:
+                        if campo in execucao and execucao[campo]:
+                            execucao[campo] = execucao[campo].isoformat()
+
+                return execucoes
+
+            execucoes = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_executions
+            )
+
+            return execucoes
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao obter execuções do MongoDB: {str(e)}")
+            return []
+
+    async def obter_estatisticas_dashboard(self) -> Dict[str, Any]:
         """
-        Obtém estatísticas das planilhas extraídas para dashboard
+        Calcula estatísticas para dashboard
         """
         if not self.conectado:
-            await self.conectar()
-        
-        try:
-            # Total de planilhas
-            total_planilhas = await self.database.planilhas_extraidas.count_documents({
-                "status_auditoria": "ativo"
-            })
-            
-            # Planilhas hoje
-            hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            planilhas_hoje = await self.database.planilhas_extraidas.count_documents({
-                "data_extracao": {"$gte": hoje},
-                "status_auditoria": "ativo"
-            })
-            
-            # Últimos 7 dias
-            data_limite = datetime.now() - timedelta(days=7)
-            planilhas_semana = await self.database.planilhas_extraidas.count_documents({
-                "data_extracao": {"$gte": data_limite},
-                "status_auditoria": "ativo"
-            })
-            
-            # Clientes únicos com planilhas
-            pipeline = [
-                {"$match": {"status_auditoria": "ativo"}},
-                {"$group": {"_id": "$cliente"}},
-                {"$count": "total"}
-            ]
-            
-            resultado_clientes = await self.database.planilhas_extraidas.aggregate(pipeline).to_list(1)
-            clientes_unicos = resultado_clientes[0]["total"] if resultado_clientes else 0
-            
-            return {
-                "total_planilhas": total_planilhas,
-                "planilhas_hoje": planilhas_hoje,
-                "planilhas_semana": planilhas_semana,
-                "clientes_unicos": clientes_unicos,
-                "ultima_atualizacao": datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao obter estatísticas de planilhas: {str(e)}")
             return {}
 
-    async def marcar_planilha_inativa(self, planilha_id: str) -> bool:
+        try:
+            def _get_stats():
+                # Execuções hoje
+                hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                execucoes_hoje = self.database.execucoes_rpa.count_documents({
+                    "timestamp_inicio": {"$gte": hoje}
+                })
+
+                # Taxa de sucesso (últimas 30 execuções)
+                cursor = self.database.execucoes_rpa.find().sort("timestamp_inicio", -1).limit(30)
+                execucoes_recentes = list(cursor)
+
+                if execucoes_recentes:
+                    sucessos = sum(1 for e in execucoes_recentes if e.get("sucesso", False))
+                    taxa_sucesso = (sucessos / len(execucoes_recentes)) * 100
+                else:
+                    taxa_sucesso = 0
+
+                # Total de execuções
+                total_execucoes = self.database.execucoes_rpa.count_documents({})
+
+                # Contratos processados este mês
+                inicio_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                contratos_mes = self.database.contratos_processados.count_documents({
+                    "data_processamento": {"$gte": inicio_mes}
+                })
+
+                return {
+                    "total_execucoes": total_execucoes,
+                    "execucoes_hoje": execucoes_hoje,
+                    "taxa_sucesso": round(taxa_sucesso, 1),
+                    "contratos_processados_mes": contratos_mes,
+                    "ultima_atualizacao": datetime.now().isoformat(),
+                    "fonte_dados": "mongodb"
+                }
+
+            stats = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_stats
+            )
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao calcular estatísticas MongoDB: {str(e)}")
+            return {}
+
+    async def verificar_saude(self) -> Dict[str, Any]:
         """
-        Marca planilha como inativa (para exclusão lógica)
+        Verifica saúde da conexão MongoDB
+        """
+        try:
+            if not self.conectado:
+                return {
+                    "status": "desconectado",
+                    "erro": "Cliente não conectado"
+                }
+
+            def _check_health():
+                # Testa comando ping
+                self.client.admin.command('ping')
+
+                # Conta documentos para verificar acesso
+                total_execucoes = self.database.execucoes_rpa.count_documents({})
+
+                return {
+                    "status": "conectado",
+                    "url": self._url_conexao.split('@')[-1] if self._url_conexao else "unknown",
+                    "database": self.database.name if self.database is not None else "none",
+                    "total_execucoes": total_execucoes,
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            health = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _check_health
+            )
+
+            return health
+
+        except Exception as e:
+            return {
+                "status": "erro",
+                "erro": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    async def obter_indice_mais_recente(self, tipo_indice: str = "igpm") -> Optional[float]:
+        """
+        Obtém índice econômico mais recente do MongoDB
+
+        Args:
+            tipo_indice: "igpm" ou "ipca"
+
+        Returns:
+            Valor do índice como float ou None se não encontrado
         """
         if not self.conectado:
-            await self.conectar()
-        
+            return None
+
         try:
-            from bson import ObjectId
-            result = await self.database.planilhas_extraidas.update_one(
-                {"_id": ObjectId(planilha_id)},
-                {
-                    "$set": {
-                        "status_auditoria": "inativo",
-                        "data_inativacao": datetime.now()
-                    }
-                }
+            def _get_latest_index():
+                # Buscar último documento com o índice solicitado
+                cursor = self.database.indices_economicos.find(
+                    {f"indices.{tipo_indice.lower()}": {"$exists": True}},
+                    sort=[("timestamp_coleta", -1)]
+                ).limit(1)
+
+                resultado = list(cursor)
+                if resultado:
+                    indice_data = resultado[0].get("indices", {}).get(tipo_indice.lower(), {})
+                    valor_str = indice_data.get("valor", "")
+
+                    # Converter valor string para float
+                    if isinstance(valor_str, str):
+                        # Remove % e converte vírgula para ponto
+                        valor_limpo = valor_str.replace("%", "").replace(",", ".").strip()
+                        return float(valor_limpo)
+                    elif isinstance(valor_str, (int, float)):
+                        return float(valor_str)
+
+                return None
+
+            indice_valor = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_latest_index
             )
-            
-            logger.info(f"📋 Planilha {planilha_id} marcada como inativa")
-            return result.modified_count > 0
-            
+
+            return indice_valor
+
         except Exception as e:
-            logger.error(f"❌ Erro ao marcar planilha como inativa: {str(e)}")
-            return False
+            logger.error(f"❌ Erro ao obter {tipo_indice} do MongoDB: {str(e)}")
+            return None
+
+    async def obter_documento_mais_recente(self, collection_name: str, filtro: Dict[str, Any] = None, 
+                                          campo_ordenacao: str = "timestamp_coleta") -> Optional[Dict[str, Any]]:
+        """
+        Obtém documento mais recente de uma collection
+
+        Args:
+            collection_name: Nome da collection
+            filtro: Filtro para a busca (opcional)
+            campo_ordenacao: Campo para ordenação descendente
+
+        Returns:
+            Documento mais recente ou None se não encontrado
+        """
+        if not self.conectado:
+            return None
+
+        try:
+            def _get_latest_document():
+                collection = self.database[collection_name]
+                cursor = collection.find(filtro or {}).sort(campo_ordenacao, -1).limit(1)
+
+                resultado = list(cursor)
+                if resultado:
+                    documento = resultado[0]
+                    # Converte ObjectId para string
+                    if "_id" in documento:
+                        documento["_id"] = str(documento["_id"])
+                    # Converte datetime para ISO string
+                    for campo, valor in documento.items():
+                        if hasattr(valor, 'isoformat'):
+                            documento[campo] = valor.isoformat()
+                    return documento
+
+                return None
+
+            documento = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _get_latest_document
+            )
+
+            return documento
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao obter documento mais recente de {collection_name}: {str(e)}")
+            return None
 
     async def desconectar(self):
         """
-        Desconecta do MongoDB
+        Fecha conexão MongoDB
         """
-        if self.client:
-            self.client.close()
-            self.conectado = False
-            logger.info("🔌 Desconectado do MongoDB")
+        try:
+            if self.client:
+                def _close_client():
+                    self.client.close()
 
-# Instância global do MongoDB Manager
+                await asyncio.get_event_loop().run_in_executor(
+                    self.executor, _close_client
+                )
+
+                self.conectado = False
+                logger.info("✅ MongoDB desconectado")
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao desconectar MongoDB: {str(e)}")
+
+
+# Instância global
 mongodb_manager = MongoDBManager()
 
-# Funções auxiliares para facilitar uso
-async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: Dict[str, Any]) -> str:
-    """Função auxiliar para salvar execução"""
-    return await mongodb_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+# Função para inicializar MongoDB automaticamente
+async def inicializar_mongodb() -> bool:
+    """Inicializa conexão MongoDB automaticamente"""
+    return await mongodb_manager.conectar()
 
-async def obter_execucoes_recentes(limite: int = 30) -> List[Dict[str, Any]]:
-    """Função auxiliar para obter execuções recentes"""
-    return await mongodb_manager.obter_execucoes_recentes(limite)
-
-async def salvar_indices_economicos(indices_data: Dict[str, Any]) -> str:
-    """Função auxiliar para salvar índices"""
-    return await mongodb_manager.salvar_indices_economicos(indices_data)
-
-async def obter_estatisticas_dashboard() -> Dict[str, Any]:
-    """Função auxiliar para estatísticas do dashboard"""
-    return await mongodb_manager.obter_estatisticas_dashboard()
+# Compatibilidade com código existente
+MONGODB_DISPONIVEL = True

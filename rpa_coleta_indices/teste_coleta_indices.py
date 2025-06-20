@@ -23,7 +23,7 @@ from datetime import datetime
 # Adiciona o diretório raiz do projeto ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from rpa_coleta_indices.rpa_coleta_indices import RPAColetaIndices, executar_coleta_indices
+from rpa_coleta_indices import RPAColetaIndices, executar_coleta_indices
 
 
 async def teste_completo():
@@ -36,11 +36,12 @@ async def teste_completo():
     print("=" * 50)
 
     # Configurações de teste
-    # ID da planilha do cliente
-    PLANILHA_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
-    CREDENCIAIS_GOOGLE = "credentials/gspread-459713-aab8a657f9b0.json"
+    # IDs das planilhas para teste (configurar com suas planilhas)
+    PLANILHA_CALCULO_ID = os.getenv("PLANILHA_CALCULO_ID", "")
+    CREDENCIAIS_GOOGLE = os.getenv("GOOGLE_CREDENTIALS_PATH",
+                                   "./gspread-credentials.json")
 
-    print(f"📊 Planilha de Teste: {PLANILHA_ID}")
+    print(f"📊 Planilha de Teste: {PLANILHA_CALCULO_ID}")
     print(f"🔐 Credenciais: {CREDENCIAIS_GOOGLE}")
     print()
 
@@ -48,9 +49,8 @@ async def teste_completo():
         # Executa RPA usando função auxiliar
         print("🚀 Iniciando execução do RPA...")
         resultado = await executar_coleta_indices(
-            planilha_id=PLANILHA_ID,
-            credenciais_google=CREDENCIAIS_GOOGLE
-        )
+            planilha_id=PLANILHA_CALCULO_ID,
+            credenciais_google=CREDENCIAIS_GOOGLE)
 
         # Mostra resultado
         print("\n📋 RESULTADO DA EXECUÇÃO:")
@@ -85,7 +85,8 @@ async def teste_completo():
 
         print("\n🔗 LINKS ÚTEIS:")
         print(
-            f"   Planilha: https://docs.google.com/spreadsheets/d/{PLANILHA_ID}")
+            f"   Planilha: https://docs.google.com/spreadsheets/d/{PLANILHA_TESTE_ID}"
+        )
 
         return resultado.sucesso
 
@@ -116,7 +117,9 @@ async def teste_conexao_google_sheets():
             print("✅ Conexão Google Sheets estabelecida")
 
             # Testa acesso à planilha
-            PLANILHA_ID = "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk"
+            PLANILHA_ID = os.getenv(
+                "PLANILHA_INDICES_ID",
+                "1f723KXu5_KooZNHiYIB3EettKb-hUsOzDYMg7LNC_hk")
             planilha = rpa.cliente_sheets.open_by_key(PLANILHA_ID)
             print(f"✅ Planilha acessada: {planilha.title}")
 
@@ -230,46 +233,91 @@ def menu_interativo():
 
 async def main():
     """
-    Função principal do teste
+    Teste completo do RPA Coleta de Índices
     """
-    print("🤖 SISTEMA DE TESTES RPA - COLETA DE ÍNDICES")
-    print("Desenvolvido em Python")
-    print("Permite testar RPA independente da orquestração Temporal")
+    print("🚀 Iniciando teste RPA Coleta de Índices")
+    print("=" * 60)
 
-    # Verifica se é execução direta ou interativa
-    if len(sys.argv) > 1:
-        # Execução direta com parâmetros
-        comando = sys.argv[1].lower()
+    # Inicializar sistema de dados híbrido ANTES do RPA
+    try:
+        from core.data_manager import data_manager
+        await data_manager.inicializar()
+        print("🗄️ Sistema de dados híbrido inicializado")
+    except Exception as e:
+        print(f"⚠️ Aviso: Falha ao inicializar dados híbridos: {e}")
 
-        if comando == "completo":
-            sucesso = await teste_completo()
-        elif comando == "conexao":
-            sucesso = await teste_conexao_google_sheets()
-        elif comando == "apis":
-            sucesso = await teste_coleta_apis()
-        elif comando == "saude":
-            sucesso = await verificar_saude_rpa()
+    rpa = RPAColetaIndices()
+    # IDs das planilhas para teste (configurar com suas planilhas)
+    PLANILHA_CALCULO_ID = os.getenv("PLANILHA_CALCULO_ID", "")
+    CREDENCIAIS_GOOGLE = os.getenv("GOOGLE_CREDENTIALS_PATH",
+                                   "./gspread-credentials.json")
+    # Parâmetros de teste
+    parametros_teste = {
+        "planilha_id": PLANILHA_CALCULO_ID,
+        "credenciais_google": CREDENCIAIS_GOOGLE
+    }
+
+    try:
+        # Executa RPA COM MONITORAMENTO (força salvamento)
+        resultado = await rpa.executar_com_monitoramento(parametros_teste)
+
+        # Processa resultado
+        if resultado.sucesso:
+            print(f"\n✅ SUCESSO: {resultado.mensagem}")
+            print(f"⏱️ Tempo: {resultado.tempo_execucao:.1f}s")
+
+            if resultado.dados:
+                ipca = resultado.dados.get("ipca", {})
+                igpm = resultado.dados.get("igpm", {})
+
+                print(f"\n📊 IPCA: {ipca.get('valor', 'N/A')}% ({ipca.get('mes', 'N/A')})")
+                print(f"📊 IGPM: {igpm.get('valor', 'N/A')}% ({igpm.get('mes', 'N/A')})")
+                print(f"📋 Planilha: {resultado.dados.get('planilha_atualizada', 'N/A')}")
+
+                # Verificar se dados foram salvos
+                print(f"\n🔍 Verificando persistência dos dados...")
+                try:
+                    from core.data_manager import data_manager
+
+                    # Debug detalhado
+                    debug_info = await data_manager.debug_verificar_indices_salvos()
+                    print(f"📈 Total de execuções registradas: {debug_info.get('total_execucoes', 0)}")
+                    print(f"📊 Total de índices salvos: {debug_info.get('total_indices_salvos', 0)}")
+                    print(f"📄 Arquivo índices existe: {debug_info.get('arquivo_indices_existe', False)}")
+                    print(f"📄 Arquivo execuções existe: {debug_info.get('arquivo_execucoes_existe', False)}")
+
+                    # Verificar se arquivo errado foi criado
+                    arquivo_errado = "dados_processamento/indices_coletados.json"
+                    if os.path.exists(arquivo_errado):
+                        print(f"⚠️ ATENÇÃO: Arquivo incorreto encontrado: {arquivo_errado}")
+                        print("   Este arquivo deveria ser 'indices_economicos.json'")
+
+                    # Debug adicional se necessário
+                    if debug_info.get('ultimo_indice'):
+                        print(f"🔍 Último índice salvo: {debug_info['ultimo_indice'].get('timestamp', 'N/A')}")
+
+                    if debug_info.get('ultima_execucao'):
+                        print(f"🔍 Última execução: {debug_info['ultima_execucao'].get('nome_rpa', 'N/A')}")
+
+                except Exception as e:
+                    print(f"⚠️ Erro ao verificar persistência: {e}")
         else:
-            print(f"❌ Comando inválido: {comando}")
-            print("Comandos disponíveis: completo, conexao, apis, saude")
-            return False
+            print(f"\n❌ FALHA: {resultado.mensagem}")
+            if resultado.erro:
+                print(f"🔍 Erro: {resultado.erro}")
 
-        return sucesso
+    except Exception as e:
+        print(f"\n💥 ERRO DURANTE EXECUÇÃO: {str(e)}")
 
-    else:
-        # Menu interativo
-        teste_escolhido = menu_interativo()
-        if teste_escolhido:
-            sucesso = await teste_escolhido
+    finally:
+        # Cleanup
+        if hasattr(rpa, 'browser') and rpa.browser:
+            rpa.browser.close()
+        print("\n🔄 Cleanup concluído")
 
-            if sucesso:
-                print("\n🎉 TESTE CONCLUÍDO COM SUCESSO!")
-            else:
-                print("\n❌ TESTE FALHOU!")
+    print("=" * 60)
+    print("✅ Teste RPA Coleta de Índices finalizado")
 
-            return sucesso
-
-        return True
 
 if __name__ == "__main__":
     # Configura event loop para Windows se necessário
