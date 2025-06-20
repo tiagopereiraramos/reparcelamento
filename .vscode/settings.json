@@ -31,5 +31,7 @@
         "**/*.pyc": true,
         ".pytest_cache": true,
         "logs/**": false
-    }
+    },
+    "cursorpyright.analysis.autoImportCompletions": true,
+    "cursorpyright.analysis.typeCheckingMode": "basic"
 }

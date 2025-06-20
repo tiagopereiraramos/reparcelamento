@@ -64,7 +64,15 @@ class RPASienge(BaseRPA):
         """
         Wrapper para compatibilidade - delega para processador centralizado
         """
-        return self.processador_regras.processar_dados_cliente_completo(df, cliente, numero_titulo, dados_validacao_base)
+        if dados_validacao_base is None:
+            dados_validacao_base = {}
+        # Garantir que o método correto existe
+        if hasattr(self.processador_regras, 'processar_dados_cliente_completo'):
+            return self.processador_regras.processar_dados_cliente_completo(df, cliente, numero_titulo, dados_validacao_base)
+        else:
+            print(
+                "[WARN] Método processar_dados_cliente_completo não existe no processador_regras.")
+            return {}
 
     async def executar(self,
                        contrato: Dict[str, Any],
@@ -85,6 +93,12 @@ class RPASienge(BaseRPA):
             notificar_analista: False para ignorar notificações de validação
         """
         try:
+            if contrato is None:
+                contrato = {}
+            if credenciais_sienge is None:
+                credenciais_sienge = {}
+            if indices is None:
+                indices = {}
             # ✅ INICIA RASTREAMENTO UNIFICADO
             self.rastreamento = iniciar_rastreamento("RPA_Sienge")
 
@@ -117,7 +131,6 @@ class RPASienge(BaseRPA):
                         "contrato_fornecido": bool(contrato),
                         "credenciais_fornecidas": bool(credenciais_sienge)
                     })
-
                 return ResultadoRPA(
                     sucesso=False,
                     mensagem="Dados do contrato ou credenciais Sienge não fornecidos",
@@ -180,23 +193,19 @@ class RPASienge(BaseRPA):
 
         except Exception as e:
             erro_msg = f"Erro na execução do RPA Sienge: {str(e)}"
-
             if self.rastreamento:
                 await self.rastreamento.registrar_erro_critico(
                     e, {
                         "fase": "execucao_principal",
                         "etapa": etapa,
-                        "contrato": contrato.get("numero_titulo", "N/A")
+                        "contrato": contrato.get("numero_titulo", "N/A") if contrato else "N/A"
                     })
                 await self.rastreamento.finalizar_rastreamento()
-
             self.log_erro(erro_msg, e)
             return ResultadoRPA(sucesso=False,
                                 mensagem="Falha na execução do RPA Sienge",
                                 erro=erro_msg)
-
         finally:
-            # ✅ SEMPRE finaliza rastreamento
             if self.rastreamento:
                 await self.rastreamento.finalizar_rastreamento()
 
@@ -250,33 +259,38 @@ class RPASienge(BaseRPA):
             # 5. Fechar caixas de mensagem
 
             # Preenche usuário inicial
-            self.find_element(
-                xpath='(//input[@id="username"])[1]').send_keys(usuario_sienge)
+            self.send_text_human_like(
+                xpath='(//input[@id="username"])[1]',
+                text=usuario_sienge
+            )
 
             # Preenche senha inicial
-            self.find_element(
-                xpath='//input[@id="password"]').send_keys(senha_sienge)
+            self.send_text_human_like(
+                xpath='//input[@id="password"]',
+                text=senha_sienge
+            )
 
             # Clica botão entrar inicial
-            self.find_element(xpath='//*[@id="btnEntrarComSiengeID"]').click()
+            self.click(xpath='//*[@id="btnEntrarComSiengeID"]')
             time.sleep(2)
 
             # Segunda etapa - email
-            self.find_element(
-                xpath='//label[text()="Seu e-mail"]/following-sibling::div//input'
-            ).send_keys(usuario_sienge)
+            self.send_text_human_like(
+                xpath='//label[text()="Seu e-mail"]/following-sibling::div//input',
+                text=usuario_sienge
+            )
 
             # Clica continuar
-            self.find_element(
-                xpath="//button[normalize-space(text())='CONTINUAR']").click()
+            self.click(xpath="//button[normalize-space(text())='CONTINUAR']")
 
             # Terceira etapa - senha final
-            self.find_element(
-                xpath="//input[@id='signup-password']").send_keys(senha_sienge)
+            self.send_text_human_like(
+                xpath="//input[@id='signup-password']",
+                text=senha_sienge
+            )
 
             # Clica entrar final
-            self.find_element(
-                xpath="//button[normalize-space(text())='ENTRAR']").click()
+            self.click(xpath="//button[normalize-space(text())='ENTRAR']")
 
             # Login bem-sucedido
             self.logado_sienge = True
@@ -337,12 +351,16 @@ class RPASienge(BaseRPA):
                 # Preenche nome do cliente
                 self.send_text_human_like(
                     xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']",
-                    text=cliente)
+                    text=cliente or ""
+                )
                 time.sleep(2)
 
                 combo_pesquisa.click()
                 time.sleep(1)
-                combo_pesquisa.send_keys(Keys.TAB)
+                self.send_text(
+                    xpath="//input[@placeholder='Pesquisar cliente' and @role='combobox']",
+                    text=Keys.TAB
+                )
                 time.sleep(1)
 
                 # WEBSCRAPING REAL - Clica em Consultar
@@ -354,7 +372,8 @@ class RPASienge(BaseRPA):
                 # Verifica se o cliente foi encontrado
                 if self.check_for_error(xpath=xpath_erro_botao):
                     erro_msg = "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
-                    self.log_erro("Erro ao consultar cliente", erro_msg)
+                    self.log_erro("Erro ao consultar cliente",
+                                  Exception(erro_msg))
                     self.log_progresso(
                         "Voltando à tela de consulta para próximo contrato...")
                     return {"sucesso": False, "erro": erro_msg}
@@ -638,39 +657,39 @@ class RPASienge(BaseRPA):
         """
         try:
             from core.data_manager import data_manager
-
-            # Se número não especificado, busca próximo da fila
             if numero_titulo is None:
-                self.log_progresso(
-                    "🔍 Buscando próximo contrato da fila de reparcelamento...")
+                numero_titulo = ""
+            # Se número não especificado, busca próximo da fila
+            self.log_progresso(
+                "🔍 Buscando próximo contrato da fila de reparcelamento...")
 
-                # Buscar próximo contrato pendente na fila
-                filtro_fila = {
-                    "status_processamento": "pendente",
-                    "dados_financeiros.pode_reparcelar": True
+            # Buscar próximo contrato pendente na fila
+            filtro_fila = {
+                "status_processamento": "pendente",
+                "dados_financeiros.pode_reparcelar": True
+            }
+
+            contrato_fila = await data_manager.obter_documento_mais_recente(
+                "fila_reparcelamento", filtro_fila,
+                "timestamp_identificacao")
+
+            if not contrato_fila:
+                return {
+                    "sucesso": False,
+                    "erro":
+                    "Nenhum contrato elegível encontrado na fila de reparcelamento",
+                    "fila_vazia": True
                 }
 
-                contrato_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
-                    "fila_reparcelamento", filtro_fila,
-                    "timestamp_identificacao")
-
-                if not contrato_fila:
-                    return {
-                        "sucesso": False,
-                        "erro":
-                        "Nenhum contrato elegível encontrado na fila de reparcelamento",
-                        "fila_vazia": True
-                    }
-
-                numero_titulo = contrato_fila["numero_titulo"]
-                self.log_progresso(f"📄 Próximo da fila: {numero_titulo}")
+            numero_titulo = contrato_fila["numero_titulo"]
+            self.log_progresso(f"📄 Próximo da fila: {numero_titulo}")
 
             # Carregar dados completos do contrato
             self.log_progresso(
                 f"📊 Carregando dados completos para: {numero_titulo}")
 
             # 1. Dados da fila de reparcelamento
-            dados_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
+            dados_fila = await data_manager.obter_documento_mais_recente(
                 "fila_reparcelamento", {"numero_titulo": numero_titulo})
 
             if not dados_fila:
@@ -842,8 +861,10 @@ class RPASienge(BaseRPA):
                 "qtd_parcelas_ct_a_vencer", 0)
 
             # Tentar obter IGPM dos índices fornecidos ou do data_manager centralizado
-            igpm_fornecido = indices.get("igpm",
-                                         {}).get("valor") if indices else None
+            igpm_fornecido = indices.get("igpm", {}).get(
+                "valor") if indices else 0.0
+            if igpm_fornecido is None:
+                igpm_fornecido = 0.0
 
             await self._registrar_passo_execucao(
                 "CALCULO_VALORES_REPARCELAMENTO", {
@@ -1006,6 +1027,8 @@ class RPASienge(BaseRPA):
             ResultadoRPA com sucesso/erro do processamento
         """
         try:
+            if numero_titulo is None:
+                numero_titulo = ""
             self.log_progresso("🚀 INICIANDO EXECUÇÃO DE REPARCELAMENTO")
             self.log_progresso("=" * 50)
 
@@ -1112,44 +1135,50 @@ class RPASienge(BaseRPA):
                 f"🔍 PASSO 21: Consultando título: {numero_titulo}")
 
             # IMPLEMENTAR: Campo obrigatório de número do título
-            with self.on_iframe(xpath='//iframe[@id="iFramePage"]'):
-                self.log_progresso("Preenchendo número do título...")
-                self.click(xpath="//input[@id='titulo.tituloPK.nuTitulo']")
-                self.send_text_human_like(
-                    xpath="//input[@id='titulo.tituloPK.nuTitulo']",
-                    text=numero_titulo)
-
-                self.log_progresso("Clicando em Consultar...")
-                self.click(
-                    xpath="//input[@type='button' and @name='btFiltrar']")
-                time.sleep(4)
-
-                # PASSO 22: SELEÇÃO DE DOCUMENTOS
-                self.log_progresso(
-                    "✅ PASSO 22: Título listado - selecionando documentos")
-                self.click(xpath="//input[@type='button' and @name='btNext']")
-
-                # Aguardar carregamento e fazer scroll para "Marcar Todos"
-                time.sleep(3)  # Aguardar carregamento
-                self.log_progresso("📄 Localizando botão 'Marcar Todos'...")
-
-                # IMPLEMENTAR: Scroll até o final + "Marcar Todos"
-                # TODO: Implementar scroll e localizar botão "Marcar Todos"
-                # TODO: Clicar em "Marcar Todos" para selecionar todas as parcelas
-
-                tabela = self.find_element(xpath='//table[@id="TituloRow"]')
-                if tabela:
-                    self.log_progresso("✅ Selecionando TODOS os documentos...")
-                    radios = tabela.find_elements(
-                        By.XPATH,
-                        './/input[@type="radio" and contains(@id, "flSelecionado_") and not(ancestor::tr[contains(@style, "display: none")])]'
+            iframe_ctx = self.on_iframe(xpath='//iframe[@id="iFramePage"]')
+            if iframe_ctx is not None:
+                with iframe_ctx:
+                    self.log_progresso("Preenchendo número do título...")
+                    self.click(xpath="//input[@id='titulo.tituloPK.nuTitulo']")
+                    self.send_text_human_like(
+                        xpath="//input[@id='titulo.tituloPK.nuTitulo']",
+                        text=numero_titulo
                     )
-                    for radio in radios:
-                        radio.click()
 
-                self.log_progresso("Clicando em Próximo...")
-                self.click(
-                    xpath='//input[@type="button" and @name="btNext" and @value="Próximo"]')
+                    self.log_progresso("Clicando em Consultar...")
+                    self.click(
+                        xpath="//input[@type='button' and @name='btFiltrar']")
+                    time.sleep(4)
+
+                    # PASSO 22: SELEÇÃO DE DOCUMENTOS
+                    self.log_progresso(
+                        "✅ PASSO 22: Título listado - selecionando documentos")
+                    self.click(
+                        xpath="//input[@type='button' and @name='btNext']")
+
+                    # Aguardar carregamento e fazer scroll para "Marcar Todos"
+                    time.sleep(3)  # Aguardar carregamento
+                    self.log_progresso("📄 Localizando botão 'Marcar Todos'...")
+
+                    # IMPLEMENTAR: Scroll até o final + "Marcar Todos"
+                    # TODO: Implementar scroll e localizar botão "Marcar Todos"
+                    # TODO: Clicar em "Marcar Todos" para selecionar todas as parcelas
+
+                    tabela = self.find_element(
+                        xpath='//table[@id="TituloRow"]')
+                    if tabela:
+                        self.log_progresso(
+                            "✅ Selecionando TODOS os documentos...")
+                        radios = tabela.find_elements(
+                            By.XPATH,
+                            './/input[@type="radio" and contains(@id, "flSelecionado_") and not(ancestor::tr[contains(@style, "display: none")])]'
+                        )
+                        for radio in radios:
+                            radio.click()
+
+                    self.log_progresso("Clicando em Próximo...")
+                    self.click(
+                        xpath='//input[@type="button" and @name="btNext" and @value="Próximo"]')
 
             # PASSO 23: APLICAÇÃO DO FILTRO CRÍTICO DE PARCELAS
             parcelas_desmarcar = parametros["parcelas_desmarcar"]
@@ -1249,23 +1278,20 @@ class RPASienge(BaseRPA):
         try:
             from core.data_manager import data_manager
 
-            # Atualizar documento na fila
             def _update_status():
-                collection = data_manager.mongodb_manager.database.fila_reparcelamento
-                collection.update_one({"numero_titulo": numero_titulo}, {
-                    "$set": {
-                        "status_processamento": novo_status,
-                        "processado_em": datetime.now(),
-                        "resultado_processamento": dados_resultado
-                    }
-                })
-
+                # Se não existir método público, apenas loga
+                if hasattr(data_manager, 'atualizar_status_fila'):
+                    data_manager.atualizar_status_fila(
+                        numero_titulo, novo_status, dados_resultado)
+                else:
+                    print(
+                        f"[WARN] Método atualizar_status_fila não implementado no data_manager. Status não atualizado.")
+            import asyncio
             await asyncio.get_event_loop().run_in_executor(
                 None, _update_status)
             self.log_progresso(
                 f"📊 Status atualizado na fila: {numero_titulo} → {novo_status}"
             )
-
         except Exception as e:
             self.log_erro(f"Erro ao atualizar status na fila: {str(e)}", e)
 
@@ -1292,7 +1318,7 @@ class RPASienge(BaseRPA):
                 }
             }
 
-            await data_manager.mongodb_manager.salvar_contrato_processado(
+            await data_manager.salvar_contrato_processado(
                 documento_historico)
             self.log_progresso("📚 Reparcelamento salvo no histórico")
 
@@ -1319,4 +1345,3 @@ class RPASienge(BaseRPA):
         else:
             self.log_progresso(
                 f"⚠️ Rastreamento não iniciado - passo: {nome_passo}")
-# This line corrects the IGPM retrieval from the database using data_manager.

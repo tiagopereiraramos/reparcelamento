@@ -32,11 +32,16 @@ class DataManagerUnificado:
 
     def __init__(self):
         self.pasta_dados = "dados_processamento"
-        self.arquivo_execucoes = os.path.join(self.pasta_dados, "execucoes_rpa.json")
-        self.arquivo_contratos = os.path.join(self.pasta_dados, "contratos_processados.json")
-        self.arquivo_indices = os.path.join(self.pasta_dados, "indices_economicos.json")
-        self.arquivo_fila_sienge = os.path.join(self.pasta_dados, "fila_contratos_sienge.json")
-        self.arquivo_planilhas = os.path.join(self.pasta_dados, "planilhas_extraidas.json")
+        self.arquivo_execucoes = os.path.join(
+            self.pasta_dados, "execucoes_rpa.json")
+        self.arquivo_contratos = os.path.join(
+            self.pasta_dados, "contratos_processados.json")
+        self.arquivo_indices = os.path.join(
+            self.pasta_dados, "indices_economicos.json")
+        self.arquivo_fila_sienge = os.path.join(
+            self.pasta_dados, "fila_contratos_sienge.json")
+        self.arquivo_planilhas = os.path.join(
+            self.pasta_dados, "planilhas_extraidas.json")
 
         self.mongodb_ativo = False
         self._garantir_estrutura_dados()
@@ -50,7 +55,8 @@ class DataManagerUnificado:
             (self.arquivo_execucoes, []),
             (self.arquivo_contratos, []),
             (self.arquivo_indices, []),
-            (self.arquivo_fila_sienge, {"timestamp_ultima_atualizacao": "", "total_contratos": 0, "status_geral": "ativo", "contratos": []}),
+            (self.arquivo_fila_sienge, {"timestamp_ultima_atualizacao": "",
+             "total_contratos": 0, "status_geral": "ativo", "contratos": []}),
             (self.arquivo_planilhas, [])
         ]
 
@@ -68,10 +74,12 @@ class DataManagerUnificado:
         database_name = os.getenv('DATABASE_NAME', 'sistema_rpa')
 
         # MODO TESTE LOCAL - force dados simulados
-        force_simulation = os.getenv('FORCE_SIMULATION', 'false').lower() == 'true'
-        
+        force_simulation = os.getenv(
+            'FORCE_SIMULATION', 'false').lower() == 'true'
+
         if force_simulation:
-            self.logger.info("🧪 MODO SIMULAÇÃO FORÇADA - MongoDB desabilitado para testes")
+            self.logger.info(
+                "🧪 MODO SIMULAÇÃO FORÇADA - MongoDB desabilitado para testes")
             self.mongodb_ativo = False
             self._garantir_estrutura_dados()
             await self._criar_dados_simulados()
@@ -95,27 +103,34 @@ class DataManagerUnificado:
                     self.logger.info("Sistema híbrido MongoDB + JSON ativo")
 
                     # Teste rápido de funcionalidade
-                    test_doc = {"teste": True, "timestamp": datetime.now().isoformat()}
+                    test_doc = {"teste": True,
+                                "timestamp": datetime.now().isoformat()}
                     result = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: mongodb_manager.database.teste_data_manager.insert_one(test_doc)
+                        None, lambda: mongodb_manager.database.teste_data_manager.insert_one(
+                            test_doc)
                     )
 
                     # Remove documento de teste
                     await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: mongodb_manager.database.teste_data_manager.delete_one({"_id": result.inserted_id})
+                        None, lambda: mongodb_manager.database.teste_data_manager.delete_one(
+                            {"_id": result.inserted_id})
                     )
 
-                    self.logger.info(f"Data manager inicializado com MongoDB ativo")
+                    self.logger.info(
+                        f"Data manager inicializado com MongoDB ativo")
 
                     # Verifica saúde inicial
                     await self._verificar_saude_mongodb()
 
                 else:
-                    logger.warning("⚠️ MongoDB conectou mas algo está incorreto")
+                    logger.warning(
+                        "⚠️ MongoDB conectou mas algo está incorreto")
                     logger.warning(f"   mongodb_ativo: {self.mongodb_ativo}")
-                    logger.warning(f"   manager.conectado: {mongodb_manager.conectado}")
+                    logger.warning(
+                        f"   manager.conectado: {mongodb_manager.conectado}")
                     self.mongodb_ativo = False
-                    logger.info("📄 Sistema Fallback: Apenas JSON (MongoDB com problemas)")
+                    logger.info(
+                        "📄 Sistema Fallback: Apenas JSON (MongoDB com problemas)")
 
             except Exception as e:
                 logger.error(f"❌ Falha ao conectar MongoDB: {str(e)}")
@@ -126,16 +141,20 @@ class DataManagerUnificado:
                 logger.info("📄 Sistema Fallback: Apenas JSON")
         else:
             logger.warning("⚠️ MONGODB_DISPONIVEL = False")
-            logger.info("📄 Sistema JSON: MongoDB não disponível nesta instalação")
+            logger.info(
+                "📄 Sistema JSON: MongoDB não disponível nesta instalação")
 
-        logger.info(f"✅ Data manager inicializado - MongoDB ativo: {self.mongodb_ativo}")
+        logger.info(
+            f"✅ Data manager inicializado - MongoDB ativo: {self.mongodb_ativo}")
 
         # Debug final do estado
         logger.info("🔍 Estado final da inicialização:")
         logger.info(f"   MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
         logger.info(f"   self.mongodb_ativo: {self.mongodb_ativo}")
-        logger.info(f"   mongodb_manager.conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
-        logger.info(f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.database is not None else 'NOT SET'}")
+        logger.info(
+            f"   mongodb_manager.conectado: {mongodb_manager.conectado if MONGODB_DISPONIVEL else 'N/A'}")
+        logger.info(
+            f"   mongodb_manager.database: {'SET' if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.database is not None else 'NOT SET'}")
 
     async def _verificar_saude_mongodb(self):
         """Verifica saúde do MongoDB e reconecta se necessário"""
@@ -145,13 +164,14 @@ class DataManagerUnificado:
         try:
             saude = await mongodb_manager.verificar_saude()
             if saude.get("status") != "conectado":
-                logger.warning("⚠️ MongoDB não saudável, tentando reconectar...")
+                logger.warning(
+                    "⚠️ MongoDB não saudável, tentando reconectar...")
                 self.mongodb_ativo = await mongodb_manager.conectar()
         except Exception as e:
             logger.warning(f"⚠️ Erro ao verificar saúde MongoDB: {str(e)}")
             self.mongodb_ativo = False
 
-    async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any], 
+    async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any],
                                   resultado: Dict[str, Any]) -> Dict[str, str]:
         """
         SEMPRE salva execução em MongoDB + JSON simultaneamente
@@ -177,7 +197,8 @@ class DataManagerUnificado:
         logger.info(f"🔍 Estado MongoDB antes do salvamento:")
         logger.info(f"   MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
         logger.info(f"   self.mongodb_ativo: {self.mongodb_ativo}")
-        logger.info(f"   mongodb_manager existe: {mongodb_manager is not None}")
+        logger.info(
+            f"   mongodb_manager existe: {mongodb_manager is not None}")
         logger.info(
             f"   mongodb_manager.conectado: {mongodb_manager.conectado if mongodb_manager else False}")
         logger.info(
@@ -193,14 +214,17 @@ class DataManagerUnificado:
                 if resultado_mongodb:
                     resultados["mongodb"] = "sucesso"
                     dados_execucao["_id_mongodb"] = resultado_mongodb
-                    logger.info(f"📊 [MongoDB] Execução {nome_rpa} salva: {resultado_mongodb}")
+                    logger.info(
+                        f"📊 [MongoDB] Execução {nome_rpa} salva: {resultado_mongodb}")
                 else:
                     resultados["mongodb"] = "falha: retorno None"
-                    logger.warning(f"⚠️ [MongoDB] Falha no salvamento de {nome_rpa}")
+                    logger.warning(
+                        f"⚠️ [MongoDB] Falha no salvamento de {nome_rpa}")
 
             except Exception as e:
                 resultados["mongodb"] = f"erro: {str(e)}"
-                logger.error(f"❌ [MongoDB] Erro ao salvar {nome_rpa}: {str(e)}")
+                logger.error(
+                    f"❌ [MongoDB] Erro ao salvar {nome_rpa}: {str(e)}")
         else:
             motivo = []
             if not MONGODB_DISPONIVEL:
@@ -228,9 +252,11 @@ class DataManagerUnificado:
         if resultados["mongodb"] == "sucesso" and resultados["json"] == "sucesso":
             logger.info(f"✅ [{nome_rpa}] Salvo em MongoDB + JSON")
         elif resultados["json"] == "sucesso":
-            logger.info(f"📄 [{nome_rpa}] Salvo apenas em JSON (MongoDB indisponível)")
+            logger.info(
+                f"📄 [{nome_rpa}] Salvo apenas em JSON (MongoDB indisponível)")
         else:
-            logger.error(f"❌ [{nome_rpa}] FALHA TOTAL - nenhum sistema funcionou!")
+            logger.error(
+                f"❌ [{nome_rpa}] FALHA TOTAL - nenhum sistema funcionou!")
 
         return resultados
 
@@ -299,18 +325,23 @@ class DataManagerUnificado:
                 logger.info(f"💾 Tentando salvar índices no MongoDB...")
                 logger.info(f"   Estado do MongoDB:")
                 logger.info(f"   - MONGODB_DISPONIVEL: {MONGODB_DISPONIVEL}")
-                logger.info(f"   - mongodb_manager.conectado: {mongodb_manager.conectado}")
-                logger.info(f"   - database: {mongodb_manager.database.name if mongodb_manager.database is not None else 'None'}")
-                logger.info(f"   Dados: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
+                logger.info(
+                    f"   - mongodb_manager.conectado: {mongodb_manager.conectado}")
+                logger.info(
+                    f"   - database: {mongodb_manager.database.name if mongodb_manager.database is not None else 'None'}")
+                logger.info(
+                    f"   Dados: {json.dumps(indices_data, indent=2, ensure_ascii=False, default=str)}")
 
                 mongo_id = await mongodb_manager.salvar_indices_economicos(indices_data)
                 if mongo_id:
                     resultados["mongodb"] = "sucesso"
                     documento["_id_mongodb"] = mongo_id
-                    logger.info(f"✅ Índices salvos no MongoDB com ID: {mongo_id}")
+                    logger.info(
+                        f"✅ Índices salvos no MongoDB com ID: {mongo_id}")
                 else:
                     resultados["mongodb"] = "falha: retorno None"
-                    logger.warning(f"⚠️ MongoDB retornou None para salvamento de índices")
+                    logger.warning(
+                        f"⚠️ MongoDB retornou None para salvamento de índices")
             except Exception as e:
                 logger.error(f"❌ Índices MongoDB falhou: {str(e)}")
                 import traceback
@@ -321,12 +352,13 @@ class DataManagerUnificado:
             if not MONGODB_DISPONIVEL:
                 motivo.append("MONGODB_DISPONIVEL=False")
             if not mongodb_manager:
-                motivo.append("mongodb_manager=None")  
+                motivo.append("mongodb_manager=None")
             elif not mongodb_manager.conectado:
                 motivo.append("mongodb_manager.conectado=False")
 
             resultados["mongodb"] = f"nao_tentado: {', '.join(motivo)}"
-            logger.warning(f"⚠️ MongoDB não tentado para índices: {', '.join(motivo)}")
+            logger.warning(
+                f"⚠️ MongoDB não tentado para índices: {', '.join(motivo)}")
 
         # 2. JSON (fallback garantido)
         try:
@@ -362,7 +394,8 @@ class DataManagerUnificado:
                 collection = mongodb_manager.database.fila_processamento_sienge
                 result = await collection.replace_one({}, documento, upsert=True)
                 resultados["mongodb"] = "sucesso"
-                documento["_id_mongodb"] = str(result.upserted_id) if result.upserted_id else "updated"
+                documento["_id_mongodb"] = str(
+                    result.upserted_id) if result.upserted_id else "updated"
             except Exception as e:
                 logger.warning(f"⚠️ Fila Sienge MongoDB falhou: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
@@ -377,9 +410,11 @@ class DataManagerUnificado:
 
         total = documento.get("total_contratos", 0)
         if resultados["mongodb"] == "sucesso" and resultados["json"] == "sucesso":
-            logger.info(f"✅ Fila Sienge ({total} contratos) salva em MongoDB + JSON")
+            logger.info(
+                f"✅ Fila Sienge ({total} contratos) salva em MongoDB + JSON")
         elif resultados["json"] == "sucesso":
-            logger.info(f"📄 Fila Sienge ({total} contratos) salva apenas em JSON")
+            logger.info(
+                f"📄 Fila Sienge ({total} contratos) salva apenas em JSON")
 
         return resultados
 
@@ -437,7 +472,8 @@ class DataManagerUnificado:
             try:
                 execucoes = await mongodb_manager.obter_execucoes_recentes(limite)
                 if execucoes:
-                    logger.debug(f"📊 {len(execucoes)} execuções obtidas do MongoDB")
+                    logger.debug(
+                        f"📊 {len(execucoes)} execuções obtidas do MongoDB")
                     return execucoes
             except Exception as e:
                 logger.warning(f"⚠️ Falha ao ler MongoDB: {str(e)}")
@@ -473,7 +509,7 @@ class DataManagerUnificado:
                 documento = await asyncio.get_event_loop().run_in_executor(
                     None, _get_fila
                 )
-                
+
                 if documento:
                     logger.debug("📊 Fila Sienge obtida do MongoDB")
                     return documento
@@ -585,21 +621,25 @@ class DataManagerUnificado:
             try:
                 indice_valor = await mongodb_manager.obter_indice_mais_recente(tipo_indice)
                 if indice_valor is not None:
-                    logger.debug(f"📊 {tipo_indice.upper()} obtido do MongoDB: {indice_valor}%")
+                    logger.debug(
+                        f"📊 {tipo_indice.upper()} obtido do MongoDB: {indice_valor}%")
                     return indice_valor
             except Exception as e:
-                logger.warning(f"⚠️ Falha ao obter {tipo_indice} do MongoDB: {str(e)}")
+                logger.warning(
+                    f"⚠️ Falha ao obter {tipo_indice} do MongoDB: {str(e)}")
 
         # Fallback para JSON
         try:
             indice_valor = await self._obter_indice_json(tipo_indice)
             if indice_valor is not None:
-                logger.debug(f"📄 {tipo_indice.upper()} obtido do JSON: {indice_valor}%")
+                logger.debug(
+                    f"📄 {tipo_indice.upper()} obtido do JSON: {indice_valor}%")
                 return indice_valor
         except Exception as e:
             logger.error(f"❌ Falha ao obter {tipo_indice} do JSON: {str(e)}")
 
-        logger.warning(f"⚠️ Nenhum {tipo_indice.upper()} válido encontrado no sistema")
+        logger.warning(
+            f"⚠️ Nenhum {tipo_indice.upper()} válido encontrado no sistema")
         return None
 
     async def _obter_indice_json(self, tipo_indice: str) -> Optional[float]:
@@ -617,12 +657,14 @@ class DataManagerUnificado:
                 indices_data = indice_doc.get("indices", {})
 
                 if tipo_indice.lower() in indices_data:
-                    valor_str = indices_data[tipo_indice.lower()].get("valor", "")
+                    valor_str = indices_data[tipo_indice.lower()].get(
+                        "valor", "")
 
                     # Converter valor string para float
                     if isinstance(valor_str, str):
                         # Remove % e converte vírgula para ponto
-                        valor_limpo = valor_str.replace("%", "").replace(",", ".").strip()
+                        valor_limpo = valor_str.replace(
+                            "%", "").replace(",", ".").strip()
                         return float(valor_limpo)
                     elif isinstance(valor_str, (int, float)):
                         return float(valor_str)
@@ -652,7 +694,8 @@ class DataManagerUnificado:
         # Remove contrato anterior com mesmo número de título
         numero_titulo = documento.get("numero_titulo")
         if numero_titulo:
-            contratos = [c for c in contratos if c.get("numero_titulo") != numero_titulo]
+            contratos = [c for c in contratos if c.get(
+                "numero_titulo") != numero_titulo]
 
         contratos.append(documento)
         self._salvar_json_seguro(self.arquivo_contratos, contratos)
@@ -692,12 +735,16 @@ class DataManagerUnificado:
 
             # Estatísticas básicas
             hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            execucoes_hoje = len([e for e in execucoes if e.get("timestamp_inicio", "").startswith(hoje.strftime("%Y-%m-%d"))])
+            execucoes_hoje = len([e for e in execucoes if e.get(
+                "timestamp_inicio", "").startswith(hoje.strftime("%Y-%m-%d"))])
 
             # Taxa de sucesso últimos 30 registros
-            execucoes_recentes = execucoes[-30:] if len(execucoes) > 30 else execucoes
-            sucessos = len([e for e in execucoes_recentes if e.get("sucesso", False)])
-            taxa_sucesso = (sucessos / len(execucoes_recentes) * 100) if execucoes_recentes else 0
+            execucoes_recentes = execucoes[-30:] if len(
+                execucoes) > 30 else execucoes
+            sucessos = len(
+                [e for e in execucoes_recentes if e.get("sucesso", False)])
+            taxa_sucesso = (sucessos / len(execucoes_recentes)
+                            * 100) if execucoes_recentes else 0
 
             return {
                 "total_execucoes": len(execucoes),
@@ -734,7 +781,7 @@ class DataManagerUnificado:
     async def _criar_dados_simulados(self):
         """Cria dados simulados para testes locais"""
         logger.info("🧪 Criando dados simulados para teste...")
-        
+
         # Dados simulados de índices
         indices_simulados = {
             "timestamp_coleta": datetime.now().isoformat(),
@@ -744,7 +791,7 @@ class DataManagerUnificado:
             },
             "fonte_coleta": "simulacao_teste"
         }
-        
+
         # Dados de fila simulados
         fila_simulada = {
             "timestamp_ultima_atualizacao": datetime.now().isoformat(),
@@ -758,52 +805,89 @@ class DataManagerUnificado:
                     "status": "pendente"
                 },
                 {
-                    "numero_titulo": "987654321", 
+                    "numero_titulo": "987654321",
                     "cliente": "Cliente Teste 2",
                     "saldo_devedor": 25000.00,
                     "status": "pendente"
                 }
             ]
         }
-        
+
         # Salva dados simulados
         self._salvar_json_seguro(self.arquivo_indices, [indices_simulados])
         self._salvar_json_seguro(self.arquivo_fila_sienge, fila_simulada)
-        
+
         logger.info("✅ Dados simulados criados com sucesso!")
+
+    async def obter_documento_mais_recente(self, collection_name, filtro=None, campo_ordenacao="timestamp_coleta"):
+        """
+        Wrapper para obter documento mais recente de uma collection do MongoDB.
+        Se MongoDB não estiver disponível, retorna None ou faz fallback para JSON local para fila_reparcelamento.
+        """
+        if hasattr(self, 'mongodb_ativo') and self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+            return await mongodb_manager.obter_documento_mais_recente(collection_name, filtro, campo_ordenacao)
+        else:
+            # Fallback: tente buscar no JSON, se aplicável
+            if collection_name == "fila_reparcelamento":
+                from pathlib import Path
+                import json
+                fila_path = Path(self.arquivo_fila_sienge)
+                if fila_path.exists():
+                    with open(fila_path, "r", encoding="utf-8") as f:
+                        fila = json.load(f)
+                        contratos = fila.get("contratos", [])
+                        if filtro:
+                            # Filtro simples por igualdade de campos
+                            contratos = [c for c in contratos if all(
+                                c.get(k) == v for k, v in filtro.items())]
+                        if contratos:
+                            # Ordena pelo campo_ordenacao se existir
+                            contratos = sorted(contratos, key=lambda x: x.get(
+                                campo_ordenacao, ""), reverse=True)
+                            return contratos[0]
+            return None
 
 
 # Instância global unificada
 data_manager = DataManagerUnificado()
 
 # Funções auxiliares para facilitar uso
+
+
 async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar execução simultaneamente"""
     return await data_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
+
 
 async def salvar_contrato(contrato_data: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar contrato simultaneamente"""
     return await data_manager.salvar_contrato_processado(contrato_data)
 
+
 async def salvar_indices(indices_data: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar índices simultaneamente"""
     return await data_manager.salvar_indices_economicos(indices_data)
+
 
 async def salvar_fila_sienge(fila_dados: Dict[str, Any]) -> Dict[str, str]:
     """Função auxiliar para salvar fila simultaneamente"""
     return await data_manager.salvar_fila_sienge(fila_dados)
 
+
 async def obter_execucoes_recentes(limite: int = 30) -> List[Dict[str, Any]]:
     """Função auxiliar para obter execuções"""
     return await data_manager.obter_execucoes_recentes(limite)
+
 
 async def obter_fila_sienge() -> Dict[str, Any]:
     """Função auxiliar para obter fila Sienge"""
     return await data_manager.obter_fila_sienge()
 
+
 async def obter_estatisticas_dashboard() -> Dict[str, Any]:
     """Função auxiliar para estatísticas"""
     return await data_manager.obter_estatisticas_dashboard()
+
 
 async def obter_indice_mais_recente(tipo_indice: str = "igpm") -> Optional[float]:
     """

@@ -1,0 +1,248 @@
+2025-06-19 23:09:43 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:09:52 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:09:52 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:09:52 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:09:52 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:09:52 - ERROR - ❌ Erro ao carregar dados da fila: 'DataManagerUnificado' object has no attribute 'mongodb_manager': 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+2025-06-19 23:09:52 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 653, in carregar_dados_fila_reparcelamento
+    contrato_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+
+2025-06-19 23:12:17 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:12:17 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:12:17 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:12:17 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:12:17 - ERROR - ❌ Erro ao carregar dados da fila: 'DataManagerUnificado' object has no attribute 'mongodb_manager': 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+2025-06-19 23:12:17 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 653, in carregar_dados_fila_reparcelamento
+    contrato_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+
+2025-06-19 23:14:09 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:14:09 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:14:09 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:14:09 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:14:09 - ERROR - ❌ Erro ao carregar dados da fila: 'DataManagerUnificado' object has no attribute 'mongodb_manager': 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+2025-06-19 23:14:09 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 653, in carregar_dados_fila_reparcelamento
+    contrato_fila = await data_manager.mongodb_manager.obter_documento_mais_recente(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DataManagerUnificado' object has no attribute 'mongodb_manager'
+
+2025-06-19 23:15:44 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:15:44 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:15:44 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:15:44 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:15:44 - ERROR - ❌ Erro ao carregar dados da fila: 'DataManagerUnificado' object has no attribute 'obter_documento_mais_recente': 'DataManagerUnificado' object has no attribute 'obter_documento_mais_recente'
+2025-06-19 23:15:44 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 653, in carregar_dados_fila_reparcelamento
+    contrato_fila = await data_manager.obter_documento_mais_recente(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DataManagerUnificado' object has no attribute 'obter_documento_mais_recente'
+
+2025-06-19 23:17:20 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:17:20 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:17:20 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:17:20 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:23:50 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:23:50 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:23:50 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:23:50 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:26:55 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:26:55 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:26:55 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:26:55 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:28:39 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:28:40 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:28:40 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:28:40 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:28:40 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:29:41 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:29:41 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:29:41 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:29:41 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:29:42 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:29:44 - INFO - 📈 Acessando sistema Sienge: https://sienge.com.br
+2025-06-19 23:40:11 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:40:11 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:40:11 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:40:11 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:40:11 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:40:16 - INFO - 📈 Acessando sistema Sienge: https://sienge.com.br
+2025-06-19 23:40:21 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-19 23:40:33 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:43:57 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:43:57 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:43:57 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:43:57 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:43:57 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:44:00 - INFO - 📈 Acessando sistema Sienge: https://sienge.com.br
+2025-06-19 23:44:05 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-19 23:48:34 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:48:34 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:48:35 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:48:35 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:48:35 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:48:40 - INFO - 📈 Acessando sistema Sienge: https://sienge.com.br
+2025-06-19 23:48:45 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-19 23:50:06 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:50:06 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:50:06 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:50:06 - INFO - 📈 🔍 Buscando próximo contrato da fila de reparcelamento...
+2025-06-19 23:50:06 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:50:09 - INFO - 📈 Acessando sistema Sienge: https://sienge.com.br
+2025-06-19 23:50:14 - INFO - 📈 Login no Sienge realizado com sucesso
+2025-06-19 23:54:45 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:54:52 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:58:53 - WARNING - Arquivo de credenciais do Google não encontrado
+2025-06-19 23:59:06 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:59:09 - INFO - 📈 Iniciando RPA Sienge - Etapa: COMPLETA
+2025-06-19 23:59:09 - INFO - 📈 Contrato: 2239
+2025-06-19 23:59:09 - INFO - 📈 Cliente: SANDRO RIZZON VIEIRA
+2025-06-19 23:59:09 - INFO - 📈 Autorização automática: False
+2025-06-19 23:59:09 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-19 23:59:45 - ERROR - ❌ Erro na execução do RPA Sienge: Falha no login Sienge: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+: Falha no login Sienge: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+2025-06-19 23:59:45 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/browser_manager.py", line 178, in find_element
+    return self._driver_wait.until(condition_func((By.XPATH, xpath)))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/.venv/lib/python3.11/site-packages/selenium/webdriver/support/wait.py", line 138, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 262, in _fazer_login_sienge
+    self.send_text_human_like(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/base_rpa.py", line 491, in send_text_human_like
+    return self.browser.send_text_human_like(xpath, text, clear, timeout, verify)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/browser_manager.py", line 233, in send_text_human_like
+    element = self.find_element(xpath, "clickable")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/browser_manager.py", line 180, in find_element
+    raise NoSuchElementException(
+selenium.common.exceptions.NoSuchElementException: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 144, in executar
+    await self._fazer_login_sienge()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 316, in _fazer_login_sienge
+    raise Exception(f"Falha no login Sienge: {str(e)}")
+Exception: Falha no login Sienge: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+
+2025-06-19 23:59:45 - INFO - 📈 RPA Sienge finalizado
+2025-06-19 23:59:47 - INFO - 🤖 Inicializando RPA: Sienge
+2025-06-19 23:59:50 - INFO - 📈 Iniciando RPA Sienge - Etapa: COMPLETA
+2025-06-19 23:59:50 - INFO - 📈 Contrato: 2356
+2025-06-19 23:59:50 - INFO - 📈 Cliente: MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO
+2025-06-19 23:59:50 - INFO - 📈 Autorização automática: False
+2025-06-19 23:59:50 - INFO - 📈 Acessando sistema Sienge: https://jmservicos.sienge.com.br/sienge/
+2025-06-20 00:00:25 - ERROR - ❌ Erro na execução do RPA Sienge: Falha no login Sienge: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+: Falha no login Sienge: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+2025-06-20 00:00:25 - ERROR - 🔍 Traceback: Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/browser_manager.py", line 178, in find_element
+    return self._driver_wait.until(condition_func((By.XPATH, xpath)))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/.venv/lib/python3.11/site-packages/selenium/webdriver/support/wait.py", line 138, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 262, in _fazer_login_sienge
+    self.send_text_human_like(
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/base_rpa.py", line 491, in send_text_human_like
+    return self.browser.send_text_human_like(xpath, text, clear, timeout, verify)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/browser_manager.py", line 233, in send_text_human_like
+    element = self.find_element(xpath, "clickable")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/core/browser_manager.py", line 180, in find_element
+    raise NoSuchElementException(
+selenium.common.exceptions.NoSuchElementException: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 144, in executar
+    await self._fazer_login_sienge()
+  File "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/rpa_sienge/rpa_sienge.py", line 316, in _fazer_login_sienge
+    raise Exception(f"Falha no login Sienge: {str(e)}")
+Exception: Falha no login Sienge: Message: Elemento com xpath (//input[@id="username"])[1] não encontrado. Message: 
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5
+NoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5
+dom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16
+; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+
+2025-06-20 00:00:25 - INFO - 📈 RPA Sienge finalizado

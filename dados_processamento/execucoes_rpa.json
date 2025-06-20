@@ -1,1 +1,1492 @@
-[]
+[
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:09:52.094966",
+    "timestamp_fim": "2025-06-19T23:09:52.094967",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:09:52.094946"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d1002e3fb799b9ae1798"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:09:52.124706",
+    "timestamp_fim": "2025-06-19T23:09:52.124707",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:09:52.072692",
+      "fim_teste": "2025-06-19T23:09:52.124696",
+      "tempo_total_segundos": 0.051992,
+      "total_testes": 21,
+      "testes_passou": 20,
+      "taxa_sucesso": 95.2,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": false,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d1002e3fb799b9ae179d"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:09:52.128954",
+    "timestamp_fim": "2025-06-19T23:09:52.128955",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.037028,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_230952_0890"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.037028,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d1002e3fb799b9ae179f"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:12:17.779649",
+    "timestamp_fim": "2025-06-19T23:12:17.779650",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:12:17.779632"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d191acaae186daaacb3c"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:12:17.803654",
+    "timestamp_fim": "2025-06-19T23:12:17.803655",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:12:17.756244",
+      "fim_teste": "2025-06-19T23:12:17.803644",
+      "tempo_total_segundos": 0.047387,
+      "total_testes": 21,
+      "testes_passou": 20,
+      "taxa_sucesso": 95.2,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": false,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d191acaae186daaacb41"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:12:17.808202",
+    "timestamp_fim": "2025-06-19T23:12:17.808204",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.030593,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_231217_7747"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.030593,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d191acaae186daaacb43"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:14:09.594598",
+    "timestamp_fim": "2025-06-19T23:14:09.594599",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:14:09.594582"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d201d529b467de783993"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:14:09.624291",
+    "timestamp_fim": "2025-06-19T23:14:09.624292",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:14:09.572368",
+      "fim_teste": "2025-06-19T23:14:09.624283",
+      "tempo_total_segundos": 0.051904,
+      "total_testes": 21,
+      "testes_passou": 20,
+      "taxa_sucesso": 95.2,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": false,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d201d529b467de783998"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:14:09.629571",
+    "timestamp_fim": "2025-06-19T23:14:09.629572",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.036726,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_231409_5899"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.036726,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d201d529b467de78399a"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:15:44.952105",
+    "timestamp_fim": "2025-06-19T23:15:44.952106",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:15:44.952088"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d2607a5c0384f8219ecb"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:15:44.976430",
+    "timestamp_fim": "2025-06-19T23:15:44.976431",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:15:44.928482",
+      "fim_teste": "2025-06-19T23:15:44.976421",
+      "tempo_total_segundos": 0.047928,
+      "total_testes": 21,
+      "testes_passou": 20,
+      "taxa_sucesso": 95.2,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": false,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d2607a5c0384f8219ed0"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:15:44.981470",
+    "timestamp_fim": "2025-06-19T23:15:44.981472",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.031535,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_231544_9469"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.031535,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d2607a5c0384f8219ed2"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:17:20.310363",
+    "timestamp_fim": "2025-06-19T23:17:20.310365",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:17:20.310344"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d2c004ef2c14f9f8b4c9"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:17:20.335982",
+    "timestamp_fim": "2025-06-19T23:17:20.335983",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:17:20.288203",
+      "fim_teste": "2025-06-19T23:17:20.335974",
+      "tempo_total_segundos": 0.04776,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d2c004ef2c14f9f8b4ce"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:17:20.341305",
+    "timestamp_fim": "2025-06-19T23:17:20.341307",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.033073,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_231720_3056"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.033073,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d2c004ef2c14f9f8b4d0"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:23:50.360244",
+    "timestamp_fim": "2025-06-19T23:23:50.360245",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:23:50.360226"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d44683a08a5a23e3d71b"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:23:50.391175",
+    "timestamp_fim": "2025-06-19T23:23:50.391176",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:23:50.336789",
+      "fim_teste": "2025-06-19T23:23:50.391167",
+      "tempo_total_segundos": 0.054367,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d44683a08a5a23e3d720"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:23:50.397046",
+    "timestamp_fim": "2025-06-19T23:23:50.397048",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.038952,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_232350_3547"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.038952,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d44683a08a5a23e3d722"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:26:55.877144",
+    "timestamp_fim": "2025-06-19T23:26:55.877145",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:26:55.877127"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d4ff6824009d1911f012"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:26:55.908312",
+    "timestamp_fim": "2025-06-19T23:26:55.908313",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:26:55.854202",
+      "fim_teste": "2025-06-19T23:26:55.908304",
+      "tempo_total_segundos": 0.054092,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d4ff6824009d1911f017"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:26:55.915139",
+    "timestamp_fim": "2025-06-19T23:26:55.915141",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.03919,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_232655_8726"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.03919,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d4ff6824009d1911f019"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:28:40.091110",
+    "timestamp_fim": "2025-06-19T23:28:40.091111",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:28:40.091094"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d56839df7e1626ceeb63"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:28:40.117515",
+    "timestamp_fim": "2025-06-19T23:28:40.117516",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:28:40.070280",
+      "fim_teste": "2025-06-19T23:28:40.117506",
+      "tempo_total_segundos": 0.047214,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d56839df7e1626ceeb68"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:28:40.124451",
+    "timestamp_fim": "2025-06-19T23:28:40.124453",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.034956,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_232840_0863"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.034956,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d56839df7e1626ceeb6a"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:29:41.957589",
+    "timestamp_fim": "2025-06-19T23:29:41.957590",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:29:41.957572"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d5a5e26cc0f45c3e517a"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:29:41.987795",
+    "timestamp_fim": "2025-06-19T23:29:41.987796",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:29:41.930804",
+      "fim_teste": "2025-06-19T23:29:41.987786",
+      "tempo_total_segundos": 0.056971,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d5a5e26cc0f45c3e517f"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:29:41.995287",
+    "timestamp_fim": "2025-06-19T23:29:41.995288",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.040004,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_232941_9521"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.040004,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d5a5e26cc0f45c3e5181"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:40:11.793708",
+    "timestamp_fim": "2025-06-19T23:40:11.793709",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:40:11.793691"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d81bc104b30d5702c032"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:40:11.822699",
+    "timestamp_fim": "2025-06-19T23:40:11.822700",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:40:11.767034",
+      "fim_teste": "2025-06-19T23:40:11.822690",
+      "tempo_total_segundos": 0.055646,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d81bc104b30d5702c037"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:40:11.831351",
+    "timestamp_fim": "2025-06-19T23:40:11.831354",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.039332,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_234011_7883"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.039332,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d81bc104b30d5702c039"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:43:57.767154",
+    "timestamp_fim": "2025-06-19T23:43:57.767156",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:43:57.767138"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d8fdc3c3b0ad635b9a44"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:43:57.795810",
+    "timestamp_fim": "2025-06-19T23:43:57.795811",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:43:57.744878",
+      "fim_teste": "2025-06-19T23:43:57.795802",
+      "tempo_total_segundos": 0.050913,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d8fdc3c3b0ad635b9a49"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:43:57.804679",
+    "timestamp_fim": "2025-06-19T23:43:57.804681",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.039111,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_234357_7623"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.039111,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854d8fdc3c3b0ad635b9a4b"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:48:35.008811",
+    "timestamp_fim": "2025-06-19T23:48:35.008812",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:48:35.008793"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854da13065e20bc475893db"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:48:35.037159",
+    "timestamp_fim": "2025-06-19T23:48:35.037160",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:48:34.984560",
+      "fim_teste": "2025-06-19T23:48:35.037150",
+      "tempo_total_segundos": 0.052579,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854da13065e20bc475893e0"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:48:35.045128",
+    "timestamp_fim": "2025-06-19T23:48:35.045129",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.038989,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_234835_0030"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.038989,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854da13065e20bc475893e2"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE",
+    "timestamp_inicio": "2025-06-19T23:50:06.391127",
+    "timestamp_fim": "2025-06-19T23:50:06.391129",
+    "parametros_entrada": {
+      "modo": "validacao"
+    },
+    "resultado": {
+      "sucesso": true,
+      "timestamp": "2025-06-19T23:50:06.391036"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854da6e0847453c49f7793f"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:50:06.423188",
+    "timestamp_fim": "2025-06-19T23:50:06.423189",
+    "parametros_entrada": {
+      "modo": "teste_completo"
+    },
+    "resultado": {
+      "inicio_teste": "2025-06-19T23:50:06.362638",
+      "fim_teste": "2025-06-19T23:50:06.423179",
+      "tempo_total_segundos": 0.06053,
+      "total_testes": 21,
+      "testes_passou": 21,
+      "taxa_sucesso": 100.0,
+      "credenciais_configuradas": false,
+      "webscraping_testado": false,
+      "resultados_detalhados": {
+        "teste_1_estrutura": {
+          "metodo_carregar_dados_fila_reparcelamento": true,
+          "metodo_executar_reparcelamento_webscraping": true,
+          "metodo__fazer_login_sienge": true,
+          "metodo__consultar_relatorios_financeiros": true,
+          "metodo__processar_planilha_baixada": true,
+          "data_manager_ativo": true,
+          "mongodb_disponivel": true,
+          "rastreamento_ativo": true
+        },
+        "teste_2_data_manager": {
+          "igpm_disponivel": true,
+          "fila_acessivel": true,
+          "salvamento_execucao": true
+        },
+        "teste_3_metodos_rpa": {
+          "carregamento_fila": true,
+          "validacao_parametros": true,
+          "integracao_rastreamento": true
+        },
+        "teste_4_simulacao": {
+          "simulacao_carregamento": true,
+          "simulacao_navegacao": true,
+          "simulacao_extracao": true,
+          "simulacao_salvamento": true
+        },
+        "teste_5_regras_pdd": {
+          "processador_criado": true,
+          "validacao_pdd": true,
+          "calculos_financeiros": true
+        }
+      }
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854da6e0847453c49f77944"
+  },
+  {
+    "nome_rpa": "TESTE_SIENGE_COMPLETO",
+    "timestamp_inicio": "2025-06-19T23:50:06.435327",
+    "timestamp_fim": "2025-06-19T23:50:06.435330",
+    "parametros_entrada": {},
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 0.045891,
+      "total_passos": 5,
+      "id_rastreamento": "TESTE_SIENGE_COMPLETO_20250619_235006_3854"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 0.045891,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854da6e0847453c49f77946"
+  },
+  {
+    "nome_rpa": "RPA_Sienge",
+    "timestamp_inicio": "2025-06-19T23:59:45.527249",
+    "timestamp_fim": "2025-06-19T23:59:45.527252",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "contrato": {
+          "id_fila": "reajuste_2239_20250617_225400",
+          "numero_titulo": 2239,
+          "cliente": "SANDRO RIZZON VIEIRA",
+          "empreendimento": "MARCELY",
+          "cnpj_unidade": "BVRB",
+          "indexador": "",
+          "ultimo_reajuste": "jun.-24",
+          "dias_desde_ultimo_reajuste": 0,
+          "linha_planilha": 51,
+          "status_processamento": "pendente",
+          "prioridade": 11,
+          "timestamp_identificacao": "2025-06-17T22:54:00.838465",
+          "dados_completos": {
+            "Empresa": "BVRB",
+            "Loteamento": "MARCELY",
+            "Cliente": "SANDRO RIZZON VIEIRA",
+            "Quadra": 36,
+            "Lote": 128,
+            "Titulo": 2239,
+            "Data de consulta  IPTU ": "",
+            "PENDENCIAS PMFI ": "",
+            "PENDENCIAS SIENGE INAD ": "",
+            "PENDENCIAS SIENGE": "",
+            "Assinatura ultimo Contrato": "01/06/2018",
+            "1 º vencimento": "05/07/2018",
+            "Índice": "IGPM",
+            "Juros": "8,0%",
+            "Tipo reajuste": "anual",
+            "\"original ou corrigido\"": "original",
+            "Último reajuste": "jun.-24",
+            "Valor da Parcela Base": "",
+            "Parcelas a vencer": "",
+            "Saldo devedor Base": "",
+            "Dia de vencimento de parcelas": "",
+            "Mês reajuste": "jun.-25",
+            "1º vencimento carnê": "",
+            "% Reajuste total": "#N/A",
+            "Parcela final": "#N/A",
+            "Saldo devedor final": "#N/A",
+            "Próximo reajuste": "",
+            "linha_planilha": 51,
+            "mes_reajuste_original": "jun.-25",
+            "mes_reajuste_numerico": 6,
+            "ano_reajuste": 2025,
+            "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+            "cliente": "SANDRO RIZZON VIEIRA",
+            "numero_titulo": 2239
+          },
+          "processado_em": "2025-06-18T15:28:09.758045",
+          "erro_processamento": null
+        },
+        "credenciais_fornecidas": true,
+        "indices_fornecidos": true,
+        "etapa": "completa",
+        "autorizar_reparcelamento": false,
+        "notificar_analista": true
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 35.884925,
+      "total_passos": 5,
+      "id_rastreamento": "RPA_Sienge_20250619_235909_6349"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 35.884925,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854dcb14385819fa36d0106"
+  },
+  {
+    "nome_rpa": "RPA_Sienge",
+    "timestamp_inicio": "2025-06-19T23:59:45.545388",
+    "timestamp_fim": "2025-06-19T23:59:45.545390",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "contrato": {
+          "id_fila": "reajuste_2239_20250617_225400",
+          "numero_titulo": 2239,
+          "cliente": "SANDRO RIZZON VIEIRA",
+          "empreendimento": "MARCELY",
+          "cnpj_unidade": "BVRB",
+          "indexador": "",
+          "ultimo_reajuste": "jun.-24",
+          "dias_desde_ultimo_reajuste": 0,
+          "linha_planilha": 51,
+          "status_processamento": "pendente",
+          "prioridade": 11,
+          "timestamp_identificacao": "2025-06-17T22:54:00.838465",
+          "dados_completos": {
+            "Empresa": "BVRB",
+            "Loteamento": "MARCELY",
+            "Cliente": "SANDRO RIZZON VIEIRA",
+            "Quadra": 36,
+            "Lote": 128,
+            "Titulo": 2239,
+            "Data de consulta  IPTU ": "",
+            "PENDENCIAS PMFI ": "",
+            "PENDENCIAS SIENGE INAD ": "",
+            "PENDENCIAS SIENGE": "",
+            "Assinatura ultimo Contrato": "01/06/2018",
+            "1 º vencimento": "05/07/2018",
+            "Índice": "IGPM",
+            "Juros": "8,0%",
+            "Tipo reajuste": "anual",
+            "\"original ou corrigido\"": "original",
+            "Último reajuste": "jun.-24",
+            "Valor da Parcela Base": "",
+            "Parcelas a vencer": "",
+            "Saldo devedor Base": "",
+            "Dia de vencimento de parcelas": "",
+            "Mês reajuste": "jun.-25",
+            "1º vencimento carnê": "",
+            "% Reajuste total": "#N/A",
+            "Parcela final": "#N/A",
+            "Saldo devedor final": "#N/A",
+            "Próximo reajuste": "",
+            "linha_planilha": 51,
+            "mes_reajuste_original": "jun.-25",
+            "mes_reajuste_numerico": 6,
+            "ano_reajuste": 2025,
+            "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+            "cliente": "SANDRO RIZZON VIEIRA",
+            "numero_titulo": 2239
+          },
+          "processado_em": "2025-06-18T15:28:09.758045",
+          "erro_processamento": null
+        },
+        "credenciais_fornecidas": true,
+        "indices_fornecidos": true,
+        "etapa": "completa",
+        "autorizar_reparcelamento": false,
+        "notificar_analista": true
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 35.903835,
+      "total_passos": 5,
+      "id_rastreamento": "RPA_Sienge_20250619_235909_6349"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 35.903835,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854dcb14385819fa36d0108"
+  },
+  {
+    "nome_rpa": "RPA_Sienge",
+    "timestamp_inicio": "2025-06-20T00:00:25.033002",
+    "timestamp_fim": "2025-06-20T00:00:25.033007",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "contrato": {
+          "id_fila": "reajuste_2356_20250617_225400",
+          "numero_titulo": 2356,
+          "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+          "empreendimento": "MARCELY",
+          "cnpj_unidade": "BVRB",
+          "indexador": "",
+          "ultimo_reajuste": "jun.-24",
+          "dias_desde_ultimo_reajuste": 0,
+          "linha_planilha": 72,
+          "status_processamento": "erro_consulta",
+          "prioridade": 11,
+          "timestamp_identificacao": "2025-06-17T22:54:00.838469",
+          "dados_completos": {
+            "Empresa": "BVRB",
+            "Loteamento": "MARCELY",
+            "Cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+            "Quadra": 38,
+            "Lote": 258,
+            "Titulo": 2356,
+            "Data de consulta  IPTU ": "",
+            "PENDENCIAS PMFI ": "",
+            "PENDENCIAS SIENGE INAD ": "",
+            "PENDENCIAS SIENGE": "",
+            "Assinatura ultimo Contrato": "07/05/2018",
+            "1 º vencimento": "10/06/2018",
+            "Índice": "IGPM",
+            "Juros": "8,0%",
+            "Tipo reajuste": "anual",
+            "\"original ou corrigido\"": "original",
+            "Último reajuste": "jun.-24",
+            "Valor da Parcela Base": "",
+            "Parcelas a vencer": "",
+            "Saldo devedor Base": "",
+            "Dia de vencimento de parcelas": "",
+            "Mês reajuste": "jun.-25",
+            "1º vencimento carnê": "",
+            "% Reajuste total": "#N/A",
+            "Parcela final": "#N/A",
+            "Saldo devedor final": "#N/A",
+            "Próximo reajuste": "",
+            "linha_planilha": 72,
+            "mes_reajuste_original": "jun.-25",
+            "mes_reajuste_numerico": 6,
+            "ano_reajuste": 2025,
+            "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+            "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+            "numero_titulo": 2356
+          },
+          "processado_em": "2025-06-18T15:28:30.163838",
+          "erro_processamento": "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
+        },
+        "credenciais_fornecidas": true,
+        "indices_fornecidos": true,
+        "etapa": "completa",
+        "autorizar_reparcelamento": false,
+        "notificar_analista": true
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 34.426425,
+      "total_passos": 5,
+      "id_rastreamento": "RPA_Sienge_20250619_235950_5997"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 34.426425,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854dcd94385819fa36d010f"
+  },
+  {
+    "nome_rpa": "RPA_Sienge",
+    "timestamp_inicio": "2025-06-20T00:00:25.053045",
+    "timestamp_fim": "2025-06-20T00:00:25.053048",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "contrato": {
+          "id_fila": "reajuste_2356_20250617_225400",
+          "numero_titulo": 2356,
+          "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+          "empreendimento": "MARCELY",
+          "cnpj_unidade": "BVRB",
+          "indexador": "",
+          "ultimo_reajuste": "jun.-24",
+          "dias_desde_ultimo_reajuste": 0,
+          "linha_planilha": 72,
+          "status_processamento": "erro_consulta",
+          "prioridade": 11,
+          "timestamp_identificacao": "2025-06-17T22:54:00.838469",
+          "dados_completos": {
+            "Empresa": "BVRB",
+            "Loteamento": "MARCELY",
+            "Cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+            "Quadra": 38,
+            "Lote": 258,
+            "Titulo": 2356,
+            "Data de consulta  IPTU ": "",
+            "PENDENCIAS PMFI ": "",
+            "PENDENCIAS SIENGE INAD ": "",
+            "PENDENCIAS SIENGE": "",
+            "Assinatura ultimo Contrato": "07/05/2018",
+            "1 º vencimento": "10/06/2018",
+            "Índice": "IGPM",
+            "Juros": "8,0%",
+            "Tipo reajuste": "anual",
+            "\"original ou corrigido\"": "original",
+            "Último reajuste": "jun.-24",
+            "Valor da Parcela Base": "",
+            "Parcelas a vencer": "",
+            "Saldo devedor Base": "",
+            "Dia de vencimento de parcelas": "",
+            "Mês reajuste": "jun.-25",
+            "1º vencimento carnê": "",
+            "% Reajuste total": "#N/A",
+            "Parcela final": "#N/A",
+            "Saldo devedor final": "#N/A",
+            "Próximo reajuste": "",
+            "linha_planilha": 72,
+            "mes_reajuste_original": "jun.-25",
+            "mes_reajuste_numerico": 6,
+            "ano_reajuste": 2025,
+            "motivo_elegibilidade": "Mês de reajuste atual: jun.-25",
+            "cliente": "MARCOS DE ALMEIDA VAZQUEZ / LUCAS FERNANDO VIEIRA DE ARAUJO",
+            "numero_titulo": 2356
+          },
+          "processado_em": "2025-06-18T15:28:30.163838",
+          "erro_processamento": "Informe pelo menos um dos seguintes campos para efetuar a consulta (empresa, título ou cliente)."
+        },
+        "credenciais_fornecidas": true,
+        "indices_fornecidos": true,
+        "etapa": "completa",
+        "autorizar_reparcelamento": false,
+        "notificar_analista": true
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": false,
+      "tempo_execucao": 34.448536,
+      "total_passos": 5,
+      "id_rastreamento": "RPA_Sienge_20250619_235950_5997"
+    },
+    "sucesso": false,
+    "tempo_execucao_segundos": 34.448536,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6854dcd94385819fa36d0111"
+  }
+]
