@@ -1,3 +1,4 @@
+
 """
 Teste Completo RPA Sienge - Ambiente de Produção
 Sistema de teste robusto que espelha exatamente o funcionamento produtivo
@@ -102,11 +103,12 @@ class TesteSiengeCompleto:
 
         except Exception as e:
             self._log_passo(f"Erro na inicialização: {str(e)}", "FALHA")
-            await self.rastreamento.registrar_erro(
-                "ERRO_INICIALIZACAO_SISTEMA",
-                str(e),
-                {"traceback": traceback.format_exc()}
-            )
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro(
+                    "ERRO_INICIALIZACAO_SISTEMA",
+                    str(e),
+                    {"traceback": traceback.format_exc()}
+                )
             return False
 
     async def teste_1_validacao_estrutura_sistema(self) -> bool:
@@ -122,8 +124,10 @@ class TesteSiengeCompleto:
         self._log_passo("Verificando métodos principais do RPA Sienge...")
         metodos_esperados = [
             "carregar_dados_fila_reparcelamento",
-            "executar_webscraping_completo",
-            "processar_reparcelamento_completo"
+            "executar_reparcelamento_webscraping",
+            "_fazer_login_sienge",
+            "_consultar_relatorios_financeiros",
+            "_processar_planilha_baixada"
         ]
 
         for metodo in metodos_esperados:
@@ -155,11 +159,12 @@ class TesteSiengeCompleto:
 
         self.resultados_teste["teste_1_estrutura"] = resultados
 
-        await self.rastreamento.registrar_passo(
-            "TESTE_1_ESTRUTURA_CONCLUIDO",
-            resultados,
-            categoria="TESTE"
-        )
+        if self.rastreamento:
+            await self.rastreamento.registrar_passo(
+                "TESTE_1_ESTRUTURA_CONCLUIDO",
+                resultados,
+                categoria="TESTE"
+            )
 
         return all(resultados.values())
 
@@ -177,7 +182,7 @@ class TesteSiengeCompleto:
             self._log_passo("Testando obtenção de índice IGP-M...")
             try:
                 igpm_valor = await data_manager.obter_indice_mais_recente("igpm")
-                resultados["igpm_disponivel"] = igpm_valor is not None
+                resultados["igpm_disponivel"] = igmp_valor is not None
 
                 if igpm_valor:
                     self._log_passo(f"IGP-M obtido: {igpm_valor}%", "SUCESSO")
@@ -222,21 +227,23 @@ class TesteSiengeCompleto:
 
             self.resultados_teste["teste_2_data_manager"] = resultados
 
-            await self.rastreamento.registrar_passo(
-                "TESTE_2_DATA_MANAGER_CONCLUIDO",
-                resultados,
-                categoria="TESTE"
-            )
+            if self.rastreamento:
+                await self.rastreamento.registrar_passo(
+                    "TESTE_2_DATA_MANAGER_CONCLUIDO",
+                    resultados,
+                    categoria="TESTE"
+                )
 
             return all(resultados.values())
 
         except Exception as e:
             self._log_passo(f"Erro geral no teste 2: {str(e)}", "FALHA")
-            await self.rastreamento.registrar_erro(
-                "ERRO_TESTE_2_DATA_MANAGER",
-                str(e),
-                {"traceback": traceback.format_exc()}
-            )
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro(
+                    "ERRO_TESTE_2_DATA_MANAGER",
+                    str(e),
+                    {"traceback": traceback.format_exc()}
+                )
             return False
 
     async def teste_3_metodos_rpa_sienge(self) -> bool:
@@ -309,13 +316,24 @@ class TesteSiengeCompleto:
 
             self.resultados_teste["teste_3_metodos_rpa"] = resultados
 
-            await self.rastreamento.registrar_passo(
-                "TESTE_3_METODOS_RPA_CONCLUIDO",
-                resultados,
-                categoria="TESTE"
-            )
+            if self.rastreamento:
+                await self.rastreamento.registrar_passo(
+                    "TESTE_3_METODOS_RPA_CONCLUIDO",
+                    resultados,
+                    categoria="TESTE"
+                )
 
             return all(resultados.values())
+
+        except Exception as e:
+            self._log_passo(f"Erro geral no teste 3: {str(e)}", "FALHA")
+            if self.rastreamento:
+                await self.rastreamento.registrar_erro(
+                    "ERRO_TESTE_3_METODOS_RPA",
+                    str(e),
+                    {"traceback": traceback.format_exc()}
+                )
+            return False
 
     async def teste_4_simulacao_execucao_completa(self) -> bool:
         """
@@ -337,11 +355,12 @@ class TesteSiengeCompleto:
 
             self.resultados_teste["teste_4_simulacao"] = resultados_mock
 
-            await self.rastreamento.registrar_passo(
-                "TESTE_4_SIMULACAO_MOCK_CONCLUIDO",
-                resultados_mock,
-                categoria="TESTE"
-            )
+            if self.rastreamento:
+                await self.rastreamento.registrar_passo(
+                    "TESTE_4_SIMULACAO_MOCK_CONCLUIDO",
+                    resultados_mock,
+                    categoria="TESTE"
+                )
 
             return True
 
@@ -360,22 +379,121 @@ class TesteSiengeCompleto:
                 self._log_passo("Sistema pronto para execução real", "SUCESSO")
                 self.resultados_teste["teste_4_execucao_real"] = resultados_reais
 
-                await self.rastreamento.registrar_passo(
-                    "TESTE_4_SISTEMA_PRONTO_EXECUCAO",
-                    resultados_reais,
-                    categoria="TESTE"
-                )
+                if self.rastreamento:
+                    await self.rastreamento.registrar_passo(
+                        "TESTE_4_SISTEMA_PRONTO_EXECUCAO",
+                        resultados_reais,
+                        categoria="TESTE"
+                    )
 
                 return True
 
             except Exception as e:
                 self._log_passo(f"Erro na simulação: {str(e)}", "FALHA")
+                if self.rastreamento:
+                    await self.rastreamento.registrar_erro(
+                        "ERRO_TESTE_4_SIMULACAO",
+                        str(e),
+                        {"traceback": traceback.format_exc()}
+                    )
+                return False
+
+    async def teste_5_webscraping_real_opcional(self) -> bool:
+        """
+        TESTE 5: Webscraping real (apenas com credenciais configuradas)
+        Executa webscraping real no Sienge se credenciais estiverem disponíveis
+        """
+        self._log_secao("TESTE 5 - WEBSCRAPING REAL (OPCIONAL)", 1)
+
+        if not self.credenciais_teste.get("usuario"):
+            self._log_passo("Webscraping real pulado - credenciais não configuradas", "AVISO")
+            return True
+
+        try:
+            self._log_passo("Iniciando teste de webscraping real...", "PROCESSANDO")
+
+            # Configurar credenciais do RPA
+            credenciais_rpa = {
+                "url": self.credenciais_teste["url"],
+                "usuario": self.credenciais_teste["usuario"],
+                "senha": self.credenciais_teste["senha"]
+            }
+
+            # Dados de teste para o contrato
+            contrato_teste = {
+                "numero_titulo": "000000001",  # Título de teste
+                "cliente": "CLIENTE TESTE RPA",
+                "empreendimento": "TESTE"
+            }
+
+            self._log_passo(f"Testando com contrato: {contrato_teste['numero_titulo']}")
+
+            # Executar apenas etapa de consulta para testar webscraping
+            resultado_consulta = await self.rpa_sienge.executar(
+                contrato=contrato_teste,
+                credenciais_sienge=credenciais_rpa,
+                etapa="consulta"
+            )
+
+            if resultado_consulta.sucesso:
+                self._log_passo("Webscraping de consulta executado com sucesso", "SUCESSO")
+                
+                dados = resultado_consulta.dados or {}
+                dados_financeiros = dados.get("dados_financeiros", {})
+                
+                self._log_passo(f"Dados extraídos: {len(dados_financeiros)} campos", "SUCESSO")
+                
+                # Registrar resultado do teste
+                resultado_webscraping = {
+                    "webscraping_sucesso": True,
+                    "dados_extraidos": bool(dados_financeiros),
+                    "arquivo_processado": dados_financeiros.get("arquivo_processado"),
+                    "status_cliente": dados_financeiros.get("status_cliente", "processado")
+                }
+                
+                self.resultados_teste["teste_5_webscraping"] = resultado_webscraping
+                
+                if self.rastreamento:
+                    await self.rastreamento.registrar_passo(
+                        "TESTE_5_WEBSCRAPING_SUCESSO",
+                        resultado_webscraping,
+                        categoria="TESTE"
+                    )
+                
+                return True
+            else:
+                erro = resultado_consulta.erro or "Erro desconhecido"
+                self._log_passo(f"Webscraping falhou: {erro}", "FALHA")
+                
+                resultado_erro = {
+                    "webscraping_sucesso": False,
+                    "erro": erro,
+                    "mensagem": resultado_consulta.mensagem
+                }
+                
+                self.resultados_teste["teste_5_webscraping"] = resultado_erro
+                
+                if self.rastreamento:
+                    await self.rastreamento.registrar_erro(
+                        "ERRO_TESTE_5_WEBSCRAPING",
+                        erro,
+                        resultado_erro
+                    )
+                
+                return False
+
+        except Exception as e:
+            erro_msg = f"Erro crítico no webscraping: {str(e)}"
+            self._log_passo(erro_msg, "FALHA")
+            
+            if self.rastreamento:
                 await self.rastreamento.registrar_erro(
-                    "ERRO_TESTE_4_SIMULACAO",
-                    str(e),
+                    "ERRO_CRITICO_TESTE_5",
+                    erro_msg,
                     {"traceback": traceback.format_exc()}
                 )
-                return False
+            
+            return False
 
     async def gerar_relatorio_final(self):
         """
@@ -407,6 +525,7 @@ class TesteSiengeCompleto:
             "testes_passou": testes_passou,
             "taxa_sucesso": round(taxa_sucesso, 1),
             "credenciais_configuradas": bool(self.credenciais_teste.get("usuario")),
+            "webscraping_testado": "teste_5_webscraping" in self.resultados_teste,
             "resultados_detalhados": self.resultados_teste
         }
 
@@ -438,7 +557,8 @@ class TesteSiengeCompleto:
         else:
             self._log_passo("❌ SISTEMA REPROVADO", "FALHA")
 
-        await self.rastreamento.finalizar_execucao(relatorio)
+        if self.rastreamento:
+            await self.rastreamento.finalizar_execucao(relatorio)
 
         return relatorio
 
@@ -452,14 +572,14 @@ class TesteSiengeCompleto:
             # Inicialização
             inicializacao_ok = await self.inicializar_sistema()
             if not inicializacao_ok:
-                self._log_passo("Falha na inicialização - abortando testes", "FALHA")
-                return
+                self._log_passo("Falha na inicialização - continuando com testes limitados", "AVISO")
 
             # Execução dos testes
             teste_1_ok = await self.teste_1_validacao_estrutura_sistema()
             teste_2_ok = await self.teste_2_integracao_data_manager()
             teste_3_ok = await self.teste_3_metodos_rpa_sienge()
             teste_4_ok = await self.teste_4_simulacao_execucao_completa()
+            teste_5_ok = await self.teste_5_webscraping_real_opcional()
 
             # Relatório final
             relatorio = await self.gerar_relatorio_final()
@@ -502,6 +622,15 @@ async def main():
             print(f"   📋 Total de testes: {relatorio.get('total_testes', 0)}")
             print(f"   ✅ Testes aprovados: {relatorio.get('testes_passou', 0)}")
             print(f"   📈 Taxa de sucesso: {relatorio.get('taxa_sucesso', 0)}%")
+            
+            if relatorio.get('credenciais_configuradas'):
+                print(f"   🔐 Credenciais: Configuradas")
+                if relatorio.get('webscraping_testado'):
+                    print(f"   🌐 Webscraping: Testado")
+                else:
+                    print(f"   🌐 Webscraping: Não testado")
+            else:
+                print(f"   🔐 Credenciais: Não configuradas (apenas simulação)")
 
             if relatorio.get('taxa_sucesso', 0) >= 80:
                 print("\n🎉 SISTEMA PRONTO PARA PRODUÇÃO!")
@@ -516,4 +645,3 @@ async def main():
 if __name__ == "__main__":
     # Executa os testes
     asyncio.run(main())
-```
