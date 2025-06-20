@@ -247,35 +247,89 @@ class RPASienge(BaseRPA):
             # 4. Clicar em Entrar
             # 5. Fechar caixas de mensagem
 
-            # Preenche usuário inicial
-            self.find_element(
-                xpath='(//input[@id="username"])[1]').send_keys(usuario_sienge)
+            # Inserir usuário - tentar múltiplos seletores
+            self.log_progresso(f"Inserindo usuário: {usuario_sienge}")
 
-            # Preenche senha inicial
-            self.find_element(
-                xpath='//input[@id="password"]').send_keys(senha_sienge)
+            # Seletores possíveis para o campo usuário
+            seletores_usuario = [
+                '//input[@id="username"]',
+                '//input[@name="username"]', 
+                '//input[@type="text"]',
+                '//input[contains(@placeholder, "usuário") or contains(@placeholder, "email")]',
+                '//input[contains(@class, "username") or contains(@class, "user")]'
+            ]
 
-            # Clica botão entrar inicial
-            self.find_element(xpath='//*[@id="btnEntrarComSiengeID"]').click()
-            time.sleep(2)
+            elemento_usuario = None
+            for seletor in seletores_usuario:
+                try:
+                    elemento_usuario = self.find_element(xpath=seletor)
+                    if elemento_usuario:
+                        self.log_progresso(f"✅ Campo usuário encontrado com seletor: {seletor}")
+                        break
+                except:
+                    continue
 
-            # Segunda etapa - email
-            self.find_element(
-                xpath=
-                '//label[text()="Seu e-mail"]/following-sibling::div//input'
-            ).send_keys(usuario_sienge)
+            if not elemento_usuario:
+                raise Exception("Campo de usuário não encontrado com nenhum dos seletores")
 
-            # Clica continuar
-            self.find_element(
-                xpath="//button[normalize-space(text())='CONTINUAR']").click()
+            elemento_usuario.send_keys(usuario_sienge)
 
-            # Terceira etapa - senha final
-            self.find_element(
-                xpath="//input[@id='signup-password']").send_keys(senha_sienge)
+            # Inserir senha - tentar múltiplos seletores
+            self.log_progresso("Inserindo senha")
 
-            # Clica entrar final
-            self.find_element(
-                xpath="//button[normalize-space(text())='ENTRAR']").click()
+            # Seletores possíveis para o campo senha
+            seletores_senha = [
+                '//input[@id="password"]',
+                '//input[@name="password"]',
+                '//input[@type="password"]',
+                '//input[contains(@placeholder, "senha")]',
+                '//input[contains(@class, "password")]'
+            ]
+
+            elemento_senha = None
+            for seletor in seletores_senha:
+                try:
+                    elemento_senha = self.find_element(xpath=seletor)
+                    if elemento_senha:
+                        self.log_progresso(f"✅ Campo senha encontrado com seletor: {seletor}")
+                        break
+                except:
+                    continue
+
+            if not elemento_senha:
+                raise Exception("Campo de senha não encontrado com nenhum dos seletores")
+
+            elemento_senha.send_keys(senha_sienge)
+
+            # Clicar no botão de login - tentar múltiplos seletores
+            self.log_progresso("Clicando no botão de login")
+
+            # Seletores possíveis para o botão de login
+            seletores_botao = [
+                '//button[@type="submit"]',
+                '//input[@type="submit"]',
+                '//button[contains(text(), "Entrar") or contains(text(), "Login")]',
+                '//input[contains(@value, "Entrar") or contains(@value, "Login")]',
+                '//button[contains(@class, "login") or contains(@class, "submit")]'
+            ]
+
+            botao_encontrado = False
+            for seletor in seletores_botao:
+                try:
+                    self.click(xpath=seletor)
+                    self.log_progresso(f"✅ Botão de login clicado com seletor: {seletor}")
+                    botao_encontrado = True
+                    break
+                except:
+                    continue
+
+            if not botao_encontrado:
+                raise Exception("Botão de login não encontrado com nenhum dos seletores")
+
+            # Aguardar carregamento e verificar se login foi bem sucedido
+            self.log_progresso("Aguardando carregamento da página após login...")
+            time.sleep(8)  # Aumentado para 8 segundos
+            self.log_progresso("Verificando sucesso do login...")
 
             # Login bem-sucedido
             self.logado_sienge = True
@@ -702,7 +756,8 @@ class RPASienge(BaseRPA):
 
             # Indexador: IGP-M (obrigatório PDD)
             select_indexador = self.find_element(xpath="//select[contains(@id, 'indexador')]")
-            Select(select_indexador).select_by_visible_text("1 IGP-M")
+            Select(```python
+select_indexador).select_by_visible_text("1 IGP-M")
 
             # Juros: 8% fixo (obrigatório PDD)
             campo_juros = self.find_element(xpath="//input[contains(@id, 'percentual_juros')]")
@@ -762,9 +817,9 @@ class RPASienge(BaseRPA):
             Dict com todos os dados necessários para navegação no Sienge
         """
         try:
-            from core.data_manager import DataManager
+            from core.data_manager import data_manager
 
-            data_manager = DataManager()
+            data_manager = data_manager
 
             # Se número não especificado, busca próximo da fila
             if numero_titulo is None:
@@ -1214,8 +1269,7 @@ class RPASienge(BaseRPA):
             dados_resultado: Dict[str, Any]):
         """Atualiza status do contrato na fila de reparcelamento"""
         try:
-            from core.data_manager import DataManager
-            data_manager = DataManager()
+            from core.data_manager import data_manager
 
             # Atualizar documento na fila
             def _update_status():
@@ -1242,8 +1296,7 @@ class RPASienge(BaseRPA):
                                                resultado: Dict[str, Any]):
         """Salva reparcelamento no histórico completo"""
         try:
-            from core.data_manager import DataManager
-            data_manager = DataManager()
+            from core.data_manager import data_manager
 
             documento_historico = {
                 "numero_titulo": parametros["numero_titulo"],
