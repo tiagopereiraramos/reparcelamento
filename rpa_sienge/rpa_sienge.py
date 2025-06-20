@@ -685,7 +685,7 @@ class RPASienge(BaseRPA):
             dados_financeiros = dados_fila.get("dados_financeiros", {})
 
             # 3. Obter IGPM mais recente do banco
-            igpm_valor = await data_manager.obter_igpm_mais_recente()
+            igpm_valor = await data_manager.obter_indice_mais_recente("igpm")
 
             if igpm_valor is None:
                 return {
@@ -1319,3 +1319,4 @@ class RPASienge(BaseRPA):
         else:
             self.log_progresso(
                 f"⚠️ Rastreamento não iniciado - passo: {nome_passo}")
+# This line corrects the IGPM retrieval from the database using data_manager.
