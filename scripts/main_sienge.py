@@ -13,6 +13,7 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 from rpa_sienge import RPASienge
+from core.data_manager import data_manager
 
 # Garante que o diretório raiz está no sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -36,16 +37,18 @@ async def main():
     log("Iniciando execução do RPA Sienge (produção)...")
     credenciais = credenciais_sienge_env()
 
-    # TODO: Implementar busca do próximo contrato da fila
-    # Exemplo mock:
-    contrato = {
-        "numero_titulo": os.getenv("SIENGE_CONTRATO_TITULO", "123456"),
-        "cliente": os.getenv("SIENGE_CONTRATO_CLIENTE", "Cliente Teste")
-    }
+    # Busca o próximo contrato pendente da fila
+    await data_manager.inicializar()
+    fila_dados = await data_manager.obter_fila_sienge()
+    contratos = fila_dados.get("contratos", []) if fila_dados else []
+    contrato = next((c for c in contratos if c.get(
+        "status_processamento") not in ["processado", "erro"]), None)
 
-    if not contrato["numero_titulo"]:
-        log("ERRO: Número do título do contrato não definido.")
-        sys.exit(1)
+    if not contrato:
+        log("Nenhum contrato pendente encontrado na fila. Encerrando execução.")
+        sys.exit(0)
+
+    log(f"Processando contrato: {contrato.get('numero_titulo', 'N/A')} - {contrato.get('cliente', 'N/A')}")
 
     rpa = RPASienge()  # Browser visível por padrão
     await rpa.inicializar()
