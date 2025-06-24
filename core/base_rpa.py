@@ -77,7 +77,7 @@ class BaseRPA(ABC):
     - Persistência de resultados
     """
 
-    def __init__(self, nome_rpa: str, usar_browser: bool = True, webhook_enabled: bool = False, webhook_url: Optional[str] = None, company_name: str = "Sistema RPA"):
+    def __init__(self, nome_rpa: str, usar_browser: bool = True, webhook_enabled: bool = False, webhook_url: Optional[str] = None, company_name: str = "Sistema RPA", firefox_profile_path: str = '', limpar_cookies_sicredi: bool = False, usar_uc_chrome: bool = False, chrome_profile_path: str = '', headless: Optional[bool] = None):
         """
         Inicializa RPA base
 
@@ -87,12 +87,22 @@ class BaseRPA(ABC):
             webhook_enabled: Se deve enviar logs para webhook (default: False)
             webhook_url: URL do webhook (se habilitado)
             company_name: Nome da empresa/cliente
+            firefox_profile_path: Path to the Firefox profile (optional)
+            limpar_cookies_sicredi: Se deve limpar cookies do Sicredi (default: False)
+            usar_uc_chrome: Se deve usar Undetected Chromedriver (default: False)
+            chrome_profile_path: Path to the Chrome profile (optional)
+            headless: Optional[bool] - If True, headless mode is enabled
         """
         self.nome_rpa = nome_rpa
         self.usar_browser = usar_browser
         self.browser: Optional['RPABrowser'] = None
         self.mongo_manager: Optional[Any] = None
         self.inicio_execucao = None
+        self.firefox_profile_path = firefox_profile_path
+        self.limpar_cookies_sicredi = limpar_cookies_sicredi
+        self.usar_uc_chrome = usar_uc_chrome
+        self.chrome_profile_path = chrome_profile_path
+        self.headless = headless
 
         # Sistema de logging avançado
         self.logger_avancado = LoggerAvancado(
@@ -129,8 +139,20 @@ class BaseRPA(ABC):
             if self.usar_browser:
                 try:
                     from core.browser_manager import RPABrowser
-                    self.browser = RPABrowser(headless=False)
-                    self.logger.info("✅ Browser Selenium inicializado")
+                    if self.headless is not None:
+                        headless = self.headless
+                    else:
+                        headless_env = os.environ.get('HEADLESS', '0')
+                        headless = headless_env == '1'
+                    self.browser = RPABrowser(
+                        headless=headless,
+                        firefox_profile_path=self.firefox_profile_path,
+                        limpar_cookies_sicredi=self.limpar_cookies_sicredi,
+                        usar_uc_chrome=self.usar_uc_chrome,
+                        chrome_profile_path=self.chrome_profile_path
+                    )
+                    self.logger.info(
+                        f"✅ Browser Selenium inicializado (headless={headless})")
                 except Exception as e:
                     self.logger.warning(f"⚠️ Browser não disponível: {str(e)}")
                     self.browser = None
@@ -190,7 +212,8 @@ class BaseRPA(ABC):
                 if mongodb_manager.conectado:
                     self.logger.info("✅ MongoDB conectado com sucesso")
                 else:
-                    self.logger.warning("⚠️ MongoDB configurado mas não conectado")
+                    self.logger.warning(
+                        "⚠️ MongoDB configurado mas não conectado")
         except Exception as e:
             self.logger.warning(f"⚠️ MongoDB não disponível: {str(e)}")
 
@@ -203,13 +226,20 @@ class BaseRPA(ABC):
             if self.usar_browser and not self.browser:
                 try:
                     from core.browser_manager import RPABrowser
-                    self.browser = RPABrowser(headless=False)
+                    self.browser = RPABrowser(
+                        headless=False,
+                        firefox_profile_path=self.firefox_profile_path,
+                        limpar_cookies_sicredi=self.limpar_cookies_sicredi,
+                        usar_uc_chrome=self.usar_uc_chrome,
+                        chrome_profile_path=self.chrome_profile_path
+                    )
                     self.logger.info("✅ Browser Selenium inicializado")
                 except ImportError:
                     self.logger.warning("⚠️ Browser não disponível")
                     self.browser = None
         except Exception as e:
-            self.logger.warning(f"⚠️ Erro ao inicializar recursos opcionais: {str(e)}")
+            self.logger.warning(
+                f"⚠️ Erro ao inicializar recursos opcionais: {str(e)}")
 
     async def _finalizar_recursos(self):
         """
@@ -230,7 +260,8 @@ class BaseRPA(ABC):
                 self.logger.info("✅ MongoDB desconectado")
 
         except Exception as e:
-            self.logger.warning(f"⚠️ Erro na finalização de recursos: {str(e)}")
+            self.logger.warning(
+                f"⚠️ Erro na finalização de recursos: {str(e)}")
 
     async def executar_com_monitoramento(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -247,7 +278,8 @@ class BaseRPA(ABC):
 
         try:
             self.log_info(f"🚀 Iniciando execução de {self.nome_rpa}")
-            self.log_info(f"📋 Parâmetros: {json.dumps(parametros, indent=2, ensure_ascii=False, default=str)}")
+            self.log_info(
+                f"📋 Parâmetros: {json.dumps(parametros, indent=2, ensure_ascii=False, default=str)}")
 
             # Chama método executar da classe filha
             resultado = await self.executar(parametros)
@@ -258,13 +290,17 @@ class BaseRPA(ABC):
 
             # Log de resultado
             if resultado.sucesso:
-                self.log_info(f"✅ {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
+                self.log_info(
+                    f"✅ {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
                 self.log_info(f"📊 Resultado: {resultado.mensagem}")
                 if resultado.dados:
-                    self.log_info(f"📈 Dados retornados: {json.dumps(resultado.dados, indent=2, ensure_ascii=False, default=str)}")
+                    self.log_info(
+                        f"📈 Dados retornados: {json.dumps(resultado.dados, indent=2, ensure_ascii=False, default=str)}")
             else:
-                self.log_erro(f"❌ {self.nome_rpa} falhou após {tempo_execucao:.2f}s")
-                self.log_erro(f"🔍 Erro: {resultado.erro}")
+                self.log_erro(f"❌ {self.nome_rpa} falhou após {tempo_execucao:.2f}s", Exception(
+                    f"{self.nome_rpa} falhou"))
+                self.log_erro(f"🔍 Erro: {resultado.erro}",
+                              Exception(str(resultado.erro)))
 
             # ❌ REMOVIDO: Salvamento duplicado - data_manager já salva via rastreamento_unificado
             # await self._salvar_execucao(parametros, resultado)
@@ -317,11 +353,14 @@ class BaseRPA(ABC):
 
             # Log mais específico baseado nos resultados
             if resultados.get("mongodb") == "sucesso" and resultados.get("json") == "sucesso":
-                self.log_info("✅ Execução salva com sucesso no sistema (MongoDB + JSON)")
+                self.log_info(
+                    "✅ Execução salva com sucesso no sistema (MongoDB + JSON)")
             elif resultados.get("json") == "sucesso":
-                self.log_info("📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)")
+                self.log_info(
+                    "📄 Execução salva com sucesso no sistema (JSON - MongoDB indisponível)")
             else:
-                self.log_info(f"⚠️ Execução salva com problemas: MongoDB={resultados.get('mongodb')}, JSON={resultados.get('json')}")
+                self.log_info(
+                    f"⚠️ Execução salva com problemas: MongoDB={resultados.get('mongodb')}, JSON={resultados.get('json')}")
 
         except Exception as e:
             self.log_erro(f"❌ Erro ao salvar execução no sistema: {str(e)}", e)
@@ -345,12 +384,14 @@ class BaseRPA(ABC):
                 arquivo_fallback = f"dados_processamento/execucao_fallback_{self.nome_rpa}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
                 with open(arquivo_fallback, 'w', encoding='utf-8') as f:
-                    json.dump(dados_execucao, f, indent=2, ensure_ascii=False, default=str)
+                    json.dump(dados_execucao, f, indent=2,
+                              ensure_ascii=False, default=str)
 
                 self.log_info(f"📄 Fallback salvo em: {arquivo_fallback}")
 
             except Exception as fallback_error:
-                self.log_erro(f"❌ Falha completa no salvamento: {str(fallback_error)}", fallback_error)
+                self.log_erro(
+                    f"❌ Falha completa no salvamento: {str(fallback_error)}", fallback_error)
 
     async def _salvar_execucao(self, parametros: Dict[str, Any],
                                resultado: ResultadoRPA):
@@ -373,7 +414,8 @@ class BaseRPA(ABC):
 
             # Log do resultado
             if resultados_salvamento.get("json") == "sucesso":
-                self.logger.info("💾 Execução salva com sucesso (sistema híbrido)")
+                self.logger.info(
+                    "💾 Execução salva com sucesso (sistema híbrido)")
             else:
                 self.logger.warning("⚠️ Falha ao salvar execução")
 
@@ -405,7 +447,8 @@ class BaseRPA(ABC):
             "erro_mensagem": str(erro),
             "traceback": traceback.format_exc()
         }
-        self.log_error(f"❌ {mensagem}: {str(erro)}", dados_extras=erro_detalhes)
+        self.log_error(f"❌ {mensagem}: {str(erro)}",
+                       dados_extras=erro_detalhes)
         self.log_error(f"🔍 Traceback: {traceback.format_exc()}")
 
     # Métodos de logging melhorados
@@ -481,11 +524,11 @@ class BaseRPA(ABC):
             return self.browser.send_text(xpath, text, clear, timeout, verify)
 
     def send_text_human_like(self,
-                            xpath: str,
-                            text: str,
-                            clear: bool = False,
-                            timeout: int = 15,
-                            verify: bool = False) -> None:
+                             xpath: str,
+                             text: str,
+                             clear: bool = False,
+                             timeout: int = 15,
+                             verify: bool = False) -> None:
         """Envia texto simulando digitação humana (delegate para browser)"""
         if self.browser:
             return self.browser.send_text_human_like(xpath, text, clear, timeout, verify)
@@ -497,12 +540,16 @@ class BaseRPA(ABC):
         return ""
 
     def check_for_error(self,
-                        xpath: str,
+                        xpath: Optional[str] = None,
                         condition: Optional[str] = None,
-                        retry: int = 1) -> bool:
-        """Verifica se elemento de erro está presente (delegate para browser)"""
+                        timeout: int = 5,
+                        accept_alert: bool = True) -> bool:
+        """
+        Delegate para browser.check_for_error.
+        Se xpath for fornecido, verifica erro HTML. Se não, só alerta JS.
+        """
         if self.browser:
-            return self.browser.check_for_error(xpath, condition, retry)
+            return self.browser.check_for_error(xpath, condition, timeout, accept_alert)
         return False
 
     def set_timeout(self, timeout: int):
@@ -555,11 +602,11 @@ class BaseRPA(ABC):
         return []
 
     def select_option_by_similarity(self,
-                                   xpath: str,
-                                   option: str,
-                                   similarity_threshold: float = 0.6,
-                                   timeout: int = 10,
-                                   verify: bool = False) -> None:
+                                    xpath: str,
+                                    option: str,
+                                    similarity_threshold: float = 0.6,
+                                    timeout: int = 10,
+                                    verify: bool = False) -> None:
         """Seleciona opção por similaridade (delegate para browser)"""
         if self.browser:
             return self.browser.select_option_by_similarity(

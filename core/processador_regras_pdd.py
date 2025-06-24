@@ -7,7 +7,7 @@ Desenvolvido em Português Brasileiro
 """
 
 from datetime import datetime, date, timedelta
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import pandas as pd
 from decimal import Decimal, ROUND_HALF_UP
 import logging
@@ -29,7 +29,7 @@ class ProcessadorRegrasNegocio:
         self.limite_inadimplencia = 3  # REGRA CRÍTICA PDD
 
     def processar_dados_cliente_completo(self, df_planilha: pd.DataFrame, cliente: str,
-                                         numero_titulo: str, dados_validacao_base: Dict[str, Any] = None) -> Dict[str, Any]:
+                                         numero_titulo: str, dados_validacao_base: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Processa todos os dados do cliente aplicando TODAS as regras PDD 9.1.1
 
@@ -178,34 +178,37 @@ class ProcessadorRegrasNegocio:
                         row["Data vencimento"], errors='coerce', dayfirst=True)
                     if pd.notna(data_venc) and isinstance(data_venc, pd.Timestamp):
                         data_venc_date = data_venc.date()
-                        status = str(row.get("Status da parcela", "")
-                                     ).strip().upper()
+                    else:
+                        continue
 
-                        # Critério rigoroso: vencida E não quitada
-                        vencida = data_venc_date < hoje
-                        quitada = status in [
-                            "PAGA", "QUITADA", "LIQUIDADA", "BAIXADA"]
-                        a_vencer = status in [
-                            "A VENCER", "PENDENTE", "EM ABERTO"]
+                    status = str(row.get("Status da parcela", "")
+                                 ).strip().upper()
 
-                        # Só conta como CT vencida se: data passou E não está quitada
-                        if vencida and not quitada:
-                            valor = 0
-                            try:
-                                valor_str = str(
-                                    row.get("Valor a receber", "0")).replace(",", ".")
-                                valor = float(valor_str) if valor_str else 0
-                            except:
-                                pass
+                    # Critério rigoroso: vencida E não quitada
+                    vencida = data_venc_date < hoje
+                    quitada = status in [
+                        "PAGA", "QUITADA", "LIQUIDADA", "BAIXADA"]
+                    a_vencer = status in [
+                        "A VENCER", "PENDENTE", "EM ABERTO"]
 
-                            ct_vencidas.append({
-                                "documento": row.get("Documento"),
-                                "parcela_condicao": row.get("Parcela/Condição"),
-                                "data_vencimento": data_venc_date.isoformat(),
-                                "status": status,
-                                "valor": valor,
-                                "dias_atraso": (hoje - data_venc_date).days
-                            })
+                    # Só conta como CT vencida se: data passou E não está quitada
+                    if vencida and not quitada:
+                        valor = 0
+                        try:
+                            valor_str = str(
+                                row.get("Valor a receber", "0")).replace(",", ".")
+                            valor = float(valor_str) if valor_str else 0
+                        except:
+                            pass
+
+                        ct_vencidas.append({
+                            "documento": row.get("Documento"),
+                            "parcela_condicao": row.get("Parcela/Condição"),
+                            "data_vencimento": data_venc_date.isoformat(),
+                            "status": status,
+                            "valor": valor,
+                            "dias_atraso": (hoje - data_venc_date).days
+                        })
                 except:
                     continue
 
@@ -265,10 +268,13 @@ class ProcessadorRegrasNegocio:
             # Extrair dias de vencimento
             dias_vencimento = []
             for _, row in parcelas_ct_a_vencer.iterrows():
-                data_venc = pd.to_datetime(
-                    row["Data vencimento"], errors='coerce', dayfirst=True)
-                if pd.notna(data_venc) and isinstance(data_venc, pd.Timestamp):
-                    dias_vencimento.append(data_venc.day)
+                try:
+                    data_venc = pd.to_datetime(
+                        row["Data vencimento"], errors='coerce', dayfirst=True)
+                    if pd.notna(data_venc) and isinstance(data_venc, pd.Timestamp):
+                        dias_vencimento.append(data_venc.day)
+                except:
+                    continue
 
             if not dias_vencimento:
                 return {
@@ -495,8 +501,8 @@ class ProcessadorRegrasNegocio:
                 "valor_total_ct": valor_ct,
                 "valor_total_iptu": valor_iptu,
                 "saldo_total": valor_ct + valor_iptu,
-                "parcelas_ct_detalhes": parcelas_ct.to_dict('records'),
-                "parcelas_iptu_detalhes": parcelas_iptu.to_dict('records')
+                "parcelas_ct_detalhes": parcelas_ct.to_dict('records') if hasattr(parcelas_ct, 'to_dict') else [],
+                "parcelas_iptu_detalhes": parcelas_iptu.to_dict('records') if hasattr(parcelas_iptu, 'to_dict') else []
             }
 
         except Exception as e:
@@ -532,7 +538,11 @@ class ProcessadorRegrasNegocio:
                     if pd.isna(data_venc):
                         continue
 
-                    data_venc_date = data_venc.date()
+                    if isinstance(data_venc, pd.Timestamp):
+                        data_venc_date = data_venc.date()
+                    else:
+                        continue
+
                     status = str(row.get("Status da parcela", "")
                                  ).strip().upper()
 
@@ -609,7 +619,7 @@ class ProcessadorRegrasNegocio:
                 "qtd_parcelas_iptu_a_vencer": parcelas_info.get("quantidade_iptu_a_vencer", 0),
                 "qtd_pendencias_iptu": pendencias_info.get("quantidade_pendencias_iptu", 0),
 
-                # VALORES FINANCEIROS
+                # VALORES FINANCEIROS - CORRIGIDO PARA CALCULAR CORRETAMENTE
                 "saldo_total": parcelas_info.get("saldo_total", 0),
                 "valor_total_ct": parcelas_info.get("valor_total_ct", 0),
                 "valor_total_iptu": parcelas_info.get("valor_total_iptu", 0),
@@ -644,7 +654,7 @@ class ProcessadorRegrasNegocio:
 
     # ============= CÁLCULOS FINANCEIROS =============
 
-    async def calcular_valores_reparcelamento(self, saldo_atual: float, indice_igpm: float = None,
+    async def calcular_valores_reparcelamento(self, saldo_atual: float, indice_igpm: Optional[float] = None,
                                               parcelas_pendentes: int = 0) -> Dict[str, Any]:
         """
         Calcula valores para reparcelamento conforme regras PDD
@@ -652,9 +662,8 @@ class ProcessadorRegrasNegocio:
         try:
             # Se IGPM não foi fornecido, tentar buscar no MongoDB
             if indice_igpm is None:
-                from core.data_manager import DataManager
-                data_manager = DataManager()
-                indice_igpm = await data_manager.obter_igpm_mais_recente()
+                from core.data_manager import data_manager
+                indice_igpm = await data_manager.obter_indice_mais_recente("igpm")
 
                 if indice_igpm is None:
                     return {
@@ -744,8 +753,8 @@ class ProcessadorRegrasNegocio:
                             f"Data inválida ignorada: {data_vencimento}")
                         continue
                 elif isinstance(data_vencimento, (date, datetime)):
-                    data_obj = data_vencimento.date() if hasattr(
-                        data_vencimento, 'date') else data_vencimento
+                    data_obj = data_vencimento.date() if isinstance(
+                        data_vencimento, datetime) else data_vencimento
                 else:
                     self.logger.warning(
                         f"Formato de data não reconhecido: {type(data_vencimento)}")

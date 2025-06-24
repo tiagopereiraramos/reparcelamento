@@ -21,6 +21,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import Dict, List, Any, Optional
 from enum import Enum
 from core.logger_avancado import LoggerAvancado
+import traceback
 
 
 # Configurar logger para notificações
@@ -36,7 +37,9 @@ try:
     GOOGLE_DISPONIVEL = True
 except ImportError:
     GOOGLE_DISPONIVEL = False
-    logger.warning("Bibliotecas do Google não disponíveis. Instale: pip install google-api-python-client google-auth")
+    logger.warning(
+        "Bibliotecas do Google não disponíveis. Instale: pip install google-api-python-client google-auth")
+
 
 class TipoEvento(Enum):
     """Tipos de evento do sistema RPA"""
@@ -46,91 +49,75 @@ class TipoEvento(Enum):
     CONCLUIDO = "concluido"
     ALERTA = "alerta"
 
+
 class NotificadorEmail:
-    """Notificador simples usando Gmail API"""
+    """Notificador que usa SMTP tradicional (SMTP_*) ou Gmail API como fallback"""
 
     def __init__(self):
         self.service = None
         self.email_remetente = None
-        self._inicializar_gmail()
+        self.smtp_config = self._carregar_config_smtp()
+        if not self.smtp_config:
+            self._inicializar_gmail()
+
+    def _carregar_config_smtp(self):
+        """Carrega configuração SMTP das variáveis de ambiente SMTP_*"""
+        smtp_user = os.getenv('SMTP_USER', '')
+        smtp_pass = os.getenv('SMTP_PASS', '')
+        smtp_host = os.getenv('SMTP_HOST', '')
+        smtp_port = os.getenv('SMTP_PORT', '')
+        smtp_sender = os.getenv('SMTP_SENDER', '')
+        smtp_ssl = os.getenv('SMTP_SSL', 'false').lower() == 'true'
+        if all([smtp_user, smtp_pass, smtp_host, smtp_port, smtp_sender]):
+            return {
+                'user': smtp_user,
+                'pass': smtp_pass,
+                'host': smtp_host,
+                'port': int(smtp_port),
+                'sender': smtp_sender,
+                'ssl': smtp_ssl
+            }
+        return None
 
     def _inicializar_gmail(self):
-        """Inicializa conexão com Gmail API"""
-        try:
-            if not GOOGLE_DISPONIVEL:
-                logger.warning("Google APIs não disponíveis")
-                return
-
-            # Verificar se existe arquivo de credenciais
-            arquivo_credenciais = None
-            possiveis_arquivos = [
-                'credentials/google_service_account.json',
-                'deploy/credentials/google_service_account.json',
-                'gspread-459713-aab8a657f9b0.json'  # Arquivo existente do projeto
-            ]
-
-            for arquivo in possiveis_arquivos:
-                if os.path.exists(arquivo):
-                    arquivo_credenciais = arquivo
-                    break
-
-            if not arquivo_credenciais:
-                logger.warning("Arquivo de credenciais do Google não encontrado")
-                return
-
-            # Carregar credenciais
-            credentials = Credentials.from_service_account_file(
-                arquivo_credenciais,
-                scopes=['https://www.googleapis.com/auth/gmail.send']
-            )
-
-            # Configurar email do remetente (deve ser delegado na conta de serviço)
-            self.email_remetente = os.getenv('EMAIL_REMETENTE', 'sistema.rpa@empresa.com')
-
-            # Delegar credenciais para o email remetente
-            delegated_credentials = credentials.with_subject(self.email_remetente)
-
-            # Criar serviço Gmail
-            self.service = build('gmail', 'v1', credentials=delegated_credentials)
-
-            logger.info(f"Gmail API inicializada com sucesso para {self.email_remetente}")
-
-        except Exception as e:
-            logger.error(f"Erro ao inicializar Gmail API: {e}")
-            self.service = None
+        """Este método não é mais utilizado. Fallback Gmail removido."""
+        # Método mantido apenas para compatibilidade, pode ser removido futuramente.
+        return None
 
     def enviar_email(self, destinatario: str, assunto: str, corpo_html: str) -> bool:
-        """Envia email usando Gmail API"""
-        try:
-            if not self.service:
-                logger.warning("Gmail API não inicializada")
+        """Envia email usando SMTP tradicional (se configurado)"""
+        if self.smtp_config:
+            try:
+                msg = MIMEMultipart('alternative')
+                msg['From'] = self.smtp_config['sender']
+                msg['To'] = destinatario
+                msg['Subject'] = assunto
+                msg.attach(MIMEText(corpo_html, 'html', 'utf-8'))
+
+                if self.smtp_config['ssl']:
+                    server = smtplib.SMTP_SSL(
+                        self.smtp_config['host'], self.smtp_config['port'])
+                else:
+                    server = smtplib.SMTP(
+                        self.smtp_config['host'], self.smtp_config['port'])
+                    server.starttls()
+                server.login(self.smtp_config['user'],
+                             self.smtp_config['pass'])
+                server.sendmail(
+                    self.smtp_config['sender'], destinatario, msg.as_string())
+                server.quit()
+                logger.info(
+                    "Email SMTP enviado com sucesso para %s", destinatario
+                )
+                return True
+            except Exception as exc:
+                logger.error(
+                    "Erro ao enviar email SMTP para %s: %s", destinatario, exc
+                )
                 return False
+        logger.error("Configuração SMTP não encontrada. Email não enviado.")
+        return False
 
-            # Criar mensagem
-            message = MIMEMultipart('alternative')
-            message['to'] = destinatario
-            message['from'] = self.email_remetente
-            message['subject'] = assunto
-
-            # Adicionar corpo HTML
-            html_part = MIMEText(corpo_html, 'html', 'utf-8')
-            message.attach(html_part)
-
-            # Codificar mensagem
-            raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-
-            # Enviar via Gmail API
-            self.service.users().messages().send(
-                userId='me',
-                body={'raw': raw_message}
-            ).execute()
-
-            logger.info(f"Email enviado com sucesso para {destinatario}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Erro ao enviar email para {destinatario}: {e}")
-            return False
 
 class GeradorTemplates:
     """Gerador de templates HTML para notificações"""
@@ -145,7 +132,8 @@ class GeradorTemplates:
             TipoEvento.ERRO: {"primaria": "#dc3545", "secundaria": "#f8d7da"},
             TipoEvento.ALERTA: {"primaria": "#ffc107", "secundaria": "#fff3cd"},
             TipoEvento.INICIO: {"primaria": "#007bff", "secundaria": "#d1ecf1"},
-            TipoEvento.CONCLUIDO: {"primaria": "#17a2b8", "secundaria": "#d1ecf1"}
+            TipoEvento.CONCLUIDO: {
+                "primaria": "#17a2b8", "secundaria": "#d1ecf1"}
         }
 
         cor_config = cores.get(tipo_evento, cores[TipoEvento.ALERTA])
@@ -324,6 +312,7 @@ class GeradorTemplates:
             TipoEvento.ERRO
         )
 
+
 class SistemaNotificacoes:
     """Sistema principal de notificações"""
 
@@ -371,20 +360,29 @@ class SistemaNotificacoes:
         if not self.configuracoes.get('eventos', {}).get('rpa_concluido', True):
             return True
 
-        html = GeradorTemplates.template_rpa_concluido(nome_rpa, tempo_execucao, resultados)
-        sucesso = self._enviar_para_todos(f"✅ RPA {nome_rpa} - Execução Concluída", html)
+        try:
+            html = GeradorTemplates.template_rpa_concluido(
+                nome_rpa, tempo_execucao, resultados)
+            sucesso = self._enviar_para_todos(
+                f"✅ RPA {nome_rpa} - Execução Concluída", html)
 
-        if sucesso:
-            logger_manager.info(f"📢 Notificação de sucesso enviada: {nome_rpa}")
-            logger_manager.debug("Detalhes da notificação de sucesso", {
-                "nome_rpa": nome_rpa,
-                "tempo_execucao": tempo_execucao,
-                "resultados": resultados
-            })
-        else:
-            logger_manager.error(f"❌ Erro ao enviar notificação de sucesso: {str(e)}")
-
-        return sucesso
+            if sucesso:
+                logger_manager.info(
+                    f"📢 Notificação de sucesso enviada: {nome_rpa}")
+                logger_manager.debug("Detalhes da notificação de sucesso", {
+                    "nome_rpa": nome_rpa,
+                    "tempo_execucao": tempo_execucao,
+                    "resultados": resultados
+                })
+            else:
+                logger_manager.error(
+                    f"❌ Erro ao enviar notificação de sucesso (retorno False)")
+            return sucesso
+        except Exception as e:
+            logger_manager.error(
+                f"❌ Exceção ao enviar notificação de sucesso: {str(e)}")
+            print(traceback.format_exc())
+            return False
 
     def notificar_erro_rpa(self, nome_rpa: str, erro: str, detalhes: str) -> bool:
         """Notifica erro no RPA"""
@@ -395,14 +393,16 @@ class SistemaNotificacoes:
         sucesso = self._enviar_para_todos(f"🚨 ERRO - RPA {nome_rpa}", html)
 
         if sucesso:
-            logger_manager.warning(f"⚠️ Notificação de erro enviada: {nome_rpa} - {erro}")
+            logger_manager.warning(
+                f"⚠️ Notificação de erro enviada: {nome_rpa} - {erro}")
             logger_manager.debug("Detalhes da notificação de erro", {
                 "nome_rpa": nome_rpa,
                 "erro": erro,
                 "detalhes": detalhes
             })
         else:
-            logger_manager.error(f"❌ Erro ao enviar notificação de erro: {str(e)}")
+            logger_manager.error(
+                "❌ Erro ao enviar notificação de erro (retorno False)")
 
         return sucesso
 
@@ -453,7 +453,8 @@ class SistemaNotificacoes:
 
         sucesso_geral = True
         for destinatario in destinatarios:
-            sucesso = self.notificador.enviar_email(destinatario, assunto, html)
+            sucesso = self.notificador.enviar_email(
+                destinatario, assunto, html)
             sucesso_geral = sucesso_geral and sucesso
 
         return sucesso_geral
@@ -476,21 +477,27 @@ class SistemaNotificacoes:
 
         return self._enviar_para_todos("🧪 Teste - Sistema de Notificações", html)
 
+
 # Instância global
 notificacoes = SistemaNotificacoes()
 
 # Funções utilitárias
+
+
 def notificar_sucesso(nome_rpa: str, tempo_execucao: str, resultados: Dict[str, Any]) -> bool:
     """Notifica sucesso de RPA"""
     return notificacoes.notificar_rpa_concluido(nome_rpa, tempo_execucao, resultados)
+
 
 def notificar_erro(nome_rpa: str, erro: str, detalhes: str) -> bool:
     """Notifica erro de RPA"""
     return notificacoes.notificar_erro_rpa(nome_rpa, erro, detalhes)
 
+
 def notificar_workflow(rpas: List[str], contratos: int, tempo: str) -> bool:
     """Notifica conclusão de workflow"""
     return notificacoes.notificar_workflow_concluido(rpas, contratos, tempo)
+
 
 def testar_notificacoes() -> bool:
     """Testa sistema de notificações"""

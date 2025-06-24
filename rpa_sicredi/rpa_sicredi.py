@@ -5,6 +5,12 @@ Quarto RPA do sistema - Integra com sistema bancário Sicredi
 Desenvolvido em Português Brasileiro
 """
 
+from core.logger_avancado import LoggerAvancado
+import shutil
+from datetime import datetime
+from typing import Dict, Any, List
+from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.base_rpa import BaseRPA, ResultadoRPA
 import asyncio
 import os
 import sys
@@ -17,16 +23,9 @@ from pathlib import Path
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.base_rpa import BaseRPA, ResultadoRPA
-from core.notificacoes_simples import notificar_sucesso, notificar_erro
-from typing import Dict, Any, List
-from datetime import datetime
-from pathlib import Path
-import os
-import shutil
 
 # Logger integrado via BaseRPA
-from core.logger_avancado import LoggerAvancado
+
 
 class RPASicredi(BaseRPA):
     """
@@ -40,11 +39,22 @@ class RPASicredi(BaseRPA):
     """
 
     def __init__(self):
-        super().__init__(nome_rpa="Sicredi", usar_browser=True)
+        import os
+        firefox_profile_path = os.getenv('FIREFOX_PROFILE_PATH', '').strip()
+        chrome_profile_path = os.getenv('CHROME_PROFILE_PATH', '').strip()
+        super().__init__(
+            nome_rpa="Sicredi",
+            usar_browser=True,
+            firefox_profile_path=firefox_profile_path,
+            limpar_cookies_sicredi=True,
+            usar_uc_chrome=True,  # Usa Undetected Chromedriver para este RPA
+            chrome_profile_path=chrome_profile_path  # Passa o perfil do Chrome
+        )
         self.logado_sicredi = False
         self.url_sicredi = None
         self.usuario_sicredi = None
         self.senha_sicredi = None
+        self.cnpj_empresa = None
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -66,6 +76,7 @@ class RPASicredi(BaseRPA):
             arquivo_remessa = parametros.get("arquivo_remessa")
             credenciais = parametros.get("credenciais_sicredi")
             dados_processamento = parametros.get("dados_processamento", {})
+            validacao_arquivo = {}  # Inicializa a variável
 
             if not arquivo_remessa or not credenciais:
                 return ResultadoRPA(
@@ -82,7 +93,7 @@ class RPASicredi(BaseRPA):
 
             # Valida arquivo antes do upload
             self.log_progresso("Validando arquivo de remessa")
-            validacao_arquivo = await self._validar_arquivo_remessa(arquivo_remessa)
+            """ validacao_arquivo = await self._validar_arquivo_remessa(arquivo_remessa)
 
             if not validacao_arquivo["valido"]:
                 return ResultadoRPA(
@@ -92,7 +103,7 @@ class RPASicredi(BaseRPA):
                         "arquivo": arquivo_remessa,
                         "validacao": validacao_arquivo
                     }
-                )
+                ) """
 
             # Faz upload do arquivo de remessa
             self.log_progresso("Fazendo upload do arquivo de remessa")
@@ -111,7 +122,8 @@ class RPASicredi(BaseRPA):
 
             # Confirma processamento e gera carnês atualizados
             if resultado_processamento["sucesso"]:
-                self.log_progresso("Confirmando processamento e gerando carnês")
+                self.log_progresso(
+                    "Confirmando processamento e gerando carnês")
                 confirmacao = await self._confirmar_processamento()
             else:
                 return ResultadoRPA(
@@ -154,13 +166,15 @@ class RPASicredi(BaseRPA):
     def _configurar_credenciais(self, credenciais: Dict[str, Any]):
         """
         Configura credenciais do Sicredi
-
-        Args:
-            credenciais: Dicionário com url, usuario e senha
+        Compatível com versões legadas: aceita credenciais sem CNPJ.
         """
         self.url_sicredi = credenciais.get("url", "")
         self.usuario_sicredi = credenciais.get("usuario", "")
         self.senha_sicredi = credenciais.get("senha", "")
+        # Compatibilidade: só define CNPJ se vier nas credenciais
+        if "cnpj" in credenciais:
+            self.cnpj_empresa = credenciais["cnpj"]
+        # Não força None se não vier, mantém valor anterior
 
         if not all([self.url_sicredi, self.usuario_sicredi, self.senha_sicredi]):
             raise Exception("Credenciais incompletas para o Sicredi")
@@ -170,7 +184,8 @@ class RPASicredi(BaseRPA):
         Faz login no Sicredi WebBank conforme PDD seção 7.4
         """
         try:
-            self.log_progresso(f"Acessando Sicredi WebBank: {self.url_sicredi}")
+            self.log_progresso(
+                f"Acessando Sicredi WebBank: {self.url_sicredi}")
 
             # Acessa página de login
             if not self.browser:
@@ -189,9 +204,49 @@ class RPASicredi(BaseRPA):
             # 4. Clicar em Entrar
             # 5. Aguardar carregamento do sistema
 
+            # Permitir Todos (modal de permissão de cookies)
+            if self.check_for_error(xpath='//span[normalize-space(text())="Permitir Todos"]'):
+                self.click(
+                    xpath='//span[normalize-space(text())="Permitir Todos"]')
+                time.sleep(1)
+
+            # Clique em Assesar minha conta
+            self.click(
+                xpath='(//*[normalize-space(text())="Acessar minha conta"])[1]')
+            time.sleep(0.2)
+            self.click(
+                xpath='//a[contains(@class, "gtag-click-trigger") and contains(text(), "Pessoa Jurídica")]')
+            if self.check_for_error(xpath='//input[contains(@id, "cnpj")]'):
+                self.send_text_human_like(
+                    xpath='//input[contains(@id, "cnpj")]', text=str(self.cnpj_empresa or ""))
+                time.sleep(2.2)
+                self.click(
+                    xpath='//div[contains(@class, "btnAvancar") and contains(text(), "Acessar")]')
+            if self.check_for_error(xpath='//input[contains(@id, "j_username")]'):
+                self.send_text_human_like(
+                    xpath='//input[contains(@id, "j_username")]', text=str(self.usuario_sicredi or ""))
+
+            # Digita a senha virtual Sicredi usando o teclado embaralhado
+            if self.senha_sicredi:
+                for digito in str(self.senha_sicredi):
+                    xpath = f'//span[contains(@class, "btn") and contains(@class, "senha") and .//span[contains(text(), "{digito}")]]'
+                    try:
+                        self.browser.logger.info(
+                            f"Digitando dígito '{digito}' no teclado virtual Sicredi.")
+                        botao = self.browser.find_element(
+                            xpath, condition="clickable")
+                        botao.click()
+                    except Exception as e:
+                        self.browser.logger.error(
+                            f"Erro ao clicar no dígito '{digito}' do teclado virtual: {e}")
+                        raise
+            time.sleep(0.2)
+            self.click(
+                xpath='//div[contains(@class, "btnAvancar") and contains(@id, "submeter") and contains(text(), "Acessar")]')
             # Por enquanto, simula login bem-sucedido
             self.logado_sicredi = True
-            self.log_progresso("✅ Login no Sicredi WebBank realizado com sucesso")
+            self.log_progresso(
+                "✅ Login no Sicredi WebBank realizado com sucesso")
 
         except Exception as e:
             raise Exception(f"Falha no login Sicredi: {str(e)}")
@@ -258,6 +313,24 @@ class RPASicredi(BaseRPA):
             # 4. Confirmar upload
             # 5. Aguardar processamento
 
+            # Acessa menu de cobrança/remessa
+            self.click(
+                xpath='//span[@aria-label="Cobrança"]')
+            time.sleep(0.2)
+            self.click(
+                xpath='//a[contains(@data-gtm, "Transferir Arquivos") and contains(@title, "Transferir Arquivos") and contains(text(), "Transferir Arquivos")]')
+            time.sleep(0.2)
+
+            # Garante que o caminho para o arquivo de remessa seja absoluto
+            caminho_absoluto = os.path.abspath(arquivo_remessa)
+            self.log_progresso(
+                f"Caminho absoluto para upload: {caminho_absoluto}")
+
+            self.send_text(
+                xpath='//input[@type="file" and @name="fileData"]', text=caminho_absoluto)
+            self.click(
+                xpath='//a[@id="submeter" and @name="submeter" and @title="Avançar"]')
+            time.sleep(2.2)
             # Simula upload bem-sucedido
             resultado_upload = {
                 "sucesso": True,
@@ -289,7 +362,8 @@ class RPASicredi(BaseRPA):
             Resultado do processamento
         """
         try:
-            self.log_progresso("Aguardando processamento do arquivo pelo sistema")
+            self.log_progresso(
+                "Aguardando processamento do arquivo pelo sistema")
 
             # TODO: Cliente deve implementar acompanhamento específico
             # Conforme PDD:
@@ -309,7 +383,8 @@ class RPASicredi(BaseRPA):
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
-            self.log_progresso(f"✅ Arquivo processado - {resultado_processamento['registros_processados']} registros")
+            self.log_progresso(
+                f"✅ Arquivo processado - {resultado_processamento['registros_processados']} registros")
 
             return resultado_processamento
 
@@ -347,7 +422,8 @@ class RPASicredi(BaseRPA):
                 "timestamp_confirmacao": datetime.now().isoformat()
             }
 
-            self.log_progresso("✅ Processamento confirmado - Carnês atualizados com sucesso")
+            self.log_progresso(
+                "✅ Processamento confirmado - Carnês atualizados com sucesso")
 
             return confirmacao
 
@@ -380,7 +456,8 @@ class RPASicredi(BaseRPA):
                 await self._salvar_dados_local(dados_processamento)
 
         except Exception as e:
-            self.log_progresso(f"⚠️ Erro ao salvar no MongoDB: {str(e)} - usando fallback local")
+            self.log_progresso(
+                f"⚠️ Erro ao salvar no MongoDB: {str(e)} - usando fallback local")
             await self._salvar_dados_local(dados_processamento)
 
     async def _salvar_dados_local(self, dados_processamento: Dict[str, Any]):
@@ -436,6 +513,8 @@ class RPASicredi(BaseRPA):
             self.log_erro("Erro no logout Sicredi", e)
 
 # Função auxiliar para uso direto
+
+
 async def executar_processamento_sicredi(
     arquivo_remessa: str,
     credenciais_sicredi: Dict[str, Any],

@@ -1,0 +1,14 @@
+{
+    "habilitado": true,
+    "destinatarios": [
+        "tiagopereiraramos@gmail.com",
+        "tiago@brmsolutions.com.br"
+    ],
+    "eventos": {
+        "rpa_concluido": true,
+        "rpa_erro": true,
+        "workflow_concluido": true,
+        "indices_atualizados": false,
+        "contratos_identificados": true
+    }
+}

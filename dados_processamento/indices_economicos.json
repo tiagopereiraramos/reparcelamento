@@ -1,1 +1,226 @@
-[]
+[
+  {
+    "timestamp_coleta": "2025-06-20T07:21:40.852842",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-20T07:21:28.538000"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-20T07:21:37.863597"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685544446fb071247e359e0f"
+  },
+  {
+    "timestamp_coleta": "2025-06-23T18:32:46.933318",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-23T18:32:34.606321"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-23T18:32:44.378405"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "6859d60e4fa1dfb9ae05d8f6"
+  },
+  {
+    "timestamp_coleta": "2025-06-23T22:27:19.869596",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-23T22:27:07.750637"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-23T22:27:16.745592"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685a0d077408495acfa493d7"
+  },
+  {
+    "timestamp_coleta": "2025-06-23T22:50:39.829007",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-23T22:50:28.210048"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-23T22:50:37.136530"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685a127f7c8c6da83daafc9d"
+  },
+  {
+    "timestamp_coleta": "2025-06-24T14:13:00.203053",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-24T14:12:47.400585"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-24T14:12:56.701291"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685aeaac1353f4dd37c9dfb8"
+  },
+  {
+    "timestamp_coleta": "2025-06-24T14:17:22.243082",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-24T14:17:11.636963"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-24T14:17:20.458253"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685aebb2eef721ea623de19d"
+  },
+  {
+    "timestamp_coleta": "2025-06-24T14:22:45.153118",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-24T14:22:33.600827"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-24T14:22:42.332303"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685aecf50c433ee873358daf"
+  },
+  {
+    "timestamp_coleta": "2025-06-24T14:52:22.288645",
+    "indices": {
+      "ipca": {
+        "tipo": "IPCA",
+        "valor": "5,32",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "IBGE",
+        "url": "https://www.ibge.gov.br/explica/inflacao.php",
+        "metodo": "webscraping_selenium",
+        "timestamp": "2025-06-24T14:52:10.389977"
+      },
+      "igpm": {
+        "tipo": "IGPM",
+        "valor": "7,02",
+        "mes": "mai.-25",
+        "periodo": "acumulado_12_meses",
+        "fonte": "FGV",
+        "url": "https://portalibre.fgv.br/taxonomy/term/94",
+        "metodo": "webscraping_selenium_download",
+        "timestamp": "2025-06-24T14:52:19.229098"
+      },
+      "planilha_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U"
+    },
+    "fonte_coleta": "rpa_coleta_indices",
+    "_id_mongodb": "685af3e60d84673d265df1fc"
+  }
+]

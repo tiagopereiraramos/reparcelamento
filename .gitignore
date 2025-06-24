@@ -20,6 +20,6 @@ logs/*.log
 Thumbs.db
 dados_extraidos
 dados_processamento
-
+outputs
 __pycache__/
 attached_files/

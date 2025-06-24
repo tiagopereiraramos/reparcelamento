@@ -13,6 +13,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+import traceback
 
 # Importa MongoDB manager
 try:
@@ -103,18 +104,19 @@ class DataManagerUnificado:
                     self.logger.info("Sistema híbrido MongoDB + JSON ativo")
 
                     # Teste rápido de funcionalidade
-                    test_doc = {"teste": True,
-                                "timestamp": datetime.now().isoformat()}
-                    result = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: mongodb_manager.database.teste_data_manager.insert_one(
-                            test_doc)
-                    )
-
-                    # Remove documento de teste
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: mongodb_manager.database.teste_data_manager.delete_one(
-                            {"_id": result.inserted_id})
-                    )
+                    db = mongodb_manager.database
+                    if db is not None:
+                        test_doc = {"teste": True,
+                                    "timestamp": datetime.now().isoformat()}
+                        result = await asyncio.get_event_loop().run_in_executor(
+                            None, lambda: db["teste_data_manager"].insert_one(
+                                test_doc)
+                        )
+                        # Remove documento de teste
+                        await asyncio.get_event_loop().run_in_executor(
+                            None, lambda: db["teste_data_manager"].delete_one(
+                                {"_id": result.inserted_id})
+                        )
 
                     self.logger.info(
                         f"Data manager inicializado com MongoDB ativo")
@@ -135,7 +137,6 @@ class DataManagerUnificado:
             except Exception as e:
                 logger.error(f"❌ Falha ao conectar MongoDB: {str(e)}")
                 logger.error(f"   Tipo do erro: {type(e).__name__}")
-                import traceback
                 logger.error(f"   Traceback: {traceback.format_exc()}")
                 self.mongodb_ativo = False
                 logger.info("📄 Sistema Fallback: Apenas JSON")
@@ -172,7 +173,7 @@ class DataManagerUnificado:
             self.mongodb_ativo = False
 
     async def salvar_execucao_rpa(self, nome_rpa: str, parametros: Dict[str, Any],
-                                  resultado: Dict[str, Any]) -> Dict[str, str]:
+                                  resultado: Dict[str, Any]) -> Dict[str, Any]:
         """
         SEMPRE salva execução em MongoDB + JSON simultaneamente
 
@@ -191,7 +192,7 @@ class DataManagerUnificado:
             "erro": resultado.get("erro", None)
         }
 
-        resultados = {"mongodb": "falhou", "json": "falhou"}
+        resultados: Dict[str, Any] = {"mongodb": "falhou", "json": "falhou"}
 
         # Debug do estado MongoDB
         logger.info(f"🔍 Estado MongoDB antes do salvamento:")
@@ -260,25 +261,31 @@ class DataManagerUnificado:
 
         return resultados
 
-    async def salvar_contrato_processado(self, contrato_data: Dict[str, Any]) -> Dict[str, str]:
+    async def salvar_contrato_processado(self, contrato_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         SEMPRE salva contrato em MongoDB + JSON simultaneamente
         """
+        # Evita salvar 'dados_completos' recursivo
+        dados_finais = dict(contrato_data)
+        if 'dados_completos' in dados_finais:
+            # Se já existe, pega apenas o mais interno
+            if isinstance(dados_finais['dados_completos'], dict) and 'dados_completos' in dados_finais['dados_completos']:
+                dados_finais['dados_completos'] = dados_finais['dados_completos']['dados_completos']
         documento = {
-            "numero_titulo": contrato_data.get("numero_titulo"),
-            "cliente": contrato_data.get("cliente"),
-            "empreendimento": contrato_data.get("empreendimento"),
+            "numero_titulo": dados_finais.get("numero_titulo"),
+            "cliente": dados_finais.get("cliente"),
+            "empreendimento": dados_finais.get("empreendimento"),
             "data_processamento": datetime.now().isoformat(),
-            "status_sienge": contrato_data.get("status_sienge", "processado"),
-            "status_sicredi": contrato_data.get("status_sicredi", "pendente"),
-            "saldo_anterior": contrato_data.get("saldo_anterior", 0),
-            "saldo_novo": contrato_data.get("saldo_novo", 0),
-            "indice_aplicado": contrato_data.get("indice_aplicado", 0),
-            "indexador": contrato_data.get("indexador", ""),
-            "dados_completos": contrato_data
+            "status_sienge": dados_finais.get("status_sienge", "processado"),
+            "status_sicredi": dados_finais.get("status_sicredi", "pendente"),
+            "saldo_anterior": dados_finais.get("saldo_anterior", 0),
+            "saldo_novo": dados_finais.get("saldo_novo", 0),
+            "indice_aplicado": dados_finais.get("indice_aplicado", 0),
+            "indexador": dados_finais.get("indexador", ""),
+            "dados_completos": dados_finais.get("dados_completos", dados_finais)
         }
 
-        resultados = {"mongodb": "falhou", "json": "falhou"}
+        resultados: Dict[str, Any] = {"mongodb": "falhou", "json": "falhou"}
 
         # 1. MongoDB (principal)
         if self.mongodb_ativo:
@@ -307,7 +314,7 @@ class DataManagerUnificado:
 
         return resultados
 
-    async def salvar_indices_economicos(self, indices_data: Dict[str, Any]) -> Dict[str, str]:
+    async def salvar_indices_economicos(self, indices_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         SEMPRE salva índices em MongoDB + JSON simultaneamente
         """
@@ -317,7 +324,7 @@ class DataManagerUnificado:
             "fonte_coleta": "rpa_coleta_indices"
         }
 
-        resultados = {"mongodb": "falhou", "json": "falhou"}
+        resultados: Dict[str, Any] = {"mongodb": "falhou", "json": "falhou"}
 
         # 1. MongoDB (principal) - usar conexão real ao invés de flag local
         if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
@@ -344,7 +351,6 @@ class DataManagerUnificado:
                         f"⚠️ MongoDB retornou None para salvamento de índices")
             except Exception as e:
                 logger.error(f"❌ Índices MongoDB falhou: {str(e)}")
-                import traceback
                 logger.error(f"   Traceback: {traceback.format_exc()}")
                 resultados["mongodb"] = f"erro: {str(e)}"
         else:
@@ -375,7 +381,7 @@ class DataManagerUnificado:
 
         return resultados
 
-    async def salvar_fila_sienge(self, fila_dados: Dict[str, Any]) -> Dict[str, str]:
+    async def salvar_fila_sienge(self, fila_dados: Dict[str, Any]) -> Dict[str, Any]:
         """
         SEMPRE salva fila Sienge em MongoDB + JSON simultaneamente
         """
@@ -391,11 +397,15 @@ class DataManagerUnificado:
         # 1. MongoDB (principal)
         if self.mongodb_ativo:
             try:
-                collection = mongodb_manager.database.fila_processamento_sienge
-                result = await collection.replace_one({}, documento, upsert=True)
-                resultados["mongodb"] = "sucesso"
-                documento["_id_mongodb"] = str(
-                    result.upserted_id) if result.upserted_id else "updated"
+                if mongodb_manager.database is not None:
+                    collection = mongodb_manager.database.fila_processamento_sienge
+                    # PyMongo: método síncrono, não usar await
+                    collection.replace_one({}, documento, upsert=True)
+                    resultados["mongodb"] = "sucesso"
+                    # Não existe inserted_id em replace_one, então não adicionar
+                else:
+                    logger.warning(
+                        "[WARN] mongodb_manager.database é None ao tentar acessar fila_processamento_sienge!")
             except Exception as e:
                 logger.warning(f"⚠️ Fila Sienge MongoDB falhou: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
@@ -418,7 +428,7 @@ class DataManagerUnificado:
 
         return resultados
 
-    async def salvar_planilha_extraida(self, dados_planilha: Dict[str, Any]) -> Dict[str, str]:
+    async def salvar_planilha_extraida(self, dados_planilha: Dict[str, Any]) -> Dict[str, Any]:
         """
         SEMPRE salva dados de planilha extraída em MongoDB + JSON simultaneamente
         """
@@ -439,10 +449,14 @@ class DataManagerUnificado:
         # 1. MongoDB (principal)
         if self.mongodb_ativo:
             try:
-                collection = mongodb_manager.database.planilhas_extraidas
-                result = await collection.insert_one(documento)
-                resultados["mongodb"] = "sucesso"
-                documento["_id_mongodb"] = str(result.inserted_id)
+                if mongodb_manager.database is not None:
+                    collection = mongodb_manager.database.planilhas_extraidas
+                    result = collection.insert_one(documento)
+                    resultados["mongodb"] = "sucesso"
+                    documento["_id_mongodb"] = str(result.inserted_id)
+                else:
+                    logger.warning(
+                        "[WARN] mongodb_manager.database é None ao tentar acessar planilhas_extraidas!")
             except Exception as e:
                 logger.warning(f"⚠️ Planilha MongoDB falhou: {str(e)}")
                 resultados["mongodb"] = f"erro: {str(e)}"
@@ -495,44 +509,35 @@ class DataManagerUnificado:
         if self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager.conectado:
             try:
                 def _get_fila():
-                    collection = mongodb_manager.database.fila_processamento_sienge
-                    documento = collection.find_one()
-                    if documento:
-                        # Remove _id do MongoDB para compatibilidade
-                        documento.pop("_id", None)
-                        # Converte datetime para ISO string se necessário
-                        for campo, valor in documento.items():
-                            if hasattr(valor, 'isoformat'):
-                                documento[campo] = valor.isoformat()
-                    return documento
-
-                documento = await asyncio.get_event_loop().run_in_executor(
-                    None, _get_fila
-                )
-
-                if documento:
+                    if mongodb_manager.database is not None:
+                        collection = mongodb_manager.database.fila_processamento_sienge
+                        documento = collection.find_one()
+                        if documento is not None:
+                            return documento
+                        else:
+                            return None
+                    else:
+                        logger.warning(
+                            "[WARN] mongodb_manager.database é None ao tentar acessar fila_processamento_sienge!")
+                        return None
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    documento = await asyncio.get_event_loop().run_in_executor(executor, _get_fila)
+                if documento is not None:
                     logger.debug("📊 Fila Sienge obtida do MongoDB")
                     return documento
             except Exception as e:
-                logger.warning(f"⚠️ Falha ao ler fila MongoDB: {str(e)}")
+                logger.warning(
+                    f"⚠️ Falha ao ler fila Sienge do MongoDB: {str(e)}")
 
         # Fallback para JSON
         try:
-            if os.path.exists(self.arquivo_fila_sienge):
-                with open(self.arquivo_fila_sienge, 'r', encoding='utf-8') as f:
-                    fila = json.load(f)
-                    logger.debug("📄 Fila Sienge obtida do JSON")
-                    return fila
+            fila = self._carregar_json_seguro(self.arquivo_fila_sienge, {})
+            logger.debug("📄 Fila Sienge obtida do JSON")
+            return fila
         except Exception as e:
-            logger.error(f"❌ Falha ao ler fila JSON: {str(e)}")
-
-        # Retorna estrutura vazia se tudo falhar
-        return {
-            "timestamp_ultima_atualizacao": "",
-            "total_contratos": 0,
-            "status_geral": "ativo",
-            "contratos": []
-        }
+            logger.error(f"❌ Falha ao ler fila Sienge do JSON: {str(e)}")
+            return {}
 
     async def obter_estatisticas_dashboard(self) -> Dict[str, Any]:
         """
@@ -825,6 +830,8 @@ class DataManagerUnificado:
         Se MongoDB não estiver disponível, retorna None ou faz fallback para JSON local para fila_reparcelamento.
         """
         if hasattr(self, 'mongodb_ativo') and self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+            if filtro is None:
+                filtro = {}
             return await mongodb_manager.obter_documento_mais_recente(collection_name, filtro, campo_ordenacao)
         else:
             # Fallback: tente buscar no JSON, se aplicável
@@ -845,7 +852,144 @@ class DataManagerUnificado:
                             contratos = sorted(contratos, key=lambda x: x.get(
                                 campo_ordenacao, ""), reverse=True)
                             return contratos[0]
-            return None
+                return None
+
+    async def atualizar_status_fila_por_id(self, id_fila: str, novo_status: str, erro: Optional[str] = None) -> dict:
+        """
+        Atualiza o status_processamento de um contrato na fila (MongoDB + JSON) usando id_fila como chave única.
+        Sincroniza status_processamento, timestamp_status e erro_processamento.
+        """
+        try:
+            fila = await self.obter_fila_sienge()
+            contratos = fila.get("contratos", [])
+            atualizado = False
+            timestamp_status = datetime.now().isoformat()
+            for i, contrato in enumerate(contratos):
+                if str(contrato.get("id_fila", "")).strip() == str(id_fila).strip():
+                    contrato["status_processamento"] = novo_status
+                    contrato["timestamp_status"] = timestamp_status
+                    if erro is not None:
+                        contrato["erro_processamento"] = str(erro)
+                    contratos[i] = contrato
+                    atualizado = True
+                    break
+            if not atualizado:
+                return {"sucesso": False, "erro": f"Contrato com id_fila {id_fila} não encontrado na fila"}
+            fila["contratos"] = contratos
+            fila["timestamp_ultima_atualizacao"] = timestamp_status
+            # Salva JSON
+            try:
+                self._salvar_json_seguro(self.arquivo_fila_sienge, fila)
+            except Exception as e:
+                logger.error(f"[ERRO] Falha ao salvar fila em JSON: {str(e)}")
+            # MongoDB
+            if self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+                try:
+                    if mongodb_manager.database is not None:
+                        collection = mongodb_manager.database.fila_processamento_sienge
+                        filtro = {"contratos.id_fila": id_fila}
+                        update = {"$set": {"contratos.$.status_processamento": novo_status,
+                                           "contratos.$.timestamp_status": timestamp_status}}
+                        if erro is not None:
+                            update["$set"]["contratos.$.erro_processamento"] = str(
+                                erro)
+                        collection.update_one(filtro, update)
+                except Exception as e:
+                    logger.error(
+                        f"[ERRO] Falha ao atualizar status_processamento no MongoDB: {str(e)}")
+            return {"sucesso": True, "id_fila": id_fila, "novo_status": novo_status}
+        except Exception as e:
+            logger.error(
+                f"[ERRO] Exceção ao atualizar status_processamento na fila: {str(e)}")
+            return {"sucesso": False, "erro": str(e)}
+
+    # Alias para garantir que todos os fluxos usem o método robusto
+    async def atualizar_status_fila_sienge(self, id_fila: str, novo_status: str) -> Dict[str, Any]:
+        return await self.atualizar_status_fila_por_id(id_fila, novo_status)
+
+    async def finalizar_processamento_contrato(self, id_fila: str, dados_processados: dict, status_final: str, erro: Optional[str] = None) -> dict:
+        """
+        Finaliza o processamento de um contrato: atualiza status na fila e grava em contratos_processados.
+        """
+        # Atualiza status na fila
+        erro_str = str(erro) if erro is not None else ""
+        resultado_fila = await self.atualizar_status_fila_por_id(id_fila, status_final, erro_str)
+        # Grava/atualiza em contratos_processados
+        resultado_proc = await self.salvar_contrato_processado(dados_processados)
+        return {"resultado_fila": resultado_fila, "resultado_processados": resultado_proc}
+
+    async def buscar_contratos_aptos_reparcelamento(self) -> List[Dict[str, Any]]:
+        """
+        Retorna todos os contratos aptos para reparcelamento:
+        status_sienge = 'processado' e status_sicredi = 'pendente'
+        MongoDB principal, JSON fallback.
+        """
+        filtro = {
+            "status_sienge": "processado",
+            "status_sicredi": "pendente"
+        }
+        contratos = []
+        # MongoDB principal
+        if self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+            try:
+                def _get_all():
+                    if mongodb_manager.database is not None:
+                        return list(mongodb_manager.database.contratos_processados.find(filtro).sort("data_processamento", -1))
+                    else:
+                        return []
+                contratos = await asyncio.get_event_loop().run_in_executor(None, _get_all)
+                # Converter ObjectId e datetime para string
+                for c in contratos:
+                    if "_id" in c:
+                        c["_id"] = str(c["_id"])
+                    if "data_processamento" in c and hasattr(c["data_processamento"], "isoformat"):
+                        c["data_processamento"] = c["data_processamento"].isoformat()
+                return contratos
+            except Exception as e:
+                logger.warning(
+                    f"⚠️ Erro ao buscar contratos aptos no MongoDB: {str(e)}")
+        # Fallback JSON
+        try:
+            contratos_json = self._carregar_json_seguro(
+                self.arquivo_contratos, [])
+            contratos = [c for c in contratos_json if c.get(
+                "status_sienge") == "processado" and c.get("status_sicredi") == "pendente"]
+            # Ordenar por data_processamento decrescente
+            contratos = sorted(contratos, key=lambda x: x.get(
+                "data_processamento", ""), reverse=True)
+            return contratos
+        except Exception as e:
+            logger.warning(
+                f"⚠️ Erro ao buscar contratos aptos no JSON: {str(e)}")
+            return []
+
+    async def buscar_cnpj_por_empresa(self, nome_empresa: str) -> Optional[str]:
+        """
+        Busca o CNPJ correspondente ao nome da empresa (case-insensitive, contains) na collection 'empresas_sicredi'.
+        MongoDB principal, fallback JSON vazio.
+        """
+        if self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+            try:
+                def _find_cnpj():
+                    if mongodb_manager.database is not None:
+                        collection = mongodb_manager.database.empresas_sicredi
+                        # Busca por regex case-insensitive (contains)
+                        doc = collection.find_one({
+                            "unidade": {"$regex": nome_empresa, "$options": "i"}
+                        })
+                        if doc:
+                            return doc.get("cnpj")
+                    return None
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    cnpj = await asyncio.get_event_loop().run_in_executor(executor, _find_cnpj)
+                return cnpj
+            except Exception as e:
+                logger.warning(
+                    f"⚠️ Erro ao buscar CNPJ por empresa no MongoDB: {str(e)}")
+                return None
+        # Fallback: não há JSON para empresas_sicredi
+        return None
 
 
 # Instância global unificada
@@ -854,22 +998,22 @@ data_manager = DataManagerUnificado()
 # Funções auxiliares para facilitar uso
 
 
-async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: Dict[str, Any]) -> Dict[str, str]:
+async def salvar_execucao(nome_rpa: str, parametros: Dict[str, Any], resultado: Dict[str, Any]) -> Dict[str, Any]:
     """Função auxiliar para salvar execução simultaneamente"""
     return await data_manager.salvar_execucao_rpa(nome_rpa, parametros, resultado)
 
 
-async def salvar_contrato(contrato_data: Dict[str, Any]) -> Dict[str, str]:
+async def salvar_contrato(contrato_data: Dict[str, Any]) -> Dict[str, Any]:
     """Função auxiliar para salvar contrato simultaneamente"""
     return await data_manager.salvar_contrato_processado(contrato_data)
 
 
-async def salvar_indices(indices_data: Dict[str, Any]) -> Dict[str, str]:
+async def salvar_indices(indices_data: Dict[str, Any]) -> Dict[str, Any]:
     """Função auxiliar para salvar índices simultaneamente"""
     return await data_manager.salvar_indices_economicos(indices_data)
 
 
-async def salvar_fila_sienge(fila_dados: Dict[str, Any]) -> Dict[str, str]:
+async def salvar_fila_sienge(fila_dados: Dict[str, Any]) -> Dict[str, Any]:
     """Função auxiliar para salvar fila simultaneamente"""
     return await data_manager.salvar_fila_sienge(fila_dados)
 

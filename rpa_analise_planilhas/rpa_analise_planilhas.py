@@ -6,6 +6,9 @@ Desenvolvido em Português Brasileiro
 Baseado no PDD seção 7 - Processamento de dados das planilhas
 """
 
+from core.rastreamento_unificado import iniciar_rastreamento
+from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.base_rpa import BaseRPA, ResultadoRPA
 import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -20,9 +23,6 @@ from pathlib import Path
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.base_rpa import BaseRPA, ResultadoRPA
-from core.notificacoes_simples import notificar_sucesso, notificar_erro
-from core.rastreamento_unificado import iniciar_rastreamento
 
 # Logger integrado via BaseRPA usando logger_avancado
 
@@ -36,8 +36,12 @@ class RPAAnalisePlanilhas(BaseRPA):
     - Validação de dados para reparcelamento
     """
 
-    def __init__(self):
-        super().__init__(nome_rpa="Analise_Planilhas", usar_browser=False)
+    def __init__(self, headless: Optional[bool] = None):
+        if headless is not None:
+            super().__init__(nome_rpa="Analise_Planilhas",
+                             usar_browser=False, headless=headless)
+        else:
+            super().__init__(nome_rpa="Analise_Planilhas", usar_browser=False)
         self.cliente_sheets = None
         self.rastreamento = None
 
@@ -57,17 +61,19 @@ class RPAAnalisePlanilhas(BaseRPA):
         try:
             # ✅ INICIA RASTREAMENTO UNIFICADO
             self.rastreamento = iniciar_rastreamento("RPA_Analise_Planilhas")
-            
+
             await self.rastreamento.registrar_inicio_rpa(parametros)
-            
+
             # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
             from core.data_manager import data_manager
             await data_manager.inicializar()
             self.log_info("💾 Sistema híbrido MongoDB+JSON inicializado")
-            
+
             self.log_info("🔍 Iniciando análise de planilhas...")
-            self.log_info(f"📊 Planilha Base: {parametros.get('planilha_calculo_id')}")
-            self.log_info(f"📋 Planilha Apoio: {parametros.get('planilha_apoio_id')}")
+            self.log_info(
+                f"📊 Planilha Base: {parametros.get('planilha_calculo_id')}")
+            self.log_info(
+                f"📋 Planilha Apoio: {parametros.get('planilha_apoio_id')}")
 
             # Valida parâmetros obrigatórios
             planilha_calculo_id = parametros.get("planilha_calculo_id")
@@ -133,14 +139,14 @@ class RPAAnalisePlanilhas(BaseRPA):
                     "fase": "execucao_principal",
                     "parametros": parametros
                 })
-                
+
             self.log_erro("Erro durante análise das planilhas", e)
             return ResultadoRPA(
                 sucesso=False,
                 mensagem="Falha na análise das planilhas",
                 erro=str(e)
             )
-        
+
         finally:
             # ✅ SEMPRE finaliza rastreamento
             if self.rastreamento:
@@ -156,7 +162,8 @@ class RPAAnalisePlanilhas(BaseRPA):
         try:
             # Valida parâmetro de credenciais
             if not credenciais_google:
-                credenciais_google = os.getenv("GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
+                credenciais_google = os.getenv(
+                    "GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
 
             self.log_progresso(
                 f"Conectando ao Google Sheets: {credenciais_google}")
@@ -198,12 +205,15 @@ class RPAAnalisePlanilhas(BaseRPA):
             max_tentativas = 3
             for tentativa in range(max_tentativas):
                 try:
-                    planilha_apoio = self.cliente_sheets.open_by_key(planilha_apoio_id)
+                    planilha_apoio = self.cliente_sheets.open_by_key(
+                        planilha_apoio_id)
                     break
                 except Exception as e:
                     if "503" in str(e) and tentativa < max_tentativas - 1:
-                        tempo_espera = (tentativa + 1) * 30  # 30, 60, 90 segundos
-                        self.log_progresso(f"⚠️ Erro 503 - aguardando {tempo_espera}s antes da próxima tentativa...")
+                        tempo_espera = (tentativa + 1) * \
+                            30  # 30, 60, 90 segundos
+                        self.log_progresso(
+                            f"⚠️ Erro 503 - aguardando {tempo_espera}s antes da próxima tentativa...")
                         await asyncio.sleep(tempo_espera)
                         continue
                     raise e
@@ -579,7 +589,7 @@ class RPAAnalisePlanilhas(BaseRPA):
             # ✅ IMPORTA E INICIALIZA PROCESSADOR DE REGRAS PDD
             from core.processador_regras_pdd import ProcessadorRegrasNegocio
             processador_pdd = ProcessadorRegrasNegocio()
-            
+
             self.log_progresso(
                 "🔍 Analisando contratos com REGRAS PDD 9.1.1 INTEGRADAS")
 
@@ -612,15 +622,17 @@ class RPAAnalisePlanilhas(BaseRPA):
             for linha, contrato in enumerate(dados_contratos, start=2):
                 try:
                     # Verifica se o contrato tem dados mínimos obrigatórios
-                    cliente = contrato.get('Cliente', '').strip()
-                    numero_titulo = contrato.get('numero_titulo', '').strip()
+                    cliente = str(contrato.get('Cliente', '')).strip()
+                    numero_titulo = str(contrato.get(
+                        'numero_titulo', '')).strip()
 
                     # Pula linhas vazias ou sem dados essenciais
                     if not cliente and not numero_titulo:
                         continue
 
                     # Verifica coluna "Mês reajuste"
-                    mes_reajuste_str = contrato.get('Mês reajuste', '').strip()
+                    mes_reajuste_str = str(
+                        contrato.get('Mês reajuste', '')).strip()
 
                     # Validação mais rigorosa para campo mês reajuste
                     if (not mes_reajuste_str or
@@ -671,8 +683,8 @@ class RPAAnalisePlanilhas(BaseRPA):
                                 # ✅ ELEGÍVEL: Mês atual - APLICAR REGRAS PDD 9.1.1
 
                                 # Verifica se há pendências de IPTU básicas
-                                pendencia_pmfi = contrato.get(
-                                    'PENDÊNCIAS PMFI', '').strip().upper()
+                                pendencia_pmfi = str(contrato.get(
+                                    'PENDÊNCIAS PMFI', '')).strip().upper()
                                 consulta_iptu_ok = pendencia_pmfi in [
                                     'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
 
@@ -682,72 +694,83 @@ class RPAAnalisePlanilhas(BaseRPA):
                                     continue
 
                                 # ✅ NOVO: APLICAR REGRAS PDD PARA VALIDAÇÃO DE INADIMPLÊNCIA
-                                titulo_final = (numero_titulo or 
-                                              contrato.get('numero_titulo') or 
-                                              contrato.get('Titulo') or 
-                                              contrato.get('Título') or
-                                              'N/A')
+                                titulo_final = str(numero_titulo or
+                                                   contrato.get('numero_titulo') or
+                                                   contrato.get('Titulo') or
+                                                   contrato.get('Título') or
+                                                   'N/A')
 
                                 # 🎯 INTEGRAÇÃO: Simula dados CSV do Sienge para validação PDD
                                 # Nota: Em produção, isso seria dados reais do CSV do Sienge
-                                dados_simulados_csv = self._simular_dados_csv_para_validacao(contrato, titulo_final)
-                                
+                                dados_simulados_csv = self._simular_dados_csv_para_validacao(
+                                    contrato, titulo_final)
+
                                 if dados_simulados_csv is not None:
                                     # Aplica validação de inadimplência PDD
                                     resultado_pdd = processador_pdd.processar_dados_cliente_completo(
                                         df_planilha=dados_simulados_csv,
-                                        cliente=cliente,
-                                        numero_titulo=titulo_final
+                                        cliente=str(cliente),
+                                        numero_titulo=str(titulo_final)
                                     )
-                                    
-                                    self.log_progresso(f"🔍 Validação PDD para {cliente}: {resultado_pdd.get('status_cliente', 'N/A')}")
-                                    
+
+                                    self.log_progresso(
+                                        f"🔍 Validação PDD para {cliente}: {resultado_pdd.get('status_cliente', 'N/A')}")
+
                                     # Se inadimplente, pula o contrato
                                     if not resultado_pdd.get('pode_reparcelar', False):
                                         self.log_progresso(
                                             f"❌ Contrato INADIMPLENTE excluído: {cliente or 'Sem nome'} - {resultado_pdd.get('motivo_classificacao', 'N/A')}")
                                         continue
-                                    
-                                    self.log_progresso(f"✅ Contrato ADIMPLENTE aprovado: {cliente or 'Sem nome'}")
+
+                                    self.log_progresso(
+                                        f"✅ Contrato ADIMPLENTE aprovado: {cliente or 'Sem nome'}")
 
                                 # Cria cópia com dados essenciais preservados + resultados PDD
                                 contrato_processado = contrato.copy()
                                 contrato_processado['linha_planilha'] = linha
                                 contrato_processado['mes_reajuste_original'] = mes_reajuste_str
-                                contrato_processado['mes_reajuste_numerico'] = mes_reajuste
-                                contrato_processado['ano_reajuste'] = ano_reajuste
-                                contrato_processado['motivo_elegibilidade'] = f"Mês de reajuste atual: {mes_reajuste_str}"
-                                
+                                contrato_processado[
+                                    'motivo_elegibilidade'] = f"Mês de reajuste atual: {mes_reajuste_str}"
+
                                 # ✅ NOVO: Adiciona resultados da validação PDD
                                 if dados_simulados_csv is not None and 'resultado_pdd' in locals():
-                                    contrato_processado['validacao_pdd'] = {
+                                    contrato_processado['validacao_pdd'] = json.dumps({
                                         'status_cliente': resultado_pdd.get('status_cliente'),
                                         'pode_reparcelar': resultado_pdd.get('pode_reparcelar'),
                                         'nivel_risco': resultado_pdd.get('nivel_risco'),
                                         'qtd_ct_vencidas': resultado_pdd.get('qtd_ct_vencidas', 0),
                                         'regras_aplicadas': 'REGRAS_9_1_1_INTEGRADAS'
-                                    }
+                                    })
                                 else:
-                                    contrato_processado['validacao_pdd'] = {
+                                    contrato_processado['validacao_pdd'] = json.dumps({
                                         'status_cliente': 'PENDENTE_DADOS_CSV',
                                         'pode_reparcelar': True,  # Assume OK se não há dados para validar
                                         'observacao': 'Validação PDD será feita no RPA Sienge com dados reais'
-                                    }
+                                    })
 
                                 # Garante que campos essenciais estejam presentes
-                                contrato_processado['cliente'] = cliente or contrato_processado.get('Cliente', 'N/A')
+                                contrato_processado['cliente'] = cliente or contrato_processado.get(
+                                    'Cliente', 'N/A')
                                 contrato_processado['numero_titulo'] = titulo_final
 
                                 # Atualiza coluna "Último reajuste" conforme PDD
                                 await self._atualizar_ultimo_reajuste(aba_base_calculo, linha, contrato_processado)
 
-                                contratos_para_reajuste.append(contrato_processado)
+                                contratos_para_reajuste.append(
+                                    contrato_processado)
                                 self.log_progresso(
                                     f"✅ Contrato aprovado com PDD: {cliente or 'Sem nome'} - {mes_reajuste_str}")
-                                self.log_progresso(
-                                    f"   📋 Título={titulo_final}, Validação PDD={contrato_processado['validacao_pdd']['status_cliente']}")
-                                self.log_progresso(
-                                    f"   📋 Linha: {linha}, Status: {contrato_processado['validacao_pdd'].get('pode_reparcelar', 'N/A')}")
+                                # Parse do JSON para acessar campos
+                                try:
+                                    validacao_pdd_dict = json.loads(
+                                        contrato_processado['validacao_pdd'])
+                                    self.log_progresso(
+                                        f"   📋 Título={titulo_final}, Validação PDD={validacao_pdd_dict.get('status_cliente')}")
+                                    self.log_progresso(
+                                        f"   📋 Linha: {linha}, Status: {validacao_pdd_dict.get('pode_reparcelar', 'N/A')}")
+                                except Exception:
+                                    self.log_progresso(
+                                        f"   📋 Título={titulo_final}, Validação PDD=ERRO_PARSE_JSON")
 
                             elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
                                 # ⚠️ ATRASADO: Deveria ter sido processado antes
@@ -799,20 +822,20 @@ class RPAAnalisePlanilhas(BaseRPA):
 
             for contrato in contratos_reajuste:
                 # ✅ CORRIGIDO: Extrai número do título com múltiplas tentativas
-                numero_titulo = (contrato.get('numero_titulo') or 
-                               contrato.get('Titulo') or 
-                               contrato.get('Título') or
-                               contrato.get('Número do título') or
-                               contrato.get('titulo') or
-                               'N/A')
-                
-                cliente_nome = (contrato.get('cliente') or 
-                              contrato.get('Cliente') or 
-                              'N/A')
-                
-                ultimo_reajuste = (contrato.get('Último reajuste') or 
-                                 contrato.get('ultimo_reajuste') or 
+                numero_titulo = (contrato.get('numero_titulo') or
+                                 contrato.get('Titulo') or
+                                 contrato.get('Título') or
+                                 contrato.get('Número do título') or
+                                 contrato.get('titulo') or
                                  'N/A')
+
+                cliente_nome = (contrato.get('cliente') or
+                                contrato.get('Cliente') or
+                                'N/A')
+
+                ultimo_reajuste = (contrato.get('Último reajuste') or
+                                   contrato.get('ultimo_reajuste') or
+                                   'N/A')
 
                 item_fila = {
                     "id_fila": f"reajuste_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -867,8 +890,8 @@ class RPAAnalisePlanilhas(BaseRPA):
         prioridade += min(dias_sem_reajuste // 30, 12)  # Máximo 12 pontos
 
         # Contratos sem pendências têm prioridade
-        pendencia_pmfi = contrato.get(
-            'PENDÊNCIAS PMFI', contrato.get('IPTU PENDÊNCIAS PMFI', '')).upper()
+        pendencia_pmfi = str(contrato.get(
+            'PENDÊNCIAS PMFI', '')).strip().upper()
         if pendencia_pmfi in ['OK', 'SEM PENDÊNCIA', 'REGULAR', '']:
             prioridade += 5
 
@@ -892,7 +915,7 @@ class RPAAnalisePlanilhas(BaseRPA):
         """
         try:
             from core.data_manager import data_manager
-            
+
             # Prepara estrutura da fila para o RPA Sienge
             if fila_processamento:
                 for contrato in fila_processamento:
@@ -909,13 +932,16 @@ class RPAAnalisePlanilhas(BaseRPA):
 
                 # ✅ USA SISTEMA UNIFICADO - MongoDB + JSON simultâneo
                 resultados = await data_manager.salvar_fila_sienge(estrutura_fila)
-                
+
                 if resultados["mongodb"] == "sucesso" and resultados["json"] == "sucesso":
-                    self.log_progresso(f"✅ Fila salva em MongoDB + JSON: {len(fila_processamento)} contratos")
+                    self.log_progresso(
+                        f"✅ Fila salva em MongoDB + JSON: {len(fila_processamento)} contratos")
                 elif resultados["json"] == "sucesso":
-                    self.log_progresso(f"📄 Fila salva em JSON: {len(fila_processamento)} contratos (MongoDB indisponível)")
+                    self.log_progresso(
+                        f"📄 Fila salva em JSON: {len(fila_processamento)} contratos (MongoDB indisponível)")
                 else:
-                    self.log_progresso(f"⚠️ Problemas ao salvar fila: {resultados}")
+                    self.log_progresso(
+                        f"⚠️ Problemas ao salvar fila: {resultados}")
             else:
                 self.log_progresso("⚠️ Nenhum item para salvar na fila")
 
@@ -951,41 +977,54 @@ class RPAAnalisePlanilhas(BaseRPA):
                 # CORRIGIDO: Valida se coluna está dentro do limite válido (A-Z = 1-26)
                 if coluna_ultimo_reajuste <= 26:
                     celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}'
-                    
+
                     # CORRIGIDO: Tenta atualizar com tratamento robusto de erro
                     try:
                         aba_base_calculo.update(celula, data_reajuste)
-                        cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
-                        self.log_progresso(f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
+                        cliente = contrato.get(
+                            'Cliente', contrato.get('cliente', 'N/A'))
+                        self.log_progresso(
+                            f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
                     except Exception as update_err:
                         # Se der erro específico da API, tenta método alternativo
                         if "Invalid value" in str(update_err):
                             try:
                                 # Método alternativo usando range de células
                                 range_celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}:{chr(64 + coluna_ultimo_reajuste)}{linha}'
-                                aba_base_calculo.update(range_celula, [[data_reajuste]])
-                                cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
-                                self.log_progresso(f"✅ Último reajuste atualizado (alt): {cliente} -> {data_reajuste}")
+                                aba_base_calculo.update(
+                                    range_celula, [[data_reajuste]])
+                                cliente = contrato.get(
+                                    'Cliente', contrato.get('cliente', 'N/A'))
+                                self.log_progresso(
+                                    f"✅ Último reajuste atualizado (alt): {cliente} -> {data_reajuste}")
                             except Exception as alt_err:
-                                self.log_progresso(f"⚠️ Falha completa ao atualizar: {str(alt_err)}")
+                                self.log_progresso(
+                                    f"⚠️ Falha completa ao atualizar: {str(alt_err)}")
                         else:
                             raise update_err
                 else:
                     # Para colunas além de Z (26), usa notação diferente
                     if coluna_ultimo_reajuste <= 702:  # Até ZZ
-                        primeira_letra = chr(64 + ((coluna_ultimo_reajuste - 1) // 26))
-                        segunda_letra = chr(64 + ((coluna_ultimo_reajuste - 1) % 26) + 1)
+                        primeira_letra = chr(
+                            64 + ((coluna_ultimo_reajuste - 1) // 26))
+                        segunda_letra = chr(
+                            64 + ((coluna_ultimo_reajuste - 1) % 26) + 1)
                         celula = f'{primeira_letra}{segunda_letra}{linha}'
                         aba_base_calculo.update(celula, data_reajuste)
-                        cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
-                        self.log_progresso(f"✅ Último reajuste atualizado (ext): {cliente} -> {data_reajuste}")
+                        cliente = contrato.get(
+                            'Cliente', contrato.get('cliente', 'N/A'))
+                        self.log_progresso(
+                            f"✅ Último reajuste atualizado (ext): {cliente} -> {data_reajuste}")
                     else:
-                        self.log_progresso(f"⚠️ Coluna muito avançada para atualizar: {coluna_ultimo_reajuste}")
+                        self.log_progresso(
+                            f"⚠️ Coluna muito avançada para atualizar: {coluna_ultimo_reajuste}")
             else:
-                self.log_progresso("⚠️ Coluna 'Último reajuste' não encontrada para atualizar")
+                self.log_progresso(
+                    "⚠️ Coluna 'Último reajuste' não encontrada para atualizar")
 
         except Exception as e:
-            self.log_progresso(f"⚠️ Erro ao atualizar último reajuste: {str(e)}")
+            self.log_progresso(
+                f"⚠️ Erro ao atualizar último reajuste: {str(e)}")
 
     async def _salvar_fila_local(self, fila_processamento: List[Dict[str, Any]]):
         """
@@ -995,63 +1034,16 @@ class RPAAnalisePlanilhas(BaseRPA):
             fila_processamento: Lista de itens da fila
         """
         try:
-            import json
-            import os
-
-            # Cria diretório se não existir
-            os.makedirs("dados_processamento", exist_ok=True)
-
-            # Nome único do arquivo - sempre o mesmo
+            pasta_dados = 'dados_processamento'
             arquivo_fila = os.path.join(
-                "dados_processamento", "fila_contratos_sienge.json")
-
-            # Estrutura do arquivo único
-            fila_completa = {
-                "timestamp_ultima_atualizacao": datetime.now().isoformat(),
-                "total_contratos": len(fila_processamento),
-                "status_geral": "ativo",
-                "contratos": []
-            }
-
-            # Se arquivo já existe, carrega dados anteriores
-            if os.path.exists(arquivo_fila):
-                try:
-                    with open(arquivo_fila, 'r', encoding='utf-8') as f:
-                        dados_existentes = json.load(f)
-
-                    # Mantém contratos já processados
-                    contratos_processados = [
-                        c for c in dados_existentes.get("contratos", [])
-                        if c.get("status_processamento") in ["processado", "erro"]
-                    ]
-
-                    self.log_progresso(
-                        f"📋 Mantendo {len(contratos_processados)} contratos já processados")
-                    fila_completa["contratos"].extend(contratos_processados)
-
-                except Exception as e:
-                    self.log_progresso(
-                        f"⚠️ Erro ao carregar arquivo anterior: {str(e)}")
-
-            # Estrutura da fila no formato esperado pelo RPA Sienge
-            fila_completa["contratos"] = []
-            for contrato in fila_processamento:
-                contrato["status_processamento"] = "pendente"
-                contrato["timestamp_identificacao"] = datetime.now().isoformat()
-                contrato["processado_em"] = None
-                contrato["erro_processamento"] = None
-                fila_completa["contratos"].append(contrato)
-
-            # Atualiza totais
-            fila_completa["total_contratos"] = len(fila_completa["contratos"])
-
-            # Salva arquivo único
-            with open(arquivo_fila, 'w', encoding='utf-8') as f:
-                json.dump(fila_completa, f, indent=2,
-                          ensure_ascii=False, default=str)
+                str(pasta_dados or ''), "fila_contratos_sienge.json")
+            if not arquivo_fila:
+                arquivo_fila = 'fila_processamento.json'
+            with open(str(arquivo_fila), 'w', encoding='utf-8') as f:
+                json.dump(fila_processamento, f, indent=2, ensure_ascii=False)
 
             self.log_progresso(
-                f"✅ Fila salva no arquivo único: {arquivo_fila} ({len(fila_processamento)} novos + {len(fila_completa['contratos']) - len(fila_processamento)} anteriores)")
+                f"✅ Fila salva no arquivo único: {arquivo_fila} ({len(fila_processamento)} itens)")
 
         except Exception as e:
             self.log_erro("Erro ao salvar fila localmente", e)
@@ -1059,24 +1051,25 @@ class RPAAnalisePlanilhas(BaseRPA):
     def _simular_dados_csv_para_validacao(self, contrato: Dict[str, Any], numero_titulo: str):
         """
         Simula dados CSV do Sienge para validação PDD usando dados da planilha
-        
+
         EM PRODUÇÃO: Este método seria substituído por dados reais do CSV do Sienge
         obtidos via webscraping no RPA Sienge
-        
+
         Args:
             contrato: Dados do contrato da planilha
             numero_titulo: Número do título
-            
+
         Returns:
             DataFrame simulado para validação PDD ou None se não há dados suficientes
         """
         try:
             import pandas as pd
             from datetime import datetime, timedelta
-            
+
             # Dados mínimos necessários para validação PDD
-            pendencia_sienge_inad = contrato.get('PENDÊNCIAS SIENGE INAD', '').strip().upper()
-            
+            pendencia_sienge_inad = contrato.get(
+                'PENDÊNCIAS SIENGE INAD', '').strip().upper()
+
             # Se já há indicação clara de inadimplência na planilha, usa isso
             if pendencia_sienge_inad in ['INADIMPLENTE', 'INAD', 'SIM']:
                 # Simula dados de um cliente inadimplente (3+ CT vencidas)
@@ -1110,7 +1103,7 @@ class RPAAnalisePlanilhas(BaseRPA):
                     }
                 ]
                 return pd.DataFrame(dados_simulados)
-                
+
             elif pendencia_sienge_inad in ['ADIMPLENTE', 'OK', 'SEM PENDÊNCIA', 'REGULAR', '', 'NÃO']:
                 # Simula dados de um cliente adimplente (0-2 CT vencidas)
                 dados_simulados = [
@@ -1134,10 +1127,10 @@ class RPAAnalisePlanilhas(BaseRPA):
                     }
                 ]
                 return pd.DataFrame(dados_simulados)
-            
+
             # Se não há informação suficiente, retorna None (validação será feita no RPA Sienge)
             return None
-            
+
         except Exception as e:
             self.log_progresso(f"⚠️ Erro ao simular dados CSV: {str(e)}")
             return None
@@ -1151,79 +1144,23 @@ class RPAAnalisePlanilhas(BaseRPA):
         Salva a fila de contratos no arquivo único acumulativo
         """
         try:
-            import json
-            import os
-
-            # Cria diretório se não existir
-            pasta_dados = "dados_processamento"
-            if not os.path.exists(pasta_dados):
-                os.makedirs(pasta_dados)
-
-            # Nome único do arquivo - sempre o mesmo
+            pasta_dados = 'dados_processamento'
             arquivo_fila = os.path.join(
-                pasta_dados, "fila_contratos_sienge.json")
-
-            # Estrutura do arquivo único
-            fila_dados = {
-                "timestamp_ultima_atualizacao": datetime.now().isoformat(),
-                "total_contratos": 0,
-                "status_geral": "ativo",
-                "contratos": []
-            }
-
-            # Se arquivo já existe, carrega e preserva contratos processados
-            if os.path.exists(arquivo_fila):
-                try:
-                    with open(arquivo_fila, 'r', encoding='utf-8') as f:
-                        dados_existentes = json.load(f)
-
-                    # Preserva apenas contratos já processados/com erro
-                    contratos_anteriores = [
-                        c for c in dados_existentes.get("contratos", [])
-                        if c.get("status_processamento") in ["processado", "erro"]
-                    ]
-
-                    fila_dados["contratos"].extend(contratos_anteriores)
-                    self.log_progresso(
-                        f"📋 Preservando {len(contratos_anteriores)} contratos já processados")
-
-                except Exception as e:
-                    self.log_progresso(
-                        f"⚠️ Erro ao carregar arquivo anterior: {str(e)}")
-
-            # Adicionar novos contratos para processamento
-            for contrato in contratos_para_reajuste:
-                item_fila = {
-                    "numero_titulo": contrato.get("numero_titulo"),
-                    "cliente": contrato.get("cliente"),
-                    "empreendimento": contrato.get("empreendimento", ""),
-                    "ultimo_reajuste": contrato.get("ultimo_reajuste"),
-                    "dias_sem_reajuste": contrato.get("dias_sem_reajuste"),
-                    "valor_atual": contrato.get("valor_atual", 0),
-                    "indexador": contrato.get("indexador", "IPCA"),
-                    "status_processamento": "pendente",
-                    "timestamp_identificacao": datetime.now().isoformat(),
-                    "processado_em": None,
-                    "erro_processamento": None,
-                    "dados_completos": contrato
-                }
-                fila_dados["contratos"].append(item_fila)
-
-            # Atualiza contadores
-            fila_dados["total_contratos"] = len(fila_dados["contratos"])
-
-            # Salva arquivo único
-            with open(arquivo_fila, 'w', encoding='utf-8') as f:
-                json.dump(fila_dados, f, indent=2, ensure_ascii=False)
+                str(pasta_dados or ''), "fila_contratos_sienge.json")
+            if not arquivo_fila:
+                arquivo_fila = 'fila_processamento.json'
+            with open(str(arquivo_fila), 'w', encoding='utf-8') as f:
+                json.dump(contratos_para_reajuste, f,
+                          indent=2, ensure_ascii=False)
 
             self.log_progresso(
-                f"📄 Fila salva no arquivo único: {arquivo_fila} ({len(contratos_para_reajuste)} novos contratos)")
+                f"📄 Fila salva no arquivo único: {arquivo_fila} ({len(contratos_para_reajuste)} contratos)")
 
             # Tentar salvar também no MongoDB se disponível
             try:
                 if self.mongo_manager and self.mongo_manager.conectado:
                     await self.mongo_manager.database.fila_processamento_sienge.replace_one(
-                        {}, fila_dados, upsert=True
+                        {}, contratos_para_reajuste, upsert=True
                     )
                     self.log_progresso("💾 Fila também salva no MongoDB")
             except Exception as e:
@@ -1238,7 +1175,8 @@ class RPAAnalisePlanilhas(BaseRPA):
 async def executar_analise_planilhas(
     planilha_calculo_id: str,
     planilha_apoio_id: str,
-    credenciais_google: str = None
+    credenciais_google: str = None,
+    headless: Optional[bool] = None
 ) -> ResultadoRPA:
     """
     Função auxiliar para executar análise de planilhas diretamente
@@ -1247,13 +1185,17 @@ async def executar_analise_planilhas(
         planilha_calculo_id: ID da planilha BASE DE CÁLCULO REPARCELAMENTO
         planilha_apoio_id: ID da planilha Base de apoio
         credenciais_google: Caminho para credenciais (opcional)
+        headless: Indica se o RPA deve ser executado em modo headless (opcional)
 
     Returns:
         ResultadoRPA com resultado da análise
     """
     rpa = None
     try:
-        rpa = RPAAnalisePlanilhas()
+        if headless is not None:
+            rpa = RPAAnalisePlanilhas(headless=headless)
+        else:
+            rpa = RPAAnalisePlanilhas()
 
         parametros = {
             "planilha_calculo_id": planilha_calculo_id,
@@ -1266,9 +1208,11 @@ async def executar_analise_planilhas(
         # Enviar notificação
         try:
             if resultado.sucesso:
-                contratos_encontrados = len(resultado.dados.get(
-                    'fila_processamento', [])) if resultado.dados else 0
-                await notificar_sucesso(
+                contratos_encontrados = 0
+                if resultado.dados and isinstance(resultado.dados, dict):
+                    contratos_encontrados = len(
+                        resultado.dados.get('fila_processamento', []))
+                notificar_sucesso(
                     nome_rpa="RPA Análise Planilhas",
                     tempo_execucao=f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
                     resultados={
@@ -1278,7 +1222,7 @@ async def executar_analise_planilhas(
                     }
                 )
             else:
-                await notificar_erro(
+                notificar_erro(
                     nome_rpa="RPA Análise Planilhas",
                     erro=resultado.erro or "Erro desconhecido",
                     detalhes=resultado.mensagem
