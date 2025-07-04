@@ -30,7 +30,7 @@ async def executar_processamento_sicredi(contrato: Dict[str, Any], cnpj_empresa:
     """
     # TODO: Ajustar caminho do arquivo de remessa conforme integração real
     arquivo_remessa = contrato.get(
-        "arquivo_remessa", "outputs/2025/06/24/logs20250624.txt")
+        "arquivo_remessa", "dados_extraidos/arquivo_remessa/19605620.219")
     credenciais_sicredi = {
         "url": os.getenv("SICREDI_URL", "https://www.sicredi.com.br/home/"),
         "usuario": os.getenv("SICREDI_USUARIO", "usuario_teste"),

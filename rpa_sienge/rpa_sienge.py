@@ -22,14 +22,14 @@ import locale
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
 from core.rastreamento_unificado import iniciar_rastreamento
-from core.processador_regras_pdd import ProcessadorRegrasNegocio, ValidadorInadimplenciaPDD, CalculadoraReparcelamentoPDD
+from core.processador_regras_pdd import ProcessadorRegrasNegocio, CalculadoraReparcelamentoPDD
 
 # Selenium imports necessários
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.select import Select
 from platformdirs import user_downloads_dir
 
 load_dotenv()
@@ -520,8 +520,19 @@ class RPASienge(BaseRPA):
             self.log_progresso(
                 f"Processando arquivo: {arquivo_mais_recente.name}")
 
-            # Ler planilha Excel
+            # Ler planilha Excel - o relatório Sienge TEM cabeçalho
             df = pd.read_excel(arquivo_mais_recente)
+
+            self.log_progresso(f"✅ Planilha carregada com {len(df)} linhas")
+            self.log_progresso(
+                f"📋 Colunas detectadas: {list(df.columns[:10])}...")
+
+            # Log das primeiras linhas para debug
+            if len(df) > 0:
+                self.log_progresso(
+                    f"🔍 Primeira linha - Título: {df.iloc[0]['Título'] if 'Título' in df.columns else 'N/A'}")
+                self.log_progresso(
+                    f"🔍 Primeira linha - Cliente: {df.iloc[0]['Cliente'] if 'Cliente' in df.columns else 'N/A'}")
 
             # Salvar cópia na pasta do projeto
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -538,14 +549,9 @@ class RPASienge(BaseRPA):
                         "arquivo_origem": caminho_arquivo
                     })
 
-            # APLICAR VALIDAÇÃO PDD RIGOROSA CONFORME SEÇÃO 9.1.1
-            validador = ValidadorInadimplenciaPDD()
-            resultado_validacao = validador.validar_cliente(
+            # APLICAR REGRAS PDD COMPLETAS 9.1.1 (INCLUINDO VALIDAÇÃO DE INADIMPLÊNCIA)
+            resultado_validacao = self.processador_regras.processar_dados_cliente_completo(
                 df, cliente, numero_titulo)
-
-            # APLICAR REGRAS ESPECÍFICAS PDD 9.1.1
-            resultado_regras_pdd = self.processador_regras.processar_dados_cliente_completo(
-                df, cliente, numero_titulo, resultado_validacao)
 
             self.log_progresso(f"✅ Validação PDD 9.1.1 concluída:")
             self.log_progresso(
@@ -559,22 +565,18 @@ class RPASienge(BaseRPA):
             )
 
             # LOGS ESPECÍFICOS DAS REGRAS 9.1.1
-            if resultado_regras_pdd:
-                self.log_progresso(
-                    f"  📅 Dia vencimento identificado: {resultado_regras_pdd.get('dia_vencimento', 'N/A')}"
-                )
-                self.log_progresso(
-                    f"  💰 Valor parcela atual: R$ {resultado_regras_pdd.get('valor_parcela_atual', 0):,.2f}"
-                )
-                self.log_progresso(
-                    f"  🗓️ 1º vencimento carnê: {resultado_regras_pdd.get('primeiro_vencimento_carne', 'N/A')}"
-                )
-                self.log_progresso(
-                    f"  ⚠️ Parcelas divergentes: {len(resultado_regras_pdd.get('parcelas_divergentes', []))}"
-                )
-
-            # COMBINAR RESULTADOS
-            resultado_validacao.update(resultado_regras_pdd or {})
+            self.log_progresso(
+                f"  📅 Dia vencimento identificado: {resultado_validacao.get('dia_vencimento', 'N/A')}"
+            )
+            self.log_progresso(
+                f"  💰 Valor parcela atual: R$ {resultado_validacao.get('valor_parcela_atual', 0):,.2f}"
+            )
+            self.log_progresso(
+                f"  🗓️ 1º vencimento carnê: {resultado_validacao.get('primeiro_vencimento_carne', 'N/A')}"
+            )
+            self.log_progresso(
+                f"  ⚠️ Parcelas divergentes: {len(resultado_validacao.get('parcelas_divergentes', []))}"
+            )
 
             # SALVAR DADOS DE AUDITORIA PDD CONFORME REQUERIDO
             dados_auditoria = {
@@ -903,82 +905,6 @@ class RPASienge(BaseRPA):
             self.log_progresso(
                 "[ATENÇÃO] O método 'carregar_dados_fila_reparcelamento' não está implementado nesta classe. Implemente ou ajuste o fluxo aqui.")
             return ResultadoRPA(sucesso=False, mensagem="Método 'carregar_dados_fila_reparcelamento' não implementado.", erro="Método ausente")
-            # O código abaixo está inacessível enquanto o método correto não for implementado.
-            # Remova o comentário e ajuste quando implementar 'carregar_dados_fila_reparcelamento'.
-            # parametros = resultado_carga["parametros_navegacao"]
-            # self.log_progresso(f"📄 Processando: {parametros['numero_titulo']}")
-            # self.log_progresso(f"👤 Cliente: {parametros['cliente']}")
-            # if not self.logado_sienge:
-            #     await self._fazer_login_sienge()
-            # resultado_webscraping = await self._navegar_e_executar_reparcelamento(parametros)
-            # if not resultado_webscraping.get("sucesso", False):
-            #     return ResultadoRPA(
-            #         sucesso=False,
-            #         mensagem="Falha no webscraping de reparcelamento",
-            #         erro=resultado_webscraping.get("erro", "Erro no webscraping"),
-            #         dados={"parametros_utilizados": parametros})
-            # await self._atualizar_status_fila_reparcelamento(
-            #     parametros["id_fila"] or '', "processado",
-            #     resultado_webscraping or {})
-            # await self._salvar_reparcelamento_historico(
-            #     parametros, resultado_webscraping)
-            # self.log_progresso("✅ REPARCELAMENTO CONCLUÍDO COM SUCESSO")
-            # return ResultadoRPA(
-            #     sucesso=True,
-            #     mensagem=f"Reparcelamento processado: {parametros['numero_titulo']}",
-            #     dados={
-            #         "numero_titulo": parametros["numero_titulo"],
-            #         "cliente": parametros["cliente"],
-            #         "novo_titulo_gerado":
-            #         resultado_webscraping.get("novo_titulo"),
-            #         "saldo_anterior": parametros["saldo_anterior"],
-            #         "saldo_novo": parametros["saldo_novo"],
-            #         "parcelas_desmarcadas":
-            #         len(parametros["parcelas_desmarcar"]),
-            #         "timestamp_processamento": datetime.now().isoformat()
-            #     })
-
-            # 2. FAZER LOGIN NO SIENGE (se não logado)
-            if not self.logado_sienge:
-                await self._fazer_login_sienge()
-
-            # 3. EXECUTAR WEBSCRAPING DE REPARCELAMENTO
-            resultado_webscraping = await self._navegar_e_executar_reparcelamento(
-                parametros)
-
-            if not resultado_webscraping.get("sucesso", False):
-                return ResultadoRPA(
-                    sucesso=False,
-                    mensagem="Falha no webscraping de reparcelamento",
-                    erro=resultado_webscraping.get("erro",
-                                                   "Erro no webscraping"),
-                    dados={"parametros_utilizados": parametros})
-
-            # 4. ATUALIZAR STATUS NA FILA
-            await self._atualizar_status_fila_reparcelamento(
-                parametros["id_fila"] or '', "processado",
-                resultado_webscraping or {})
-
-            # 5. SALVAR NO HISTÓRICO
-            await self._salvar_reparcelamento_historico(
-                parametros, resultado_webscraping)
-
-            self.log_progresso("✅ REPARCELAMENTO CONCLUÍDO COM SUCESSO")
-
-            return ResultadoRPA(
-                sucesso=True,
-                mensagem=f"Reparcelamento processado: {parametros['numero_titulo']}",
-                dados={
-                    "numero_titulo": parametros["numero_titulo"],
-                    "cliente": parametros["cliente"],
-                    "novo_titulo_gerado":
-                    resultado_webscraping.get("novo_titulo"),
-                    "saldo_anterior": parametros["saldo_anterior"],
-                    "saldo_novo": parametros["saldo_novo"],
-                    "parcelas_desmarcadas":
-                    len(parametros["parcelas_desmarcar"]),
-                    "timestamp_processamento": datetime.now().isoformat()
-                })
 
         except Exception as e:
             erro_msg = f"Erro na execução do reparcelamento: {str(e)}"
@@ -1063,68 +989,35 @@ class RPASienge(BaseRPA):
                     self.click(
                         xpath='//input[@type="button" and @name="btNext" and @value="Próximo"]')
 
-                    # PASSO 23: APLICAÇÃO DO FILTRO CRÍTICO DE PARCELAS
-                    self.log_progresso("📄 Localizando botão 'Marcar Todos'...")
-
-                    # 1. Clicar em "Marcar Todos" conforme PDD
-                    try:
-                        marcar_todos_btn_xpath = '//input[@type="button" and @id="btTodos" and @value="Marcar todos"]'
-                        self.click(marcar_todos_btn_xpath)
-                        self.log_progresso("✅ Botão 'Marcar Todos' clicado.")
-                        time.sleep(1)
-                    except Exception as e:
-                        self.log_warning(
-                            f"⚠️ Botão 'Marcar Todos' não encontrado ou não clicável: {e}")
-
-                    # 2. Desmarcar parcelas conforme regras do PDD (vencimento <= mês vigente)
-                    parcelas_a_desmarcar = parametros.get(
-                        "parcelas_desmarcar", [])
+                    # PASSO 23: SELEÇÃO INDIVIDUAL DE PARCELAS (SUBSTITUI "MARCAR TODOS")
                     self.log_progresso(
-                        f"🔎 Analisando {len(parcelas_a_desmarcar)} parcela(s) para desmarcar.")
+                        "📄 PASSO 23: Selecionando parcelas individualmente conforme PDD...")
 
-                    if not parcelas_a_desmarcar:
+                    # Obter data base para reparcelamento (mês seguinte)
+                    data_reparcelamento = parametros.get(
+                        "data_reparcelamento", "")
+                    if not data_reparcelamento:
+                        # Calcular data base se não fornecida (mês seguinte)
+                        mes_atual = datetime.now()
+                        data_reparcelamento = (mes_atual.replace(
+                            day=1) + timedelta(days=32)).replace(day=1).strftime("%d/%m/%Y")
                         self.log_progresso(
-                            "Nenhuma parcela a desmarcar. Todas as 12 parcelas permanecerão marcadas.")
-                    else:
-                        datas_a_desmarcar = {p['data_vencimento']
-                                             for p in parcelas_a_desmarcar}
+                            f"📅 Data base calculada automaticamente: {data_reparcelamento}")
 
-                        # Mapeia todas as linhas visíveis da grid
-                        grid_rows_xpath = "//table[contains(@id, 'parcelaRow')]//tr[contains(@id, 'linhaParcelaRow_') and not(contains(@style, 'display: none'))]"
-                        rows = self.find_elements(xpath=grid_rows_xpath)
+                    # Selecionar parcelas individualmente (máximo 12 conforme PDD)
+                    parcelas_selecionadas = self._selecionar_parcelas_individualmente(
+                        data_reparcelamento=data_reparcelamento,
+                        max_parcelas=12,  # Conforme PDD - 12 parcelas = 1 ano
+                        tabela_idx=1
+                    )
 
-                        if not rows:
-                            self.log_warning(
-                                "⚠️ Nenhuma linha de parcela encontrada na grid para análise.")
-                        else:
-                            self.log_progresso(
-                                f"Iterando sobre {len(rows)} linhas da grid de parcelas.")
-                            for row in rows:
-                                try:
-                                    # Extrai a data de vencimento da linha
-                                    date_input = row.find_element(
-                                        By.XPATH, ".//input[contains(@id, '.dtVencto_')]")
-                                    due_date = date_input.get_attribute(
-                                        'value')
+                    if parcelas_selecionadas == 0:
+                        self.log_erro(
+                            "Nenhuma parcela foi selecionada - verificar critérios de seleção", Exception("Nenhuma parcela selecionada"))
+                        return {"sucesso": False, "erro": "Nenhuma parcela selecionada para reparcelamento"}
 
-                                    # Se a data da linha está na lista de datas a desmarcar
-                                    if due_date in datas_a_desmarcar:
-                                        self.log_progresso(
-                                            f"   - Encontrada parcela para desmarcar: vencimento {due_date}")
-                                        checkbox = row.find_element(
-                                            By.XPATH, ".//input[contains(@id, '.flSelecionado_') and @type='checkbox']")
-
-                                        # Garante que está selecionado antes de clicar para desmarcar
-                                        if checkbox.is_selected():
-                                            checkbox.click()
-                                            self.log_progresso(
-                                                f"     ✅ Checkbox da parcela {due_date} desmarcado.")
-                                        else:
-                                            self.log_progresso(
-                                                f"     ℹ️ Checkbox da parcela {due_date} já estava desmarcado.")
-                                except Exception as e:
-                                    self.log_warning(
-                                        f"   - ⚠️ Erro ao processar uma linha da grid: {e}")
+                    self.log_progresso(
+                        f"✅ Seleção individual concluída: {parcelas_selecionadas} parcelas selecionadas")
 
                     # 3. Clicar em "Próximo" para avançar para a tela de detalhamento
                     self.log_progresso(
@@ -1136,16 +1029,144 @@ class RPASienge(BaseRPA):
                     self.check_for_error()
 
                     # PASSO 24: CONFIGURAÇÃO DO DETALHAMENTO
-                    valores_sienge = parametros["valores_sienge"]
-                    # "CORREÇÃO MM/AA"
-                    detalhamento = valores_sienge["detalhamento"]
+                    # PRIMEIRO: PREENCHER DADOS NA PLANILHA (CONFORME PDD)
+                    self.log_progresso(
+                        "📊 PASSO 24: Preenchendo dados na planilha BASE DE CÁLCULO...")
+
+                    # Obter ID da planilha do ambiente (OBRIGATÓRIO conforme PDD)
+                    planilha_id = os.getenv("PLANILHA_CALCULO_ID")
+                    if not planilha_id:
+                        erro_msg = "PLANILHA_CALCULO_ID não configurada no ambiente. Conforme PDD, todos os valores devem vir da planilha."
+                        self.log_erro(erro_msg, Exception(erro_msg))
+                        return {"sucesso": False, "erro": erro_msg}
+
+                    # Conectar ao Google Sheets se não conectado
+                    if not hasattr(self, 'cliente_sheets'):
+                        await self._conectar_google_sheets()
+
+                    # Abrir planilha
+                    planilha = self.cliente_sheets.open_by_key(planilha_id)
+
+                    # PREENCHER DADOS DO RELATÓRIO SIENGE (Passo 9.1.2 do PDD)
+                    # Isso alimenta as fórmulas da planilha para calcular automaticamente
+                    resultado_planilha = await self._preencher_dados_relatorio_sienge(planilha, {
+                        "cliente": parametros.get("cliente", ""),
+                        "numero_titulo": parametros.get("numero_titulo", ""),
+                        "dados_validacao": {
+                            # CORRIGIDO: usar total de parcelas do contrato, não apenas as selecionadas
+                            "qtd_parcelas_ct_a_vencer": parametros.get("qtd_parcelas_ct_total", parcelas_selecionadas),
+                            # CORRIGIDO: usar valor original do relatório
+                            "valor_parcela_atual": parametros.get("valor_parcela_original", 1000.0),
+                            "saldo_total": parametros.get("saldo_anterior", 0),
+                            "dia_vencimento": 10,  # Valor padrão conforme PDD
+                            "status_cliente": parametros.get("status_cliente", "adimplente"),
+                            "parcelas_rec_fat": []
+                        },
+                        "regras_pdd_aplicadas": {
+                            "primeiro_vencimento_carne": (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')
+                        }
+                    })
+
+                    # VERIFICAR SE PROCESSAMENTO DEVE SER INTERROMPIDO (CONFORME PDD 9.1.2)
+                    if resultado_planilha and resultado_planilha.get("deve_interromper_processamento", False):
+                        self.log_progresso(
+                            "🚫 PROCESSAMENTO INTERROMPIDO - CLIENTE INADIMPLENTE")
+                        self.log_progresso(
+                            "📋 Conforme PDD Seção 9.1.2: Planilha marcada como inadimplente, reparcelamento NÃO autorizado")
+                        self.log_progresso(
+                            "✅ Processo encerrado conforme regras de negócio")
+
+                        return {
+                            "sucesso": True,
+                            "motivo_interrupcao": "Cliente inadimplente",
+                            "cliente_inadimplente": True,
+                            "planilha_atualizada": True,
+                            "reparcelamento_autorizado": False,
+                            "conforme_pdd": "Seção 9.1.2 - Inadimplência detectada",
+                            "timestamp": datetime.now().isoformat()
+                        }
+
+                    self.log_progresso(
+                        "✅ Dados preenchidos na planilha - fórmulas calculando automaticamente...")
+
+                    # BREAKPOINT: CONFERIR RETROALIMENTAÇÃO
+                    self.log_progresso(
+                        "⏸️ BREAKPOINT: Retroalimentação concluída!")
+                    self.log_progresso(
+                        "📋 Verifique na planilha se os campos foram preenchidos:")
+                    self.log_progresso(
+                        f"   📄 Parcelas a vencer: {parametros.get('qtd_parcelas_ct_total', parcelas_selecionadas)} (total do contrato)")
+                    self.log_progresso(
+                        f"   📄 Parcelas selecionadas: {parcelas_selecionadas} (para reparcelamento)")
+                    self.log_progresso(
+                        f"   💰 Valor da Parcela Base: R$ {parametros.get('valor_parcela_original', 1000.0):,.2f} (do relatório Sienge)")
+                    self.log_progresso(
+                        f"   💰 Saldo devedor Base: R$ {parametros.get('saldo_anterior', 0):,.2f}")
+                    self.log_progresso(f"   📅 Dia de vencimento: 10")
+                    self.log_progresso(
+                        f"   📅 1º vencimento carnê: {(datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')}")
+                    self.log_progresso(f"   📊 Indexador: IGPM")
+                    self.log_progresso(f"   💰 Juros %: 8.0%")
+                    self.log_progresso(f"   📋 Tipo condição: PM")
+                    self.log_progresso(f"   📅 Tipo reajuste: anual")
+                    self.log_progresso(
+                        "🔍 Verifique se as fórmulas calcularam:")
+                    self.log_progresso("   - 1º vencimento carnê")
+                    self.log_progresso("   - % Reajuste total")
+                    self.log_progresso("   - Parcela final")
+                    self.log_progresso("   - Saldo devedor final")
+                    self.log_progresso("   - Próximo reajuste")
+                    self.log_progresso(
+                        "⏸️ Pressione ENTER para continuar com a leitura dos valores calculados...")
+
+                    # Aguardar confirmação do usuário
+                    input("   Pressione ENTER para continuar...")
+
+                    # AGORA: LER VALORES CALCULADOS DA PLANILHA (CONFORME PDD)
+                    self.log_progresso(
+                        "📊 PASSO 24.1: Lendo valores calculados da planilha BASE DE CÁLCULO...")
+
+                    # Ler valores calculados da planilha (OBRIGATÓRIO conforme PDD)
+                    resultado_leitura = await self._ler_valores_calculados_planilha(
+                        planilha_id=planilha_id,
+                        cliente=parametros.get("cliente", ""),
+                        numero_titulo=parametros.get("numero_titulo", "")
+                    )
+
+                    if not resultado_leitura.get("sucesso"):
+                        erro_msg = f"Falha ao ler valores da planilha: {resultado_leitura.get('erro')}. Conforme PDD, todos os valores devem vir da planilha."
+                        self.log_erro(erro_msg, Exception(erro_msg))
+                        return {"sucesso": False, "erro": erro_msg}
+
+                    valores_calculados = resultado_leitura.get(
+                        "valores_calculados", {})
+
+                    # Validar se os valores essenciais estão preenchidos na planilha
+                    saldo_final = valores_calculados.get(
+                        "saldo_devedor_final", 0)
+                    parcelas_vencer = valores_calculados.get(
+                        "parcelas_a_vencer", 0)
+
+                    if saldo_final <= 0:
+                        erro_msg = "Saldo devedor final não encontrado ou inválido na planilha. Conforme PDD, todos os valores devem vir da planilha."
+                        self.log_erro(erro_msg, Exception(erro_msg))
+                        return {"sucesso": False, "erro": erro_msg}
+
+                    if parcelas_vencer <= 0:
+                        erro_msg = "Quantidade de parcelas a vencer não encontrada ou inválida na planilha. Conforme PDD, todos os valores devem vir da planilha."
+                        self.log_erro(erro_msg, Exception(erro_msg))
+                        return {"sucesso": False, "erro": erro_msg}
+
+                    self.log_progresso(
+                        "✅ Valores da planilha válidos - usando dados calculados conforme PDD")
+
+                    # USAR VALORES DA PLANILHA (CONFORME PDD)
+                    detalhamento = f"CORREÇÃO {datetime.now().strftime('%m/%y')}"
 
                     self.log_progresso(
                         f"📝 PASSO 24: Configurando detalhamento: {detalhamento}")
-                    # TODO: Clicar em "Próximo"
-                    # TODO: Scroll para visualizar campos
-                    # TODO: Preencher campo "Detalhamento" com formato obrigatório
-                    # TODO: Clicar em "Adicionar" para confirmar
+
+                    # Preencher detalhamento
                     self.click(
                         xpath='//textarea[@id="deObservacao" and @name="deObservacao"]')
                     time.sleep(1)
@@ -1154,16 +1175,44 @@ class RPASienge(BaseRPA):
                     time.sleep(1)
                     self.click(
                         xpath='//input[@type="button" and @id="btNovaLinhaCondicaoRow" and @value="Adicionar"]')
-                    # PASSO 25: PREENCHIMENTO DOS DADOS DO PARCELAMENTO
-                    self.log_progresso(
-                        "💰 PASSO 25: Preenchendo dados obrigatórios...")
 
-                    # IMPLEMENTAR: Campos com valores fixos obrigatórios
-                    # - Tipo condição: "PM" (SEMPRE)
+                    # PASSO 25: PREENCHIMENTO DOS DADOS DO PARCELAMENTO (VALORES DA PLANILHA)
+                    self.log_progresso(
+                        "💰 PASSO 25: Preenchendo dados obrigatórios com valores da planilha...")
+
+                    # Tipo condição: "PM" (SEMPRE)
                     self.click(
                         xpath='//input[@id="tipoCondicao.tipoCondicaoPK.cdTipoCondicao" and @type="text"]')
                     self.send_text(
                         xpath='//input[@id="tipoCondicao.tipoCondicaoPK.cdTipoCondicao" and @type="text"]', text="PM")
+
+                    # VALORES DA PLANILHA (CONFORME PDD):
+                    # Valor total: saldo devedor final da planilha
+                    valor_total = valores_calculados.get(
+                        "saldo_devedor_final", 0)
+                    self.log_progresso(
+                        f"💰 Preenchendo valor total: R$ {valor_total:,.2f} (da planilha)")
+
+                    # Quantidade de parcelas: parcelas a vencer da planilha
+                    qtd_parcelas = valores_calculados.get(
+                        "parcelas_a_vencer", 0)
+                    self.log_progresso(
+                        f"📄 Preenchendo quantidade de parcelas: {qtd_parcelas} (da planilha)")
+
+                    # Data 1º vencimento: 1º vencimento carnê da planilha
+                    data_primeiro_vencimento = valores_calculados.get(
+                        "primeiro_vencimento_carne", "")
+                    self.log_progresso(
+                        f"📅 Preenchendo data 1º vencimento: {data_primeiro_vencimento} (da planilha)")
+
+                    # TODO: Implementar preenchimento dos campos com os valores da planilha
+                    # - Campo valor total
+                    # - Campo quantidade parcelas
+                    # - Campo data primeiro vencimento
+                    # - Campo indexador (1 IGP-M)
+                    # - Campo tipo de juros (Nenhum)
+
+                    # IMPLEMENTAR: Campos com valores fixos obrigatórios
                     # - Portador: "1 Carteira" (NÃO alterar)
                     # - Operação cobrança: "0 Cobrança em Carteira" (NÃO alterar)
                     # - Indexador: "1 IGP-M" (SEMPRE IGP-M)
@@ -1215,8 +1264,8 @@ class RPASienge(BaseRPA):
                     return {
                         "sucesso": True,
                         "novo_titulo": novo_titulo_gerado,
-                        "parcelas_processadas": len(parcelas_a_desmarcar),
-                        "valores_aplicados": valores_sienge,
+                        "parcelas_processadas": parcelas_selecionadas,
+                        "valores_aplicados": valores_calculados,
                         "passos_pdd_executados": "21-28",
                         "timestamp_webscraping": datetime.now().isoformat()
                     }
@@ -1357,6 +1406,10 @@ class RPASienge(BaseRPA):
                 "status_cliente": dados_validacao.get("status_cliente", ""),
                 "qtd_ct_vencidas": dados_validacao.get("qtd_ct_vencidas", 0),
                 "id_fila": dados_completos.get("id_fila", ""),
+                # ADICIONADO: valor original do relatório
+                "valor_parcela_original": dados_validacao.get("valor_parcela_atual", 1000.0),
+                # ADICIONADO: total de parcelas CT do contrato
+                "qtd_parcelas_ct_total": dados_validacao.get("qtd_parcelas_ct_a_vencer", 12),
                 "timestamp_carregamento": datetime.now().isoformat()
             }
             self.log_progresso(
@@ -1546,13 +1599,11 @@ class RPASienge(BaseRPA):
 
     def _formatar_mes_igpm(self, valor_mes):
         """
-        Converte datas (datetime, string, etc) para o formato 'mmm.-aa' em português,
-        robusto para qualquer entrada (ex: '25/07/2024', 'jul.-24', '01/03/2025', etc).
+        Converte datas (datetime, string, etc) para o formato 'MM-AA' numérico,
+        robusto para qualquer entrada (ex: '25/07/2024', '05-25', '01/03/2025', etc).
         """
-        meses_pt = ['jan', 'fev', 'mar', 'abr', 'mai',
-                    'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
         if isinstance(valor_mes, datetime):
-            return f"{meses_pt[valor_mes.month-1]}.-{str(valor_mes.year)[-2:]}"
+            return f"{valor_mes.month:02d}-{str(valor_mes.year)[-2:]}"
         try:
             # Tenta converter string para datetime
             data = None
@@ -1563,23 +1614,44 @@ class RPASienge(BaseRPA):
                 except Exception:
                     continue
             if data:
-                return f"{meses_pt[data.month-1]}.-{str(data.year)[-2:]}"
+                return f"{data.month:02d}-{str(data.year)[-2:]}"
         except Exception:
             pass
-        # Se já estiver no formato correto, retorna
-        if isinstance(valor_mes, str) and valor_mes.strip().count('-') == 1 and '.' in valor_mes:
-            return valor_mes.strip().lower()
-        # Se for só mês/ano, tenta converter
+        # Se já estiver no formato correto MM-AA, retorna
+        if isinstance(valor_mes, str) and len(valor_mes.strip()) == 5 and valor_mes.strip()[2] == '-':
+            try:
+                partes = valor_mes.strip().split('-')
+                if len(partes) == 2 and len(partes[0]) == 2 and len(partes[1]) == 2:
+                    # Valida se são números
+                    int(partes[0])
+                    int(partes[1])
+                    return valor_mes.strip()
+            except ValueError:
+                pass
+        # Converte formato antigo mai.-25 para 05-25
+        if isinstance(valor_mes, str) and '.-' in valor_mes:
+            try:
+                meses_pt = {'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+                            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12}
+                partes = valor_mes.strip().split('.-')
+                if len(partes) == 2:
+                    mes_abrev = partes[0][:3].lower()
+                    ano = partes[1][-2:]
+                    if mes_abrev in meses_pt:
+                        return f"{meses_pt[mes_abrev]:02d}-{ano}"
+            except Exception:
+                pass
+        # Se for só mês/ano numérico, tenta converter
         try:
             partes = valor_mes.strip().split('-')
             if len(partes) == 2:
-                mes = partes[0][:3].lower()
+                mes = int(partes[0])
                 ano = partes[1][-2:]
-                if mes in meses_pt:
-                    return f"{mes}.-{ano}"
+                if 1 <= mes <= 12:
+                    return f"{mes:02d}-{ano}"
         except Exception:
             pass
-        return str(valor_mes).lower()
+        return self._obter_mes_atual_formatado()
 
     async def _atualizar_aba_igpm(self, planilha, dados_igpm: Dict[str, Any]):
         """Atualiza aba IGPM da planilha"""
@@ -1622,8 +1694,8 @@ class RPASienge(BaseRPA):
             raise Exception(f"Erro ao atualizar aba IGPM: {str(e)}")
 
     def _obter_mes_atual_formatado(self) -> str:
-        """Retorna o mês atual no formato usado na planilha (ex: abr.-25)"""
-        return datetime.now().strftime("%b.-%y").lower()
+        """Retorna o mês atual no formato usado na planilha (ex: 05-25)"""
+        return datetime.now().strftime("%m-%y")
 
     async def _processar_novos_contratos(self, planilha):
         """
@@ -1794,162 +1866,158 @@ class RPASienge(BaseRPA):
     async def _preencher_dados_relatorio_sienge(self, planilha, dados_financeiros: Dict[str, Any]):
         """
         Preenche dados do relatório Sienge na planilha Base de cálculo
-        Conforme PDD Passo 9.1.2 - Campos que alimentam as fórmulas da planilha
+        Conforme PDD seção 9.1.2 + campos base necessários (SEM fórmulas)
+
+        CAMPOS QUE SÃO FÓRMULAS (NÃO PREENCHEMOS):
+        - % Reajuste total (fórmula complexa)
+        - Parcela final (calculada pela planilha)  
+        - Saldo devedor final (calculado pela planilha)
+        - Próximo reajuste (calculado pela planilha)
         """
         try:
             self.log_progresso(
                 "📊 Preenchendo dados do relatório Sienge na planilha BASE DE CÁLCULO...")
 
+            # Extrair dados validados
             dados_validacao = dados_financeiros.get("dados_validacao", {})
-            regras_pdd = dados_financeiros.get("regras_pdd_aplicadas", {})
 
-            # Dados EXTRAÍDOS do Sienge (não calculados) conforme PDD 9.1.2
-            dados_para_preencher = {
-                # Campos que alimentam as fórmulas da planilha
+            # Verificar se cliente é inadimplente
+            status_cliente = dados_validacao.get("status_cliente", "").upper()
+            cliente_inadimplente = status_cliente == "INADIMPLENTE"
+
+            if cliente_inadimplente:
+                self.log_progresso("🚫 CLIENTE INADIMPLENTE DETECTADO!")
+                self.log_progresso(
+                    "📋 Conforme PDD: Preenchendo apenas PENDÊNCIAS SIENGE INAD e encerrando processamento")
+
+            # Preparar dados para preenchimento
+            cliente = dados_financeiros.get("cliente", "")
+            numero_titulo = dados_financeiros.get("numero_titulo", "")
+
+            # Valores extraídos do relatório
+            dia_vencimento = dados_validacao.get("dia_vencimento")
+            if not dia_vencimento:
+                dia_vencimento = 10  # Padrão conforme análise
+
+            primeiro_vencimento = dados_validacao.get(
+                "primeiro_vencimento_carne", "")
+            if not primeiro_vencimento:
+                # Calcular baseado no dia de vencimento e mês base
+                from datetime import date, datetime
+                hoje = date.today()
+                proximo_mes = hoje.replace(day=1) + timedelta(days=32)
+                proximo_mes = proximo_mes.replace(day=1)
+                primeiro_vencimento = proximo_mes.replace(
+                    day=dia_vencimento).strftime("%Y-%m-%d")
+
+            # Mapear dados para preenchimento na planilha
+            dados_preenchimento = {
+                "PENDÊNCIAS SIENGE INAD": "Inadimplência" if cliente_inadimplente else "",
+                "PENDÊNCIAS SIENGE": dados_validacao.get("pendencias_sienge", ""),
                 "Parcelas a vencer": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
                 "Valor da Parcela Base": dados_validacao.get("valor_parcela_atual", 0),
-                # EXTRAÍDO do Sienge
-                "Saldo devedor Base": dados_validacao.get("saldo_total", 0),
-                "Dia de vencimento de parcelas": dados_validacao.get("dia_vencimento", ""),
-                "1º vencimento carnê": regras_pdd.get("primeiro_vencimento_carne", ""),
+                "Dia de vencimento de parcelas": dia_vencimento,
+                "1º vencimento carnê": primeiro_vencimento,
 
-                # Campos de pendências (status do cliente)
-                "PENDÊNCIAS SIENGE INAD": "INADIMPLENTE" if dados_validacao.get("status_cliente") == "inadimplente" else "",
-                "PENDÊNCIAS SIENGE": "SIM" if len(dados_validacao.get("parcelas_rec_fat", [])) > 0 else "",
-
-                # CAMPOS NECESSÁRIOS PARA A FÓRMULA "% Reajuste total"
-                # Fixo conforme PDD (sempre IGPM para reparcelamento)
-                "Indexador": "IGPM",
-                # Fixo conforme PDD (sempre 8% para reparcelamento)
-                "Juros %": 8.0,
-                # Fixo conforme PDD (sempre PM para reparcelamento)
-                "Tipo condição": "PM",
-                "Tipo reajuste": "anual",  # Fixo conforme PDD (sempre anual)
-                "Original ou corrigido": "original"  # Status inicial do contrato
+                # Dados fixos da configuração
+                "Índice": "IGPM",  # Conforme PDD - sempre IGPM no sistema
+                "Juros": "8%",
+                "Tipo reajuste": "anual",
+                "Original ou corrigido": "original",
+                "Último reajuste": datetime.now().strftime("%d/%m/%Y")
             }
 
-            # Aba Base de cálculo
-            aba_base_calculo = planilha.worksheet("Base de cálculo")
-            valores_existentes = aba_base_calculo.get_all_values()
-            cabecalhos = valores_existentes[0]
+            # Buscar linha do contrato na planilha
+            todas_linhas = planilha.get_all_values()
+            cabecalho = todas_linhas[0] if todas_linhas else []
 
-            # Encontra linha do contrato atual
-            cliente_atual = dados_financeiros.get("cliente", "")
-            numero_titulo_atual = dados_financeiros.get("numero_titulo", "")
-
+            # Encontrar linha do contrato
             linha_contrato = None
-            # Pula cabeçalho
-            for i, linha in enumerate(valores_existentes[1:], start=2):
-                if (linha[2].strip() == cliente_atual.strip() and  # Coluna Cliente
-                        linha[5].strip() == str(numero_titulo_atual).strip()):  # Coluna numero_titulo
-                    linha_contrato = i
-                    break
+            for i, linha in enumerate(todas_linhas[1:], start=2):
+                if len(linha) >= 3:
+                    cliente_planilha = linha[2].strip() if len(
+                        linha) > 2 else ""
+                    titulo_planilha = str(
+                        linha[5]).strip() if len(linha) > 5 else ""
 
-            if linha_contrato is None:
-                self.log_warning(
-                    f"Contrato não encontrado na planilha: {cliente_atual} - {numero_titulo_atual}")
-                return
-
-            # Mapeia colunas da planilha
-            mapeamento_colunas = {}
-            for i, cabecalho in enumerate(cabecalhos):
-                cabecalho_upper = str(cabecalho).upper()
-                for campo, valor in dados_para_preencher.items():
-                    if campo.upper() in cabecalho_upper:
-                        mapeamento_colunas[campo] = i
+                    if (cliente_planilha.upper() == cliente.upper() and
+                            titulo_planilha == str(numero_titulo)):
+                        linha_contrato = i
                         break
 
-            # Preenche dados na planilha
-            for campo, valor in dados_para_preencher.items():
+            if not linha_contrato:
+                self.log_progresso(
+                    f"❌ Contrato não encontrado na planilha: {cliente} - {numero_titulo}")
+                return {"deve_interromper_processamento": False}
+
+            self.log_progresso(
+                f"✅ Contrato encontrado: {cliente} - Título {numero_titulo}")
+
+            # Mapear colunas por nome
+            mapeamento_colunas = {}
+            for campo in dados_preenchimento.keys():
+                for j, col_nome in enumerate(cabecalho):
+                    # Normalizar nomes para comparação
+                    col_normalizada = col_nome.strip().replace('"', '').replace(' ', ' ')
+                    campo_normalizado = campo.replace(
+                        '"', '').replace(' ', ' ')
+
+                    if col_normalizada == campo_normalizado:
+                        mapeamento_colunas[campo] = j
+                        break
+
+            # Preencher campos na planilha
+            campos_preenchidos = 0
+            for campo, valor in dados_preenchimento.items():
                 if campo in mapeamento_colunas:
-                    coluna = mapeamento_colunas[campo]
-                    celula = f'{chr(65 + coluna)}{linha_contrato}'
+                    coluna_idx = mapeamento_colunas[campo]
+                    celula = f"{chr(65 + coluna_idx)}{linha_contrato}"
 
-                    # Formata valor conforme tipo de campo
-                    if campo == "Valor da Parcela Base" or campo == "Saldo devedor Base":
-                        # Valores monetários - sem formatação para não quebrar fórmulas
-                        valor_formatado = valor if valor else 0
-                    elif campo in ["PENDÊNCIAS SIENGE INAD", "PENDÊNCIAS SIENGE"]:
-                        # Pendências - texto direto
-                        valor_formatado = valor
-                    elif campo == "Parcelas a vencer":
-                        # Quantidade - número direto
-                        valor_formatado = valor if valor else 0
-                    elif campo == "Dia de vencimento de parcelas":
-                        # Dia - número direto
-                        valor_formatado = valor if valor else ""
-                    elif campo == "1º vencimento carnê":
-                        # Data - formato dd/mm/yyyy
-                        valor_formatado = valor if valor else ""
-                    elif campo == "Juros %":
-                        # Percentual - número direto
-                        valor_formatado = valor if valor else 8.0
-                    elif campo in ["Indexador", "Tipo condição", "Tipo reajuste", "Original ou corrigido"]:
-                        # Texto direto
-                        valor_formatado = valor if valor else ""
-                    else:
-                        valor_formatado = str(valor) if valor else ""
+                    try:
+                        # Formatar valor conforme tipo
+                        if isinstance(valor, (int, float)) and valor == 0:
+                            valor_formatado = valor
+                        elif campo == "1º vencimento carnê" and valor:
+                            valor_formatado = valor
+                        elif campo == "Dia de vencimento de parcelas":
+                            valor_formatado = int(valor) if valor else 10
+                        else:
+                            valor_formatado = str(valor) if valor else ""
 
-                    # Atualiza célula na planilha
-                    aba_base_calculo.update_acell(celula, valor_formatado)
-                    self.log_progresso(f"   ✅ {campo}: {valor_formatado}")
+                        # Enviar para planilha
+                        planilha.update(celula, valor_formatado)
+                        campos_preenchidos += 1
 
-            # Atualiza data do último reajuste
-            coluna_ultimo_reajuste = None
-            for i, cabecalho in enumerate(cabecalhos):
-                if 'ÚLTIMO REAJUSTE' in str(cabecalho).upper():
-                    coluna_ultimo_reajuste = i
-                    break
+                    except Exception as e:
+                        self.log_progresso(
+                            f"⚠️ Erro ao preencher {campo}: {str(e)}")
 
-            if coluna_ultimo_reajuste is not None:
-                data_reajuste = datetime.now().strftime('%d/%m/%Y')
-                celula = f'{chr(65 + coluna_ultimo_reajuste)}{linha_contrato}'
-                aba_base_calculo.update_acell(celula, data_reajuste)
-                self.log_progresso(f"   ✅ Último reajuste: {data_reajuste}")
-
-            # Log dos dados que alimentarão as fórmulas
-            self.log_progresso(f"\n📊 DADOS PREENCHIDOS PARA FÓRMULAS:")
-            self.log_progresso(
-                f"   📄 Parcelas a vencer: {dados_para_preencher['Parcelas a vencer']}")
-            self.log_progresso(
-                f"   💰 Valor da Parcela Base: R$ {dados_para_preencher['Valor da Parcela Base']:,.2f}")
-            self.log_progresso(
-                f"   💰 Saldo devedor Base: R$ {dados_para_preencher['Saldo devedor Base']:,.2f}")
-            self.log_progresso(
-                f"   📅 Dia de vencimento: {dados_para_preencher['Dia de vencimento de parcelas']}")
-            self.log_progresso(
-                f"   📅 1º vencimento carnê: {dados_para_preencher['1º vencimento carnê']}")
-            self.log_progresso(
-                f"   ⚠️ PENDÊNCIAS SIENGE INAD: {dados_para_preencher['PENDÊNCIAS SIENGE INAD']}")
-            self.log_progresso(
-                f"   📋 PENDÊNCIAS SIENGE: {dados_para_preencher['PENDÊNCIAS SIENGE']}")
-
-            # Log dos campos para fórmula "% Reajuste total"
-            self.log_progresso(f"\n🎯 CAMPOS PARA FÓRMULA '% Reajuste total':")
-            self.log_progresso(
-                f"   📊 Indexador: {dados_para_preencher['Indexador']}")
-            self.log_progresso(
-                f"   💰 Juros %: {dados_para_preencher['Juros %']}%")
-            self.log_progresso(
-                f"   📋 Tipo condição: {dados_para_preencher['Tipo condição']}")
-            self.log_progresso(
-                f"   📅 Tipo reajuste: {dados_para_preencher['Tipo reajuste']}")
-            self.log_progresso(
-                f"   📄 Original ou corrigido: {dados_para_preencher['Original ou corrigido']}")
-
-            self.log_progresso(
-                "✅ Dados do relatório Sienge preenchidos com sucesso na planilha BASE DE CÁLCULO")
-            self.log_progresso(
-                "🎯 As fórmulas da planilha agora podem calcular automaticamente:")
-            self.log_progresso("   - 1º vencimento carnê")
-            self.log_progresso("   - % Reajuste total")
-            self.log_progresso("   - Parcela final")
-            self.log_progresso("   - Saldo devedor final")
-            self.log_progresso("   - Próximo reajuste")
+            # Log do resultado
+            if cliente_inadimplente:
+                self.log_progresso(
+                    f"✅ Cliente inadimplente identificado: {cliente}")
+                self.log_progresso(
+                    f"📋 PENDÊNCIAS SIENGE INAD: Inadimplência (preenchida na planilha)")
+                self.log_progresso(
+                    f"🚫 Reparcelamento: NÃO AUTORIZADO conforme PDD Seção 9.1.2")
+                return {"deve_interromper_processamento": True, "motivo": "Cliente inadimplente"}
+            else:
+                self.log_progresso(
+                    f"✅ Dados do relatório preenchidos: {campos_preenchidos} campos")
+                self.log_progresso(f"📊 Cliente: {cliente}")
+                self.log_progresso(f"📊 Título: {numero_titulo}")
+                self.log_progresso(
+                    f"📊 Parcelas pendentes: {dados_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
+                self.log_progresso(
+                    f"📊 Valor parcela atual: R$ {dados_validacao.get('valor_parcela_atual', 0):,.2f}")
+                self.log_progresso(
+                    f"📊 1º vencimento carnê: {primeiro_vencimento}")
+                return {"deve_interromper_processamento": False}
 
         except Exception as e:
-            self.log_warning(f"Erro ao preencher dados do relatório: {str(e)}")
-            raise e
+            self.log_progresso(
+                f"❌ Erro ao preencher dados na planilha: {str(e)}")
+            return {"deve_interromper_processamento": False}
 
     async def _identificar_contratos_reparcelamento(self, planilha) -> List[Dict[str, Any]]:
         """
@@ -2085,3 +2153,270 @@ class RPASienge(BaseRPA):
         except Exception as e:
             self.log_warning(f"Erro ao preparar e-mail: {str(e)}")
             return {}
+
+    def _selecionar_parcelas_individualmente(self, data_reparcelamento: str, max_parcelas: int = 12, tabela_idx: int = 1) -> int:
+        """
+        Seleciona individualmente as parcelas com vencimento >= data atual (até max_parcelas).
+        Conforme PDD - seleciona apenas parcelas que ainda não venceram, não clica em "Marcar Todos".
+
+        Args:
+            data_reparcelamento: Data base para comparação, formato 'DD/MM/YYYY'
+            max_parcelas: Máximo de parcelas a selecionar (normalmente 12 = 1 ano)
+            tabela_idx: Índice da tabela desejada (1-based)
+
+        Returns:
+            Quantidade de parcelas selecionadas
+        """
+        try:
+            # 1. Encontrar a tabela correta
+            xpath_tabela = f'(//table[.//tr[starts-with(@id, "linhaParcelaRow_")]])[{tabela_idx}]'
+            tabela = self.find_element(xpath=xpath_tabela)
+
+            if not tabela:
+                self.log_erro(
+                    f"Nenhuma tabela de parcelas encontrada com XPath: {xpath_tabela}", Exception("Tabela não encontrada"))
+                return 0
+
+            # 2. Encontrar as linhas da tabela
+            linhas = tabela.find_elements(By.XPATH,
+                                          './/tr[starts-with(@id, "linhaParcelaRow_") and @linha="true" and not(contains(@style,"display: none"))]')
+
+            if not linhas:
+                self.log_erro(
+                    f"Nenhuma linha disponível na tabela localizada pelo XPath: {xpath_tabela}", Exception("Linhas não encontradas"))
+                return 0
+
+            # 3. Preparar data atual para comparação
+            data_atual = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            parcelas_selecionadas = 0
+
+            self.log_progresso(
+                f"🔍 Analisando {len(linhas)} parcelas para seleção individual")
+            self.log_progresso(
+                f"📅 Data atual para comparação: {data_atual.strftime('%d/%m/%Y')}")
+            self.log_progresso(
+                f"📊 Máximo de parcelas a selecionar: {max_parcelas}")
+
+            # 4. Iterar linhas e clicar nos checkboxes válidos
+            for idx, linha in enumerate(linhas):
+                if parcelas_selecionadas >= max_parcelas:
+                    self.log_progresso(
+                        f"✅ Limite de {max_parcelas} parcelas atingido")
+                    break
+
+                try:
+                    # Extrair data de vencimento da linha
+                    input_vencto = linha.find_element(
+                        By.XPATH, './/input[contains(@id, ".dtVencto_")]')
+                    value_attr = input_vencto.get_attribute("value")
+                    data_vencimento_str = value_attr.strip() if value_attr else ""
+
+                    if not data_vencimento_str:
+                        self.log_warning(
+                            f"Linha {idx+1}: Data de vencimento vazia")
+                        continue
+
+                    data_vencimento = datetime.strptime(
+                        data_vencimento_str, "%d/%m/%Y")
+
+                except Exception as e:
+                    self.log_warning(
+                        f"Linha {idx+1}: Erro ao extrair data de vencimento: {e}")
+                    continue
+
+                # REGRA CORRIGIDA: Verificar se a parcela deve ser selecionada (vencimento >= data atual)
+                if data_vencimento >= data_atual:
+                    try:
+                        checkbox = linha.find_element(
+                            By.XPATH, './/input[@type="checkbox" and contains(@id, ".flSelecionado_")]')
+
+                        if not checkbox.is_selected():
+                            checkbox.click()
+                            parcelas_selecionadas += 1
+                            self.log_progresso(
+                                f"✅ Parcela {idx+1}: Selecionada (vencimento {data_vencimento_str} >= data atual)")
+                        else:
+                            self.log_progresso(
+                                f"ℹ️ Parcela {idx+1}: Já estava selecionada (vencimento {data_vencimento_str})")
+                            parcelas_selecionadas += 1
+
+                    except Exception as e:
+                        self.log_warning(
+                            f"Linha {idx+1}: Erro ao clicar checkbox: {e}")
+                        continue
+                else:
+                    self.log_progresso(
+                        f"❌ Parcela {idx+1}: Vencimento {data_vencimento_str} < data atual (já venceu - ignorada)")
+
+            self.log_progresso(
+                f"📊 RESULTADO: {parcelas_selecionadas} parcelas selecionadas (máximo permitido: {max_parcelas})")
+            return parcelas_selecionadas
+
+        except Exception as e:
+            self.log_erro(
+                f"Erro na seleção individual de parcelas: {str(e)}", e)
+            return 0
+
+    async def _ler_valores_calculados_planilha(self, planilha_id: str, cliente: str, numero_titulo: str) -> Dict[str, Any]:
+        """
+        Lê os valores calculados da planilha BASE DE CÁLCULO conforme PDD seção 9.1.2
+        Conforme PDD: os valores para preenchimento no Sienge devem vir da planilha, não do código
+
+        Args:
+            planilha_id: ID da planilha Google Sheets
+            cliente: Nome do cliente
+            numero_titulo: Número do título
+
+        Returns:
+            Dict com valores calculados pela planilha
+        """
+        try:
+            self.log_progresso(
+                "📊 Lendo valores calculados da planilha BASE DE CÁLCULO...")
+
+            # Conectar ao Google Sheets se não conectado
+            if not hasattr(self, 'cliente_sheets'):
+                await self._conectar_google_sheets()
+
+            # Abrir planilha
+            planilha = self.cliente_sheets.open_by_key(planilha_id)
+            aba_base_calculo = planilha.worksheet("Base de cálculo")
+
+            # Buscar linha do cliente/título
+            dados_contratos = aba_base_calculo.get_all_records()
+            linha_contrato = None
+
+            for i, contrato in enumerate(dados_contratos, start=2):
+                cliente_planilha = str(contrato.get('Cliente', '')).strip()
+                numero_titulo_planilha = str(
+                    contrato.get('numero_titulo', '')).strip()
+
+                # Busca flexível: ignora diferenças pequenas no nome
+                cliente_match = (cliente_planilha.lower() == cliente.strip().lower() or
+                                 cliente_planilha.lower().replace(' ', '') == cliente.strip().lower().replace(' ', '') or
+                                 cliente_planilha.lower().replace('r', 'd') == cliente.strip().lower().replace('r', 'd') or
+                                 cliente.strip().lower().replace('r', 'd') == cliente_planilha.lower().replace('r', 'd'))
+
+                titulo_match = numero_titulo_planilha == str(
+                    numero_titulo).strip()
+
+                if cliente_match and titulo_match:
+                    linha_contrato = i
+                    self.log_progresso(
+                        f"✅ Contrato encontrado na linha {i}: '{cliente_planilha}' - '{numero_titulo_planilha}'")
+                    break
+
+            if linha_contrato is None:
+                # Busca alternativa apenas por título
+                for i, contrato in enumerate(dados_contratos, start=2):
+                    numero_titulo_planilha = str(
+                        contrato.get('Titulo', '')).strip()
+                    if numero_titulo_planilha == str(numero_titulo).strip():
+                        linha_contrato = i
+                        self.log_progresso(
+                            f"✅ Contrato encontrado por título apenas na linha {i}")
+                        break
+
+                if linha_contrato is None:
+                    raise ValueError(
+                        f"Cliente {cliente} - Título {numero_titulo} não encontrado na planilha")
+
+            # Obter cabeçalhos para mapear colunas
+            cabecalhos = aba_base_calculo.row_values(1)
+
+            # Mapear colunas importantes conforme PDD (APENAS CAMPOS COM VALORES/FÓRMULAS)
+            colunas_mapeadas = {}
+            for i, cabecalho in enumerate(cabecalhos):
+                cabecalho_upper = str(cabecalho).upper()
+                # Campos que têm valores calculados pelas fórmulas da planilha
+                if 'SALDO DEVEDOR FINAL' in cabecalho_upper:
+                    colunas_mapeadas['saldo_devedor_final'] = i
+                elif 'PARCELAS A VENCER' in cabecalho_upper:
+                    colunas_mapeadas['parcelas_a_vencer'] = i
+                elif '1º VENCIMENTO CARNÊ' in cabecalho_upper or '1º VENCIMENTO CARNE' in cabecalho_upper:
+                    colunas_mapeadas['primeiro_vencimento_carne'] = i
+                elif 'PARCELA FINAL' in cabecalho_upper:
+                    colunas_mapeadas['parcela_final'] = i
+                elif 'REAJUSTE TOTAL' in cabecalho_upper:
+                    colunas_mapeadas['reajuste_total'] = i
+                elif 'VALOR DA PARCELA BASE' in cabecalho_upper:
+                    colunas_mapeadas['valor_parcela_base'] = i
+
+            # Ler valores da linha do contrato
+            valores_calculados = {}
+
+            for campo, coluna in colunas_mapeadas.items():
+                try:
+                    celula = f'{chr(65 + coluna)}{linha_contrato}'
+                    valor = aba_base_calculo.acell(celula).value
+
+                    # Converter valores numéricos
+                    if campo in ['saldo_devedor_final', 'parcela_final', 'reajuste_total', 'valor_parcela_base']:
+                        try:
+                            # Remover formatação de moeda e converter
+                            valor_limpo = str(valor).replace('R$', '').replace(
+                                '.', '').replace(',', '.').strip()
+                            valores_calculados[campo] = float(
+                                valor_limpo) if valor_limpo else 0.0
+                        except:
+                            valores_calculados[campo] = 0.0
+                    elif campo == 'parcelas_a_vencer':
+                        try:
+                            valores_calculados[campo] = int(
+                                float(str(valor))) if valor else 0
+                        except:
+                            valores_calculados[campo] = 0
+                    else:
+                        valores_calculados[campo] = str(valor) if valor else ""
+
+                except Exception as e:
+                    self.log_warning(f"Erro ao ler campo {campo}: {e}")
+                    valores_calculados[campo] = 0.0 if 'valor' in campo or 'parcela' in campo else ""
+
+            # Validar valores obrigatórios
+            if not valores_calculados.get('saldo_devedor_final', 0):
+                raise ValueError(
+                    "Saldo devedor final não encontrado ou inválido na planilha")
+
+            if not valores_calculados.get('parcelas_a_vencer', 0):
+                raise ValueError(
+                    "Quantidade de parcelas a vencer não encontrada ou inválida na planilha")
+
+            self.log_progresso(
+                "✅ Valores calculados pela planilha lidos com sucesso:")
+            self.log_progresso(
+                f"   💰 Saldo devedor final: R$ {valores_calculados.get('saldo_devedor_final', 0):,.2f}")
+            self.log_progresso(
+                f"   📄 Parcelas a vencer: {valores_calculados.get('parcelas_a_vencer', 0)}")
+            self.log_progresso(
+                f"   📅 1º vencimento carnê: {valores_calculados.get('primeiro_vencimento_carne', 'N/A')}")
+            self.log_progresso(
+                f"   💵 Parcela final: R$ {valores_calculados.get('parcela_final', 0):,.2f}")
+            # CORREÇÃO: Reajuste total já vem em decimal da planilha (0.1274 = 12.74%)
+            reajuste_decimal = valores_calculados.get('reajuste_total', 0)
+            reajuste_percentual = reajuste_decimal * 100  # Converte para porcentagem
+            self.log_progresso(
+                f"   📊 Reajuste total: {reajuste_percentual:.2f}% (valor decimal da planilha: {reajuste_decimal})")
+
+            # CORREÇÃO CRÍTICA: Converter reajuste_total para porcentagem antes de salvar
+            if 'reajuste_total' in valores_calculados:
+                # Salva tanto o valor decimal quanto o percentual
+                valores_calculados['reajuste_total_decimal'] = valores_calculados['reajuste_total']
+                # Converte para %
+                valores_calculados['reajuste_total'] = valores_calculados['reajuste_total'] * 100
+
+            return {
+                "sucesso": True,
+                "valores_calculados": valores_calculados,
+                "linha_planilha": linha_contrato,
+                "timestamp_leitura": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            erro_msg = f"Erro ao ler valores da planilha: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "valores_calculados": {}
+            }

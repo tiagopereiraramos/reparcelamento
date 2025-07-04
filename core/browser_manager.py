@@ -1,6 +1,7 @@
 """
 Browser Manager - Baseado na sua classe Browser
 Mantém compatibilidade com sua arquitetura Firefox/Gecko
+Adiciona suporte ao Undetected Chromedriver para RPAs que precisam
 
 Desenvolvido em Português Brasileiro
 """
@@ -11,7 +12,6 @@ from contextlib import contextmanager
 import random
 from time import sleep
 from typing import Iterator, List, Optional, Callable
-import sqlite3
 
 # Tentar importar Selenium
 try:
@@ -24,24 +24,25 @@ try:
         StaleElementReferenceException,
         TimeoutException,
     )
-    from selenium.webdriver.remote.webdriver import WebDriver
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.by import By
     from selenium.webdriver.firefox.options import Options
     from selenium.webdriver.firefox.service import Service
     from selenium.webdriver.remote.webelement import WebElement
     from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.support.ui import Select, WebDriverWait
+    from selenium.webdriver.support.wait import WebDriverWait
+    from selenium.webdriver.support.select import Select
     from webdriver_manager.firefox import GeckoDriverManager
     SELENIUM_DISPONIVEL = True
 except ImportError:
     SELENIUM_DISPONIVEL = False
 
+# Tentar importar Undetected Chromedriver
 try:
-    import undetected_chromedriver as uc  # type: ignore
+    import undetected_chromedriver as uc
     UC_CHROME_DISPONIVEL = True
 except ImportError:
-    uc = None  # type: ignore
+    uc = None
     UC_CHROME_DISPONIVEL = False
 
 from difflib import get_close_matches
@@ -55,27 +56,36 @@ class RPABrowser:
     """
     Browser Manager baseado na sua classe Browser
     Implementa Firefox/Gecko seguindo sua arquitetura
+    Adiciona suporte ao Undetected Chromedriver para RPAs específicos
     """
 
     def __init__(self, headless: bool = True, eager_load: bool = False, firefox_profile_path: str = '', limpar_cookies_sicredi: bool = False, usar_uc_chrome: bool = False, chrome_profile_path: str = ''):
         """
-        Se firefox_profile_path não for passado, tenta buscar em FIREFOX_PROFILE_PATH do ambiente.
+        Inicializa o browser com suporte a Firefox e Chrome UC
+
+        Args:
+            headless: Modo headless
+            eager_load: Carregamento eager
+            firefox_profile_path: Caminho do perfil Firefox
+            limpar_cookies_sicredi: Limpar cookies do Sicredi
+            usar_uc_chrome: Usar Undetected Chromedriver
+            chrome_profile_path: Caminho do perfil Chrome
         """
-        self._driver: Optional[WebDriver] = None
+        self._driver = None
         self._driver_wait: Optional[WebDriverWait] = None
         self._original_timeout = 30
         self.actions = None
         self.logger = logging.getLogger("RPABrowser")
-        # Se não passar explicitamente, tenta buscar do ambiente
-        if not firefox_profile_path:
-            firefox_profile_path = os.getenv(
-                'FIREFOX_PROFILE_PATH', '').strip()
-        self._firefox_profile_path = firefox_profile_path
-        self._chrome_profile_path = chrome_profile_path
 
-        # Inicializa o driver como None
-        self._driver = None
+        # Configurar perfis
+        self._firefox_profile_path = firefox_profile_path or os.getenv(
+            'FIREFOX_PROFILE_PATH', '').strip()
+        self._chrome_profile_path = chrome_profile_path or os.getenv(
+            'CHROME_PROFILE_PATH', '').strip()
+        self._usar_uc_chrome = usar_uc_chrome
+        self._limpar_cookies_sicredi = limpar_cookies_sicredi
 
+        # Verificar disponibilidade
         if usar_uc_chrome and not UC_CHROME_DISPONIVEL:
             self.logger.error(
                 "❌ undetected-chromedriver não está instalado. Instale com 'pip install undetected-chromedriver'")
@@ -85,15 +95,10 @@ class RPABrowser:
             return
 
         try:
-            self._inicializar_browser(
-                headless, eager_load, self._firefox_profile_path, limpar_cookies_sicredi, usar_uc_chrome, self._chrome_profile_path)
+            self._inicializar_browser(headless, eager_load)
 
-            # Se o driver foi inicializado com sucesso, configura o restante
+            # Configurar após inicialização
             if self._driver:
-                if usar_uc_chrome:
-                    # Adiciona uma pequena pausa para o UC se estabilizar antes de interagir
-                    sleep(2)
-
                 self._driver_wait = WebDriverWait(
                     self._driver, self._original_timeout)
                 self._driver.maximize_window()
@@ -104,153 +109,126 @@ class RPABrowser:
             self.logger.error(f"❌ Erro ao inicializar browser: {e}")
             self._driver = None
 
-    def _inicializar_browser(self, headless: bool, eager_load: bool, firefox_profile_path: str = '', limpar_cookies_sicredi: bool = False, usar_uc_chrome: bool = False, chrome_profile_path: str = ''):
-        """Inicializa o driver do browser (Firefox ou UC Chrome) e atribui a self._driver."""
+    def _inicializar_browser(self, headless: bool, eager_load: bool):
+        """Inicializa o browser (Firefox ou Chrome UC)"""
+        if self._usar_uc_chrome:
+            self._inicializar_chrome_uc(headless, eager_load)
+        else:
+            self._inicializar_firefox(headless, eager_load)
 
-        if usar_uc_chrome:
-            if not UC_CHROME_DISPONIVEL or uc is None:
-                self.logger.error(
-                    "❌ undetected-chromedriver não está instalado. Por favor, instale com 'pip install undetected-chromedriver'")
-                raise ImportError("undetected-chromedriver não instalado")
+    def _inicializar_chrome_uc(self, headless: bool, eager_load: bool):
+        """Inicializa Chrome com Undetected Chromedriver"""
+        if not UC_CHROME_DISPONIVEL or uc is None:
+            raise ImportError("undetected-chromedriver não instalado")
 
-            self.logger.info("🚀 Inicializando com Undetected Chromedriver...")
+        self.logger.info(
+            "🚀 Inicializando Chrome com Undetected Chromedriver...")
+
+        try:
+            # Configurar opções do Chrome
             chrome_options = uc.ChromeOptions()
-            if headless:
-                chrome_options.add_argument("--headless")
 
-            # Adiciona o perfil do Chrome se fornecido
-            if chrome_profile_path:
+            # Configurar headless de forma compatível
+            if headless:
+                chrome_options.add_argument("--headless=new")
+
+            # Argumentos essenciais para estabilidade (reduzidos)
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
+
+            # Adicionar perfil do Chrome se fornecido
+            if self._chrome_profile_path:
                 self.logger.info(
-                    f"✅ Usando perfil do Chrome: {chrome_profile_path}")
+                    f"✅ Usando perfil do Chrome: {self._chrome_profile_path}")
                 chrome_options.add_argument(
-                    f'--user-data-dir={chrome_profile_path}')
+                    f'--user-data-dir={self._chrome_profile_path}')
 
+            # Inicializar Chrome UC sem fixar versão
             self._driver = uc.Chrome(
-                options=chrome_options, enable_cdp_events=True)
-            self.logger.info("✅ Undetected Chromedriver inicializado")
-
-        else:  # Lógica do Firefox
-            if not SELENIUM_DISPONIVEL:
-                return
-
-            self.options = Options()
-
-            # Configurações baseadas na sua classe
-            if headless:
-                self.options.add_argument("--headless")
-
-            if eager_load:
-                self.options.page_load_strategy = "eager"
-
-            self.options.add_argument("--disable-dev-shm-usage")
-            self.options.add_argument("--no-sandbox")
-
-            # Configurações de download - usar pasta RPA parametrizada
-            downloads_base = os.path.expanduser("~/Downloads")
-            rpa_downloads_folder = os.getenv(
-                'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
-
-            # Garantir concatenação correta do caminho - todos os casos
-            if downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
-                # Caso: "/Downloads/" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-                downloads_dir = downloads_base + rpa_downloads_folder[1:]
-            elif downloads_base.endswith('/') and not rpa_downloads_folder.startswith('/'):
-                # Caso: "/Downloads/" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-                downloads_dir = downloads_base + rpa_downloads_folder
-            elif not downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
-                # Caso: "/Downloads" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-                downloads_dir = downloads_base + rpa_downloads_folder
-            else:
-                # Caso: "/Downloads" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-                downloads_dir = os.path.join(
-                    downloads_base, rpa_downloads_folder)
-
-            os.makedirs(downloads_dir, exist_ok=True)
-
-            self.options.set_preference("browser.download.folderList", 2)
-            self.options.set_preference("browser.download.dir", downloads_dir)
-            self.options.set_preference(
-                "browser.helperApps.neverAsk.saveToDisk",
-                "application/pdf,application/octet-stream,text/csv,application/vnd.ms-excel"
+                options=chrome_options,
+                use_subprocess=True,
+                suppress_welcome=True
             )
-            self.options.set_preference(
-                "browser.download.useDownloadDir", True)
-            self.options.set_preference("pdfjs.disabled", True)
 
-            # Opções de SSL/TLS para ambientes restritos (NÃO altera legado)
-            # Para aceitar certificados inválidos, defina RPA_ACCEPT_INSECURE_CERTS=true no ambiente
-            if os.getenv('RPA_ACCEPT_INSECURE_CERTS', 'false').lower() == 'true':
-                self.options.set_preference(
-                    'webdriver_accept_untrusted_certs', True)
-                self.options.set_preference(
-                    'webdriver_assume_untrusted_issuer', False)
-                self.logger.warning(
-                    '⚠️ Aceitando certificados SSL inseguros (apenas para debug)!')
+            # Configurar para evitar detecção
+            self._driver.execute_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
-            # Tentar usar GeckoDriver
-            try:
-                gecko_driver_path = GeckoDriverManager().install()
-            except Exception:
-                # Fallback para caminho padrão
-                gecko_driver_path = "/usr/local/bin/geckodriver"
+            self.logger.info("✅ Chrome UC inicializado com sucesso")
 
-            # Se um perfil for fornecido, use-o (para plugins bancários, certificados, etc)
-            if firefox_profile_path and isinstance(firefox_profile_path, str) and firefox_profile_path.strip():
-                # Limpa cookies do Sicredi apenas se explicitamente solicitado
-                if limpar_cookies_sicredi:
-                    self.logger.info(
-                        f"Iniciando limpeza de cookies do Sicredi no profile: {firefox_profile_path}")
-                    cookies_file = os.path.join(
-                        firefox_profile_path, "cookies.sqlite")
-                    if os.path.exists(cookies_file):
-                        try:
-                            conn = sqlite3.connect(cookies_file)
-                            cur = conn.cursor()
-                            # Tenta executar a query, mas não falha se a coluna não existir
-                            try:
-                                cur.execute(
-                                    "SELECT COUNT(*) FROM moz_cookies WHERE baseDomain LIKE '%sicredi.com.br%'")
-                                count = cur.fetchone()[0]
-                                if count > 0:
-                                    self.logger.info(
-                                        f"Encontrados {count} cookies do Sicredi. Removendo...")
-                                    cur.execute(
-                                        "DELETE FROM moz_cookies WHERE baseDomain LIKE '%sicredi.com.br%'")
-                                    conn.commit()
-                                    self.logger.info(
-                                        f"{count} cookies do Sicredi removidos do profile antes de inicializar o browser.")
-                                else:
-                                    self.logger.info(
-                                        "Nenhum cookie do Sicredi encontrado para remover.")
-                            except sqlite3.OperationalError as db_err:
-                                self.logger.warning(
-                                    f"Não foi possível limpar cookies do Sicredi (schema do banco pode ter mudado): {db_err}")
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao inicializar Chrome UC: {e}")
+            raise Exception(f"Falha ao inicializar Chrome UC: {e}")
 
-                            conn.close()
-                        except Exception as e:
-                            self.logger.warning(
-                                f"Falha ao acessar o arquivo de cookies do Sicredi: {e}")
-                    else:
-                        self.logger.info(
-                            f"Arquivo de cookies não encontrado no profile: {cookies_file}")
+    def _inicializar_firefox(self, headless: bool, eager_load: bool):
+        """Inicializa Firefox seguindo sua estrutura original"""
+        if not SELENIUM_DISPONIVEL:
+            return
 
-                # ATUALIZADO: Carrega o perfil diretamente no options, que é a forma moderna e mais estável
-                self.options.profile = firefox_profile_path
+        self.options = Options()
 
-                self._driver = webdriver.Firefox(
-                    service=Service(gecko_driver_path),
-                    options=self.options
-                )
-                self.logger.info(
-                    f"✅ Firefox inicializado com perfil: {firefox_profile_path}")
-                # Limpa todos os cookies da sessão ao iniciar com perfil
-                if self._driver:
-                    self._driver.delete_all_cookies()
-            else:
-                self._driver = webdriver.Firefox(service=Service(gecko_driver_path),
-                                                 options=self.options)
+        # Configurações baseadas na sua classe
+        if headless:
+            self.options.add_argument("--headless")
 
-        # Não configurar o restante aqui, será feito no __init__
+        if eager_load:
+            self.options.page_load_strategy = "eager"
+
+        self.options.add_argument("--disable-dev-shm-usage")
+        self.options.add_argument("--no-sandbox")
+
+        # Configurações de download - usar pasta RPA parametrizada
+        downloads_base = os.path.expanduser("~/Downloads")
+        rpa_downloads_folder = os.getenv(
+            'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+
+        # Garantir concatenação correta do caminho - todos os casos
+        if downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads/" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder[1:]
+        elif downloads_base.endswith('/') and not rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads/" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder
+        elif not downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
+            # Caso: "/Downloads" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = downloads_base + rpa_downloads_folder
+        else:
+            # Caso: "/Downloads" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
+            downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
+
+        os.makedirs(downloads_dir, exist_ok=True)
+
+        self.options.set_preference("browser.download.folderList", 2)
+        self.options.set_preference("browser.download.dir", downloads_dir)
+        self.options.set_preference(
+            "browser.helperApps.neverAsk.saveToDisk",
+            "application/pdf,application/octet-stream,text/csv,application/vnd.ms-excel"
+        )
+        self.options.set_preference("browser.download.useDownloadDir", True)
+        self.options.set_preference("pdfjs.disabled", True)
+
+        # Tentar usar GeckoDriver
+        try:
+            gecko_driver_path = GeckoDriverManager().install()
+        except Exception:
+            # Fallback para caminho padrão
+            gecko_driver_path = "/usr/local/bin/geckodriver"
+
+        # Usar perfil Firefox se fornecido
+        if self._firefox_profile_path:
+            self.options.profile = self._firefox_profile_path
+            self.logger.info(
+                f"✅ Usando perfil Firefox: {self._firefox_profile_path}")
+
+        self._driver = webdriver.Firefox(service=Service(gecko_driver_path),
+                                         options=self.options)
+
+        self._driver.delete_all_cookies()
+        self.logger.info("✅ Browser Firefox inicializado")
 
     def set_timeout(self, timeout: int):
         """Define timeout personalizado"""
@@ -423,39 +401,30 @@ class RPABrowser:
         raise TimeoutException(
             f"Timeout enviando texto para elemento com xpath {xpath}")
 
-    def check_for_error(self,
-                        xpath: Optional[str] = None,
-                        condition: Optional[str] = None,
-                        timeout: int = 5,
-                        accept_alert: bool = True
-                        ) -> bool:
-        """
-        Se xpath for fornecido, verifica apenas o elemento de erro HTML (legado).
-        Se xpath não for fornecido (None ou ''), verifica e lida apenas com alertas JS.
-        Retorna True se encontrar/tratar o erro ou alerta, False caso contrário.
-        """
+    def check_for_error(
+        self,
+        xpath: Optional[str] = None,
+        condition: Optional[str] = None,
+        retry: int = 1,
+        timeout: int = 5,
+        accept_alert: bool = True
+    ) -> bool:
+        """Verifica se há erro na página"""
         if not self._driver:
-            raise Exception("Browser não inicializado")
+            return False
 
-        if not xpath:
-            # Só verifica alerta JS
+        # Se xpath não foi fornecido, só verifica alertas JS
+        if xpath is None:
             try:
-                WebDriverWait(self._driver, timeout).until(
-                    EC.alert_is_present())
-                alert = self._driver.switch_to.alert
                 if accept_alert:
+                    alert = self._driver.switch_to.alert
                     alert.accept()
-                    self.logger.info("✅ Alerta JS aceito (check_for_error).")
-                else:
-                    alert.dismiss()
-                    self.logger.info(
-                        "✅ Alerta JS rejeitado (check_for_error).")
-                return True
-            except TimeoutException:
-                self.logger.info("Nenhum alerta JS exibido.")
-                return False
+                    return True
+            except:
+                pass
+            return False
 
-        # Só verifica elemento de erro HTML (legado)
+        # Se xpath foi fornecido, verifica elemento HTML
         try:
             self.set_timeout(timeout)
             self.find_element(xpath, condition or "presence")
@@ -632,24 +601,6 @@ class RPABrowser:
         raise NoSuchElementException(
             f"Failed to select option '{closest_option}' in select element with xpath '{xpath}'."
         )
-
-    def handle_alert(self, accept: bool = True, timeout: int = 5) -> bool:
-        """Tenta lidar com um alerta JS (popup) se aparecer. Retorna True se tratou, False se não havia alerta."""
-        if not self._driver:
-            raise Exception("Browser não inicializado")
-        try:
-            WebDriverWait(self._driver, timeout).until(EC.alert_is_present())
-            alert = self._driver.switch_to.alert
-            if accept:
-                alert.accept()
-                self.logger.info("✅ Alerta JS aceito.")
-            else:
-                alert.dismiss()
-                self.logger.info("✅ Alerta JS rejeitado.")
-            return True
-        except TimeoutException:
-            self.logger.info("Nenhum alerta JS exibido.")
-            return False
 
     def __del__(self):
         """Destrutor - garante que browser seja fechado"""

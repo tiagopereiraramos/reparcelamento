@@ -45,9 +45,14 @@ class ProcessadorRegrasNegocio:
         try:
             self.logger.info(
                 f"🔍 Processando regras PDD COMPLETAS para cliente: {cliente}")
+            self.logger.info(
+                f"🔍 DEBUG - Planilha tem {len(df_planilha)} registros")
+            self.logger.info(
+                f"🔍 DEBUG - Colunas da planilha: {list(df_planilha.columns)}")
 
             # VALIDAÇÃO ESTRUTURAL INICIAL
             if df_planilha.empty:
+                self.logger.info("🔍 DEBUG - Planilha vazia detectada")
                 return self._retorno_erro("Planilha vazia", cliente, numero_titulo)
 
             validacao_estrutura = self._validar_estrutura_planilha_csv(
@@ -55,12 +60,86 @@ class ProcessadorRegrasNegocio:
             if not validacao_estrutura["valida"]:
                 return self._retorno_erro(f"Estrutura inválida: {validacao_estrutura['motivo']}", cliente, numero_titulo)
 
+            # FILTRAR APENAS LINHAS DO TÍTULO ESPECÍFICO (CORREÇÃO CRÍTICA)
+            self.logger.info(
+                f"🔍 DEBUG - Filtrando por título: {numero_titulo}")
+
+            # Debug detalhado das colunas e primeiras linhas
+            self.logger.info(
+                f"🔍 DEBUG - Colunas disponíveis: {list(df_planilha.columns)}")
+            if len(df_planilha) > 0:
+                self.logger.info(
+                    f"🔍 DEBUG - Primeira linha de dados: {df_planilha.iloc[0].to_dict()}")
+                self.logger.info(
+                    f"🔍 DEBUG - Valores na coluna 'Título': {df_planilha['Título'].head().tolist()}")
+
+            # CORREÇÃO CRÍTICA: Título pode vir como float (ex: 21860.0) E pode ter NaN
+            self.logger.info(
+                f"🔍 DEBUG CRÍTICO - Título buscado: '{numero_titulo}'")
+            self.logger.info(
+                f"🔍 DEBUG CRÍTICO - Únicos na coluna: {df_planilha['Título'].unique()}")
+
+            try:
+                numero_titulo_int = int(float(str(numero_titulo)))
+                self.logger.info(
+                    f"🔍 DEBUG CRÍTICO - Título convertido: {numero_titulo_int}")
+
+                # REMOVER NaN antes da conversão para int
+                mask_validos = df_planilha["Título"].notna()  # Remove NaN
+                df_sem_nan = df_planilha[mask_validos].copy()
+                self.logger.info(
+                    f"🔍 DEBUG CRÍTICO - Linhas após remover NaN: {len(df_sem_nan)}")
+
+                # Agora converter para int sem problemas de NaN
+                titulos_int = df_sem_nan["Título"].astype(float).astype(int)
+                mask_titulo = titulos_int == numero_titulo_int
+                df_titulo = df_sem_nan[mask_titulo].copy()
+
+                self.logger.info(
+                    f"🔍 DEBUG CRÍTICO - Linhas encontradas: {len(df_titulo)}")
+
+            except (ValueError, TypeError) as e:
+                self.logger.info(f"🔍 DEBUG CRÍTICO - Erro na conversão: {e}")
+                # Fallback para comparação string se conversão falhar
+                df_titulo = df_planilha[df_planilha["Título"].astype(
+                    str) == str(numero_titulo)].copy()
+                self.logger.info(
+                    f"🔍 DEBUG CRÍTICO - Fallback string: {len(df_titulo)} linhas")
+
+            if df_titulo.empty:
+                self.logger.warning(
+                    f"⚠️ Nenhuma linha encontrada para o título {numero_titulo}")
+                # Listar títulos disponíveis para debug
+                titulos_disponiveis = df_planilha["Título"].unique()
+                self.logger.info(
+                    f"🔍 DEBUG - Títulos disponíveis: {titulos_disponiveis}")
+                self.logger.info(
+                    f"🔍 DEBUG - Tipos dos títulos: {[type(t) for t in titulos_disponiveis[:5]]}")
+                return self._retorno_erro(f"Título {numero_titulo} não encontrado no relatório", cliente, numero_titulo)
+
+            self.logger.info(
+                f"✅ Encontradas {len(df_titulo)} linhas para o título {numero_titulo}")
+
+            # USAR DATAFRAME FILTRADO PARA TODAS AS REGRAS (garantir tipo DataFrame)
+            df_processamento: pd.DataFrame = df_titulo
+
             # APLICAR REGRA CRÍTICA DE INADIMPLÊNCIA PRIMEIRO
+            self.logger.info(
+                "🔍 DEBUG - Vou chamar _aplicar_regra_inadimplencia_csv agora")
             validacao_inadimplencia = self._aplicar_regra_inadimplencia_csv(
-                df_planilha)
+                df_processamento)
+            self.logger.info(
+                f"🔍 DEBUG - _aplicar_regra_inadimplencia_csv retornou: {validacao_inadimplencia}")
 
             # SE INADIMPLENTE, RETORNAR IMEDIATAMENTE (NÃO PROCESSAR OUTRAS REGRAS)
             if not validacao_inadimplencia.get("pode_reparcelar", False):
+                self.logger.info(
+                    f"🚫 Cliente inadimplente detectado: {cliente}")
+                self.logger.info(
+                    f"🚫 Motivo: {validacao_inadimplencia.get('motivo_classificacao', 'N/A')}")
+                self.logger.info(
+                    f"🚫 Parcelas CT vencidas: {validacao_inadimplencia.get('qtd_ct_vencidas', 0)}")
+
                 resultado_final = {
                     "cliente": cliente,
                     "numero_titulo": numero_titulo,
@@ -86,31 +165,31 @@ class ProcessadorRegrasNegocio:
 
             # REGRA 1: Identificação do dia de vencimento
             resultado_regras["regras_aplicadas"]["regra_1"] = self._regra_1_dia_vencimento_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 2: Cálculo primeiro vencimento
             resultado_regras["regras_aplicadas"]["regra_2"] = self._regra_2_primeiro_vencimento_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 3: Valor da parcela atual
             resultado_regras["regras_aplicadas"]["regra_3"] = self._regra_3_valor_parcela_atual_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 4: Verificação parcelas irregulares
             resultado_regras["regras_aplicadas"]["regra_4"] = self._regra_4_parcelas_irregulares_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 5: Quantidade parcelas a vencer
             resultado_regras["regras_aplicadas"]["regra_5"] = self._regra_5_parcelas_a_vencer_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 6: Quantidade parcelas vencidas CT
             resultado_regras["regras_aplicadas"]["regra_6"] = self._regra_6_parcelas_vencidas_ct_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 7: Pendências REC/FAT/IPTU
             resultado_regras["regras_aplicadas"]["regra_7"] = self._regra_7_pendencias_rec_fat_iptu_csv(
-                df_planilha)
+                df_processamento)
 
             # REGRA 8: Validação final de inadimplência (confirmação)
             resultado_regras["regras_aplicadas"]["regra_8"] = validacao_inadimplencia
@@ -138,11 +217,26 @@ class ProcessadorRegrasNegocio:
             if df.empty:
                 return {"valida": False, "motivo": "Planilha vazia"}
 
-            # Colunas obrigatórias conforme CSV real do Sienge
+            # Colunas obrigatórias conforme CSV real do Sienge (cabeçalho atualizado)
             colunas_obrigatorias = [
                 "Título", "Parcela/Condição", "Documento", "Cliente",
                 "Status da parcela", "Data vencimento", "Valor a receber"
             ]
+
+            # Verificar se existem variações nos nomes das colunas
+            colunas_disponíveis = list(df.columns)
+            mapeamento_colunas = {}
+
+            for col_obrigatoria in colunas_obrigatorias:
+                if col_obrigatoria in colunas_disponíveis:
+                    mapeamento_colunas[col_obrigatoria] = col_obrigatoria
+                else:
+                    # Buscar variações comuns
+                    if col_obrigatoria == "Documento" and "Nº documento" in colunas_disponíveis:
+                        mapeamento_colunas[col_obrigatoria] = "Nº documento"
+                    elif col_obrigatoria == "Valor a receber" and "Valor a receber" in colunas_disponíveis:
+                        mapeamento_colunas[col_obrigatoria] = "Valor a receber"
+                    # Adicionar outras variações conforme necessário
 
             colunas_faltantes = [
                 col for col in colunas_obrigatorias if col not in df.columns]
@@ -159,90 +253,156 @@ class ProcessadorRegrasNegocio:
 
     def _aplicar_regra_inadimplencia_csv(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
-        Aplica regra crítica PDD usando CSV real: ≥3 CT vencidas = INADIMPLENTE
+        REGRA PDD CRÍTICA: Identificação de Inadimplência
+
+        CONFORME PDD SEÇÃO 9.1.1:
+        - Considerar TODAS as parcelas CT (independente do status)
+        - Verificar se vencimento < data limite (60 dias antes do novo carnê)
+        - Status "Vencida" ou "A vencer" não importa para esta análise
         """
         try:
             hoje = date.today()
 
-            # Filtrar apenas parcelas CT usando coluna "Documento"
+            # 1. IDENTIFICAR DIA DE VENCIMENTO REAL DO RELATÓRIO
+            resultado_regra_1 = self._regra_1_dia_vencimento_csv(df)
+            dia_vencimento_extraido = resultado_regra_1.get("dia_vencimento")
+            if resultado_regra_1.get("sucesso", False) and dia_vencimento_extraido is not None:
+                dia_vencimento = int(dia_vencimento_extraido)
+                self.logger.info(
+                    f"📈 ✅ Dia de vencimento extraído do relatório: {dia_vencimento}")
+            else:
+                # Fallback: usar padrão apenas se não conseguir extrair
+                dia_vencimento = 10
+                self.logger.warning(
+                    f"📈 ⚠️ Dia de vencimento não encontrado - usando padrão: {dia_vencimento}")
+
+            # Próximo mês disponível
+            proximo_mes = hoje.replace(day=1) + timedelta(days=32)
+            proximo_mes = proximo_mes.replace(day=1)
+
+            # 2. CALCULAR 1º VENCIMENTO DO NOVO CARNÊ
+            primeiro_vencimento_novo_carne = proximo_mes.replace(
+                day=dia_vencimento)
+
+            # 3. CALCULAR DATA LIMITE (60 DIAS ANTES)
+            data_limite = primeiro_vencimento_novo_carne - timedelta(days=60)
+
+            # 4. FILTRAR APENAS PARCELAS CT (todas, independente do status)
             parcelas_ct = df[
                 df["Documento"].str.contains("CT", case=False, na=False)
             ].copy()
 
-            # Identificar CT vencidas e não quitadas
-            ct_vencidas = []
-            for _, row in parcelas_ct.iterrows():
+            if parcelas_ct.empty:
+                self.logger.info(
+                    "📈 ⚠️ Nenhuma parcela CT encontrada no relatório")
+                return {
+                    "status_cliente": "ADIMPLENTE",
+                    "pode_reparcelar": True,
+                    "qtd_parcelas_ct_vencidas": 0,
+                    "parcelas_problematicas": [],
+                    "data_limite_inadimplencia": data_limite.strftime("%d/%m/%Y"),
+                    "primeiro_vencimento_carne": primeiro_vencimento_novo_carne.strftime("%Y-%m-%d")
+                }
+
+            # 5. PROCESSAR DATAS DE VENCIMENTO
+            def processar_data_vencimento(data_str):
                 try:
-                    # Converter data
-                    data_venc = pd.to_datetime(
-                        row["Data vencimento"], errors='coerce', dayfirst=True)
-                    if pd.notna(data_venc) and isinstance(data_venc, pd.Timestamp):
-                        data_venc_date = data_venc.date()
-                    else:
-                        continue
+                    if pd.isna(data_str) or str(data_str).strip() == "":
+                        return None
 
-                    status = str(row.get("Status da parcela", "")
-                                 ).strip().upper()
+                    data_str = str(data_str).strip()
 
-                    # Critério rigoroso: vencida E não quitada
-                    vencida = data_venc_date < hoje
-                    quitada = status in [
-                        "PAGA", "QUITADA", "LIQUIDADA", "BAIXADA"]
-                    a_vencer = status in [
-                        "A VENCER", "PENDENTE", "EM ABERTO"]
+                    # Tentar diferentes formatos
+                    formatos = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y"]
 
-                    # Só conta como CT vencida se: data passou E não está quitada
-                    if vencida and not quitada:
-                        valor = 0
+                    for formato in formatos:
                         try:
-                            valor_str = str(
-                                row.get("Valor a receber", "0")).replace(",", ".")
-                            valor = float(valor_str) if valor_str else 0
-                        except:
-                            pass
+                            return datetime.strptime(data_str, formato).date()
+                        except ValueError:
+                            continue
 
-                        ct_vencidas.append({
-                            "documento": row.get("Documento"),
-                            "parcela_condicao": row.get("Parcela/Condição"),
-                            "data_vencimento": data_venc_date.isoformat(),
-                            "status": status,
-                            "valor": valor,
-                            "dias_atraso": (hoje - data_venc_date).days
-                        })
-                except:
-                    continue
+                    return None
+                except Exception:
+                    return None
 
-            qtd_ct_vencidas = len(ct_vencidas)
+            # 6. APLICAR PROCESSAMENTO DE DATAS
+            parcelas_ct["Data_vencimento_processada"] = parcelas_ct["Data vencimento"].apply(
+                processar_data_vencimento)
 
-            # APLICAR REGRA RIGOROSA PDD
-            if qtd_ct_vencidas >= self.limite_inadimplencia:
+            # 7. FILTRAR PARCELAS COM DATAS VÁLIDAS
+            parcelas_validas = parcelas_ct[parcelas_ct["Data_vencimento_processada"].notna(
+            )].copy()
+
+            if parcelas_validas.empty:
+                self.logger.warning(
+                    "📈 ⚠️ Nenhuma parcela CT com data válida encontrada")
+                return {
+                    "status_cliente": "ADIMPLENTE",
+                    "pode_reparcelar": True,
+                    "qtd_parcelas_ct_vencidas": 0,
+                    "parcelas_problematicas": [],
+                    "data_limite_inadimplencia": data_limite.strftime("%d/%m/%Y"),
+                    "primeiro_vencimento_carne": primeiro_vencimento_novo_carne.strftime("%Y-%m-%d")
+                }
+
+            # 8. IDENTIFICAR PARCELAS VENCIDAS ANTES DA DATA LIMITE
+            parcelas_inadimplentes = parcelas_validas[
+                parcelas_validas["Data_vencimento_processada"] < data_limite
+            ]
+
+            qtd_parcelas_inadimplentes = len(parcelas_inadimplentes)
+
+            # 9. DETERMINAR STATUS DO CLIENTE
+            if qtd_parcelas_inadimplentes > 0:
                 status_cliente = "INADIMPLENTE"
                 pode_reparcelar = False
-                motivo = f"Cliente possui {qtd_ct_vencidas} parcelas CT vencidas (≥{self.limite_inadimplencia} limite PDD)"
-                nivel_risco = "ALTO"
+                self.logger.info(
+                    f"📈 ⚠️ Cliente INADIMPLENTE: {qtd_parcelas_inadimplentes} parcelas vencidas antes da data limite")
             else:
                 status_cliente = "ADIMPLENTE"
                 pode_reparcelar = True
-                motivo = f"Cliente possui {qtd_ct_vencidas} parcelas CT vencidas (<{self.limite_inadimplencia} limite PDD)"
-                nivel_risco = "BAIXO" if qtd_ct_vencidas == 0 else "MEDIO"
+                self.logger.info(
+                    "📈 ✅ Cliente ADIMPLENTE: Nenhuma parcela vencida antes da data limite")
 
-            return {
+            # 10. PREPARAR LISTA DE PARCELAS PROBLEMÁTICAS
+            parcelas_problematicas = []
+            for _, parcela in parcelas_inadimplentes.iterrows():
+                parcelas_problematicas.append({
+                    "parcela": parcela.get("Parcela/Condição", "N/A"),
+                    "vencimento": parcela["Data_vencimento_processada"].strftime("%d/%m/%Y"),
+                    "valor": parcela.get("Valor a receber", 0),
+                    "status": parcela.get("Status da parcela", "N/A")
+                })
+
+            # 11. RESULTADO FINAL
+            resultado = {
                 "status_cliente": status_cliente,
                 "pode_reparcelar": pode_reparcelar,
-                "motivo_classificacao": motivo,
-                "nivel_risco": nivel_risco,
-                "qtd_ct_vencidas": qtd_ct_vencidas,
-                "ct_vencidas_detalhes": ct_vencidas,
-                "limite_pdd": self.limite_inadimplencia
+                "qtd_parcelas_ct_vencidas": qtd_parcelas_inadimplentes,
+                "parcelas_problematicas": parcelas_problematicas,
+                "data_limite_inadimplencia": data_limite.strftime("%d/%m/%Y"),
+                "primeiro_vencimento_carne": primeiro_vencimento_novo_carne.strftime("%Y-%m-%d"),
+                "dia_vencimento": dia_vencimento
             }
 
+            # LOG FINAL RESUMIDO
+            self.logger.info("📈 ✅ Validação PDD 9.1.1 concluída:")
+            self.logger.info(f"📈   📊 Status: {status_cliente}")
+            self.logger.info(
+                f"📈   🔢 Parcelas CT vencidas: {qtd_parcelas_inadimplentes}")
+            self.logger.info(f"📈   ✔️ Pode reparcelar: {pode_reparcelar}")
+
+            return resultado
+
         except Exception as e:
+            self.logger.error(
+                f"📈 ❌ Erro na validação de inadimplência: {str(e)}")
             return {
                 "status_cliente": "ERRO",
                 "pode_reparcelar": False,
-                "motivo_classificacao": f"Erro na validação: {str(e)}",
-                "qtd_ct_vencidas": 0,
-                "ct_vencidas_detalhes": []
+                "qtd_parcelas_ct_vencidas": 0,
+                "parcelas_problematicas": [],
+                "erro": str(e)
             }
 
     # ============= REGRAS 9.1.1 COMPLETAS ADAPTADAS PARA CSV =============
@@ -252,13 +412,45 @@ class ProcessadorRegrasNegocio:
         REGRA 1 PDD: Identificação do Dia de Vencimento das Parcelas CT A VENCER
         """
         try:
-            # Filtrar apenas parcelas CT a vencer
-            parcelas_ct_a_vencer = df[
-                (df["Status da parcela"].str.upper().str.contains("VENCER", na=False)) &
-                (df["Documento"].str.contains("CT", case=False, na=False))
-            ].copy()
+            print("🔍 DEBUG - Vou verificar os status das parcelas...")
+            self.logger.info(
+                "🔍 DEBUG - Vou verificar os status das parcelas...")
 
-            if parcelas_ct_a_vencer.empty:
+            # Verificar todos os status únicos
+            status_unicos = df["Status da parcela"].str.upper().unique()
+            print(f"🔍 DEBUG - Status únicos encontrados: {status_unicos}")
+            self.logger.info(
+                f"🔍 DEBUG - Status únicos encontrados: {status_unicos}")
+
+            # Verificar todos os documentos únicos
+            documentos_unicos = df["Documento"].str.upper().unique()
+            print(
+                f"🔍 DEBUG - Documentos únicos encontrados: {documentos_unicos}")
+            self.logger.info(
+                f"🔍 DEBUG - Documentos únicos encontrados: {documentos_unicos}")
+
+            # Verificar todos os tipos de condição únicos
+            tipos_condicao_unicos = df["Tipo condição"].str.upper().unique()
+            print(
+                f"🔍 DEBUG - Tipos de condição únicos encontrados: {tipos_condicao_unicos}")
+            self.logger.info(
+                f"🔍 DEBUG - Tipos de condição únicos encontrados: {tipos_condicao_unicos}")
+
+            # Filtrar apenas parcelas CT a vencer
+            mask_vencer = df["Status da parcela"].str.upper(
+            ).str.contains("VENCER", na=False)
+            mask_ct = df["Documento"].str.contains("CT", case=False, na=False)
+            parcelas_ct_a_vencer = df[mask_vencer & mask_ct].copy()
+
+            print(
+                f"🔍 DEBUG - Parcelas CT a vencer encontradas: {len(parcelas_ct_a_vencer)}")
+            self.logger.info(
+                f"🔍 DEBUG - Parcelas CT a vencer encontradas: {len(parcelas_ct_a_vencer)}")
+
+            if len(parcelas_ct_a_vencer) == 0:
+                print("🔍 DEBUG - Nenhuma parcela CT a vencer encontrada!")
+                self.logger.info(
+                    "🔍 DEBUG - Nenhuma parcela CT a vencer encontrada!")
                 return {
                     "sucesso": False,
                     "motivo": "Nenhuma parcela CT a vencer encontrada",
@@ -269,10 +461,14 @@ class ProcessadorRegrasNegocio:
             dias_vencimento = []
             for _, row in parcelas_ct_a_vencer.iterrows():
                 try:
-                    data_venc = pd.to_datetime(
-                        row["Data vencimento"], errors='coerce', dayfirst=True)
-                    if pd.notna(data_venc) and isinstance(data_venc, pd.Timestamp):
-                        dias_vencimento.append(data_venc.day)
+                    try:
+                        data_venc_str = str(row["Data vencimento"])
+                        data_venc = pd.to_datetime(
+                            data_venc_str, errors='coerce', dayfirst=True)
+                        if not pd.isna(data_venc):
+                            dias_vencimento.append(data_venc.day)
+                    except:
+                        continue
                 except:
                     continue
 
@@ -341,10 +537,16 @@ class ProcessadorRegrasNegocio:
 
     def _regra_3_valor_parcela_atual_csv(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
-        REGRA 3 PDD: Valor da Parcela Atual CT (usando Valor original)
+        REGRA 3 PDD: Valor da Parcela Atual CT (CONFORME PDD EXATO)
+
+        CONFORME PDD (linhas 525-575):
+        - Filtrar por Status da parcela = "a vencer"
+        - Filtrar por Documento = "CT"  
+        - Pegar o valor unitário da coluna "Valor original" (NÃO calcular média)
+        - Valor mais comum (moda) das parcelas individuais
         """
         try:
-            # Filtrar parcelas CT a vencer
+            # Filtrar parcelas CT a vencer CONFORME PDD
             parcelas_ct = df[
                 (df["Status da parcela"].str.upper().str.contains("VENCER", na=False)) &
                 (df["Documento"].str.contains("CT", case=False, na=False))
@@ -357,39 +559,64 @@ class ProcessadorRegrasNegocio:
                     "valor_parcela_base": 0
                 }
 
-            # Converter valores para numérico
-            valores = []
+            # CONFORME PDD: Pegar valores UNITÁRIOS da coluna "Valor original"
+            valores_unitarios = []
             for _, row in parcelas_ct.iterrows():
                 try:
+                    # PDD: Usar "Valor original" (valor unitário da parcela)
                     valor_str = str(
                         row.get("Valor original", "0")).replace(",", ".")
-                    valor = float(valor_str)
-                    if valor > 0:
-                        valores.append(valor)
-                except:
+                    valor_unitario = float(valor_str)
+
+                    if valor_unitario > 0:
+                        valores_unitarios.append(valor_unitario)
+
+                except Exception as e:
                     continue
 
-            if not valores:
+            if not valores_unitarios:
                 return {
                     "sucesso": False,
-                    "motivo": "Valores de parcela inválidos",
+                    "motivo": "Valores de parcela unitários inválidos",
                     "valor_parcela_base": 0
                 }
 
-            # Valor mais comum (moda)
-            valor_base = max(set(valores), key=valores.count)
+            # CONFORME PDD: Valor mais comum (moda) das parcelas unitárias
+            valor_base = max(set(valores_unitarios),
+                             key=valores_unitarios.count)
+
+            # Log detalhado conforme PDD
+            self.logger.info(f"🎯 REGRA 3 PDD - Valor da Parcela Atual:")
+            self.logger.info(
+                f"   📊 Filtros aplicados: Status='a vencer' + Documento='CT'")
+            self.logger.info(
+                f"   📄 Parcelas CT encontradas: {len(parcelas_ct)}")
+            self.logger.info(
+                f"   💰 Valores unitários válidos: {len(valores_unitarios)}")
+            self.logger.info(
+                f"   💵 Valor mais comum (moda): R$ {valor_base:,.2f}")
+            self.logger.info(
+                f"   📈 Valores únicos encontrados: {len(set(valores_unitarios))}")
+
+            if len(set(valores_unitarios)) > 1:
+                self.logger.warning(
+                    f"⚠️ Múltiplos valores encontrados: {set(valores_unitarios)}")
+                self.logger.warning(
+                    f"   Usando valor mais comum: R$ {valor_base:,.2f}")
 
             return {
                 "sucesso": True,
                 "valor_parcela_base": valor_base,
-                "total_parcelas_analisadas": len(valores),
-                "valor_minimo": min(valores),
-                "valor_maximo": max(valores),
-                "valores_unicos": len(set(valores)),
-                "valor_mais_comum": valor_base
+                "total_parcelas_analisadas": len(valores_unitarios),
+                "valor_minimo": min(valores_unitarios),
+                "valor_maximo": max(valores_unitarios),
+                "valores_unicos": len(set(valores_unitarios)),
+                "valor_mais_comum": valor_base,
+                "metodo_calculo": "valor_unitario_moda_conforme_pdd"
             }
 
         except Exception as e:
+            self.logger.error(f"❌ Erro na Regra 3 PDD: {str(e)}")
             return {
                 "sucesso": False,
                 "erro": str(e),
@@ -464,16 +691,15 @@ class ProcessadorRegrasNegocio:
         """
         try:
             # Parcelas CT a vencer
-            parcelas_ct = df[
-                (df["Status da parcela"].str.upper().str.contains("VENCER", na=False)) &
-                (df["Documento"].str.contains("CT", case=False, na=False))
-            ]
+            mask_vencer = df["Status da parcela"].str.upper(
+            ).str.contains("VENCER", na=False)
+            mask_ct = df["Documento"].str.contains("CT", case=False, na=False)
+            parcelas_ct = df[mask_vencer & mask_ct]
 
             # Parcelas IPTU a vencer
-            parcelas_iptu = df[
-                (df["Status da parcela"].str.upper().str.contains("VENCER", na=False)) &
-                (df["Documento"].str.contains("IPTU", case=False, na=False))
-            ]
+            mask_iptu = df["Documento"].str.contains(
+                "IPTU", case=False, na=False)
+            parcelas_iptu = df[mask_vencer & mask_iptu]
 
             # Calcular valores
             valor_ct = 0
@@ -501,8 +727,8 @@ class ProcessadorRegrasNegocio:
                 "valor_total_ct": valor_ct,
                 "valor_total_iptu": valor_iptu,
                 "saldo_total": valor_ct + valor_iptu,
-                "parcelas_ct_detalhes": parcelas_ct.to_dict('records') if hasattr(parcelas_ct, 'to_dict') else [],
-                "parcelas_iptu_detalhes": parcelas_iptu.to_dict('records') if hasattr(parcelas_iptu, 'to_dict') else []
+                "parcelas_ct_detalhes": [] if parcelas_ct.empty else parcelas_ct.to_dict('records'),
+                "parcelas_iptu_detalhes": [] if parcelas_iptu.empty else parcelas_iptu.to_dict('records')
             }
 
         except Exception as e:
@@ -533,14 +759,15 @@ class ProcessadorRegrasNegocio:
 
             for _, row in parcelas_iptu.iterrows():
                 try:
-                    data_venc = pd.to_datetime(
-                        row["Data vencimento"], errors='coerce', dayfirst=True)
-                    if pd.isna(data_venc):
-                        continue
 
-                    if isinstance(data_venc, pd.Timestamp):
+                    try:
+                        data_venc_str = str(row["Data vencimento"])
+                        data_venc = pd.to_datetime(
+                            data_venc_str, errors='coerce', dayfirst=True)
+                        if pd.isna(data_venc):
+                            continue
                         data_venc_date = data_venc.date()
-                    else:
+                    except:
                         continue
 
                     status = str(row.get("Status da parcela", "")
@@ -683,12 +910,15 @@ class ProcessadorRegrasNegocio:
             primeiro_vencimento = (hoje.replace(
                 day=1) + timedelta(days=32)).replace(day=15)
 
+            # REGRA PDD: Quantidade de parcelas deve ser 12 (não todas as pendentes)
+            quantidade_parcelas_reparcelamento = min(parcelas_pendentes, 12)
+
             # Valores para preenchimento no Sienge
             valores_sienge = {
                 "detalhamento": f"CORREÇÃO {hoje.strftime('%m/%y')}",
                 "tipo_condicao": "PM",
                 "valor_total": novo_saldo,
-                "quantidade_parcelas": parcelas_pendentes,
+                "quantidade_parcelas": quantidade_parcelas_reparcelamento,
                 "data_primeiro_vencimento": primeiro_vencimento.strftime("%d/%m/%Y"),
                 "indexador": "1 IGP-M",
                 "tipo_juros": "Fixo",
@@ -792,10 +1022,42 @@ class ProcessadorRegrasNegocio:
             parcelas_desmarcar.sort(key=lambda x: (
                 x["prioridade"], x["data_vencimento"]))
 
+            # REGRA PDD: Limitar a 12 parcelas para reparcelamento
+            parcelas_para_reparcelamento = 12
+            parcelas_restantes = len(
+                parcelas_ct_a_vencer) - len(parcelas_desmarcar)
+
+            # Se há mais de 12 parcelas restantes, desmarcar as excedentes
+            if parcelas_restantes > parcelas_para_reparcelamento:
+                parcelas_excedentes = parcelas_restantes - parcelas_para_reparcelamento
+                # Pegar as últimas parcelas (mais distantes) para desmarcar
+                parcelas_futuras = [
+                    p for p in parcelas_ct_a_vencer if p not in parcelas_desmarcar]
+                parcelas_futuras.sort(
+                    key=lambda x: x.get("Data vencimento", ""))
+
+                for i in range(parcelas_excedentes):
+                    if i < len(parcelas_futuras):
+                        parcela = parcelas_futuras[-(i+1)]  # Pegar as últimas
+                        parcela_info = {
+                            "documento": parcela.get("Documento"),
+                            "parcela_condicao": parcela.get("Parcela/Condição", "N/A"),
+                            "data_vencimento": parcela.get("Data vencimento", "N/A"),
+                            "valor": float(parcela.get("Valor a receber", 0)),
+                            "motivo": f"Parcela excedente - limite PDD de {parcelas_para_reparcelamento} parcelas",
+                            "estrategia_aplicada": "LIMITE_PDD_12",
+                            "status_vencimento": "FUTURA_EXCEDENTE",
+                            "dias_diferenca": 0,
+                            "prioridade": 4
+                        }
+                        parcelas_desmarcar.append(parcela_info)
+
             # Log de auditoria
             total_valor = sum(p["valor"] for p in parcelas_desmarcar)
             self.logger.info(f"📋 Parcelas para desmarcar: {len(parcelas_desmarcar)} "
-                             f"(R$ {total_valor:,.2f}) - Estratégia: CONSERVADORA")
+                             f"(R$ {total_valor:,.2f}) - Estratégia: CONSERVADORA + LIMITE_PDD_12")
+            self.logger.info(
+                f"📊 Parcelas restantes para reparcelamento: {parcelas_para_reparcelamento}")
 
             if parcelas_desmarcar:
                 self.logger.info(f"📊 Distribuição:")

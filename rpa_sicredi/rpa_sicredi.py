@@ -194,7 +194,7 @@ class RPASicredi(BaseRPA):
                 raise Exception("URL do Sicredi não configurada")
 
             self.browser.get_page(self.url_sicredi)
-            time.sleep(3)
+            time.sleep(5)
 
             # TODO: Cliente deve implementar login específico no Sicredi usando sua classe browser
             # Conforme PDD seção 7.4:
@@ -330,17 +330,30 @@ class RPASicredi(BaseRPA):
                 xpath='//input[@type="file" and @name="fileData"]', text=caminho_absoluto)
             self.click(
                 xpath='//a[@id="submeter" and @name="submeter" and @title="Avançar"]')
-            time.sleep(2.2)
-            # Simula upload bem-sucedido
-            resultado_upload = {
-                "sucesso": True,
-                "arquivo_enviado": arquivo_remessa,
-                "protocolo_upload": f"UPL{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "timestamp_upload": datetime.now().isoformat(),
-                "status": "arquivo_recebido"
-            }
+            time.sleep(0.2)
+            self.click(
+                xpath='//a[@id="submeter"]')
+            time.sleep(0.2)
+            error_xpath = '//div[@id="DivServerError" and contains(@class, "login-erro") and contains(., "Dados inválidos.")]'
+            if not self.check_for_error(xpath=error_xpath):
+                time.sleep(2.2)
+                # Simula upload bem-sucedido
+                resultado_upload = {
+                    "sucesso": True,
+                    "arquivo_enviado": arquivo_remessa,
+                    "protocolo_upload": f"UPL{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                    "timestamp_upload": datetime.now().isoformat(),
+                    "status": "arquivo_recebido"
+                }
 
-            self.log_progresso("✅ Upload realizado com sucesso")
+                self.log_progresso("✅ Upload realizado com sucesso")
+            else:
+                self.log_progresso("❌ Upload não realizado")
+                resultado_upload = {
+                    "sucesso": False,
+                    "erro": "Upload não realizado",
+                    "arquivo": arquivo_remessa
+                }
 
             return resultado_upload
 

@@ -27,6 +27,7 @@ from google.oauth2.service_account import Credentials
 from PyPDF2 import PdfReader
 import requests
 import aiohttp
+import re
 
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -234,10 +235,17 @@ class RPAColetaIndices(BaseRPA):
             # Se o scrapping retornar o mês junto com o valor, extrair e converter
             # Por enquanto, usa o mês atual formatado
 
+            # Debug: Log do valor original do mês
+            self.log_progresso(
+                f"🔍 IPCA - Mês original do scrapping: '{ipca_mes_ref}'")
+
+            mes_convertido = self._converter_formato_mes(ipca_mes_ref)
+            self.log_progresso(f"🔍 IPCA - Mês convertido: '{mes_convertido}'")
+
             dados_ipca = {
                 "tipo": "IPCA",
                 "valor": ipca_valor.replace("%", "").strip(),
-                "mes": self._converter_formato_mes(ipca_mes_ref),
+                "mes": mes_convertido,
                 "periodo": "acumulado_12_meses",
                 "fonte": "IBGE",
                 "url": url_ibge,
@@ -286,10 +294,10 @@ class RPAColetaIndices(BaseRPA):
             # 1. Extrair mês de referência das primeiras linhas
             mes_referencia = None
             meses_map = {
-                "janeiro": "jan.", "fevereiro": "fev.", "marco": "mar.", "março": "mar.",
-                "abril": "abr.", "maio": "mai.", "junho": "jun.",
-                "julho": "jul.", "agosto": "ago.", "setembro": "set.",
-                "outubro": "out.", "novembro": "nov.", "dezembro": "dez."
+                "janeiro": 1, "fevereiro": 2, "marco": 3, "março": 3,
+                "abril": 4, "maio": 5, "junho": 6,
+                "julho": 7, "agosto": 8, "setembro": 9,
+                "outubro": 10, "novembro": 11, "dezembro": 12
             }
             for linha in linhas[:10]:
                 linha_clean = unicodedata.normalize('NFKD', linha).encode(
@@ -299,9 +307,9 @@ class RPAColetaIndices(BaseRPA):
                 if match:
                     mes_nome = match.group(1)
                     ano = match.group(2)[2:]  # Dois últimos dígitos
-                    abrev = meses_map.get(mes_nome)
-                    if abrev:
-                        mes_referencia = f"{abrev}-{ano}".lower()
+                    mes_num = meses_map.get(mes_nome)
+                    if mes_num:
+                        mes_referencia = f"01/{mes_num:02d}/{ano}"
                         break
 
             # 2. Extrair valor acumulado 12 meses
@@ -406,9 +414,15 @@ class RPAColetaIndices(BaseRPA):
                     "Valor 'Acumulado 12 meses' não encontrado no PDF.")
             valor_igpm, mes_formatado = resultado_igpm
 
-            # Se o scrapping retornar o mês junto com o valor, extrair e converter
-            # Por enquanto, usa o mês atual formatado
-            # mes_formatado = self._obter_mes_atual_formatado()
+            # Debug: Log do valor original do mês
+            self.log_progresso(
+                f"🔍 IGPM - Mês original do PDF: '{mes_formatado}'")
+
+            # Converte o mês para o formato correto se necessário
+            if mes_formatado and not mes_formatado.startswith("01/"):
+                mes_formatado = self._converter_formato_mes(mes_formatado)
+                self.log_progresso(
+                    f"🔍 IGPM - Mês convertido: '{mes_formatado}'")
 
             dados_igpm = {
                 "tipo": "IGPM",
@@ -518,52 +532,104 @@ class RPAColetaIndices(BaseRPA):
             raise Exception(f"Erro ao atualizar planilha: {str(e)}")
 
     def _obter_mes_atual_formatado(self) -> str:
-        """Retorna o mês atual no formato usado na planilha (ex: abr.-25)"""
-        return datetime.now().strftime("%b.-%y").lower()
+        """Retorna o mês atual no formato de data para planilha (ex: 01/07/25)"""
+        agora = datetime.now()
+        # Retorna data no formato DD/MM/YY onde DD=01 (primeiro dia do mês)
+        return f"01/{agora.month:02d}/{agora.year % 100:02d}"
 
     def _converter_formato_mes(self, mes_scrapping: str) -> str:
         """
-        Converte formato do scrapping (Abr/2025) para formato da planilha (abr.-25)
+        Converte formato do scrapping para formato de data da planilha (ex: 01/06/25)
+
+        Suporta múltiplos formatos:
+        - "Abr/2025" -> "01/04/25"
+        - "25/06/2025" -> "01/06/25"
+        - "junho de 2025" -> "01/06/25"
+        - "mai.-25" -> "01/05/25"
+        - "06-25" -> "01/06/25"
 
         Args:
-            mes_scrapping: Mês no formato do scrapping (ex: "Abr/2025")
+            mes_scrapping: Mês no formato do scrapping
 
         Returns:
-            Mês no formato da planilha (ex: "abr.-25")
+            Data no formato da planilha (ex: "01/06/25") - sempre dia 01
         """
         try:
-            # Mapeia meses em português para abreviações
-            meses_pt = {
-                'Jan': 'jan.', 'Fev': 'fev.', 'Mar': 'mar.', 'Abr': 'abr.',
-                'Mai': 'mai.', 'Jun': 'jun.', 'Jul': 'jul.', 'Ago': 'ago.',
-                'Set': 'set.', 'Out': 'out.', 'Nov': 'nov.', 'Dez': 'dez.'
+            # Mapeia meses em português para números
+            meses_pt_para_num = {
+                'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4,
+                'mai': 5, 'jun': 6, 'jul': 7, 'ago': 8,
+                'set': 9, 'out': 10, 'nov': 11, 'dez': 12,
+                'janeiro': 1, 'fevereiro': 2, 'março': 3, 'abril': 4,
+                'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8,
+                'setembro': 9, 'outubro': 10, 'novembro': 11, 'dezembro': 12
             }
 
-            # Parse do formato "Abr/2025"
+            # CASO 1: Formato "25/06/2025" (data completa)
+            if re.match(r'\d{1,2}/\d{1,2}/\d{4}', mes_scrapping):
+                try:
+                    data = datetime.strptime(mes_scrapping, '%d/%m/%Y')
+                    return f"01/{data.month:02d}/{data.year % 100:02d}"
+                except ValueError:
+                    pass
+
+            # CASO 2: Formato "Abr/2025" ou "Abril/2025"
             if '/' in mes_scrapping:
                 mes_abrev, ano = mes_scrapping.strip().split('/')
-                mes_abrev = mes_abrev.strip()
+                mes_abrev = mes_abrev.strip().lower()
                 ano = int(ano)
 
-                if mes_abrev in meses_pt:
-                    # Converte para formato da planilha: "abr.-25"
-                    return f"{meses_pt[mes_abrev]}-{ano % 100:02d}"
+                if mes_abrev in meses_pt_para_num:
+                    mes_num = meses_pt_para_num[mes_abrev]
+                    return f"01/{mes_num:02d}/{ano % 100:02d}"
                 else:
                     raise ValueError(f"Mês não reconhecido: {mes_abrev}")
-            else:
-                # Se já está no formato esperado, retorna como está
-                return mes_scrapping.lower()
+
+            # CASO 3: Formato "junho de 2025"
+            match = re.search(r'(\w+)\s+de\s+(\d{4})', mes_scrapping.lower())
+            if match:
+                mes_nome = match.group(1)
+                ano = int(match.group(2))
+                if mes_nome in meses_pt_para_num:
+                    mes_num = meses_pt_para_num[mes_nome]
+                    return f"01/{mes_num:02d}/{ano % 100:02d}"
+
+            # CASO 4: Formato antigo "mai.-25"
+            if re.match(r'[a-z]{3}\.-[0-9]{2}', mes_scrapping.lower()):
+                partes = mes_scrapping.lower().split('.-')
+                mes_abrev = partes[0]
+                ano = int(partes[1])
+                ano_completo = 2000 + ano if ano < 50 else 1900 + \
+                    ano  # Assume 2000-2049 para anos < 50
+                if mes_abrev in meses_pt_para_num:
+                    mes_num = meses_pt_para_num[mes_abrev]
+                    return f"01/{mes_num:02d}/{ano:02d}"
+
+            # CASO 5: Formato numérico "06-25" -> converter para data
+            if re.match(r'[0-9]{2}-[0-9]{2}', mes_scrapping):
+                partes = mes_scrapping.split('-')
+                mes_num = int(partes[0])
+                ano = int(partes[1])
+                ano_completo = 2000 + ano if ano < 50 else 1900 + \
+                    ano  # Assume 2000-2049 para anos < 50
+                return f"01/{mes_num:02d}/{ano:02d}"
+
+            # CASO 6: Se nada funcionar, usa mês atual
+            self.log_progresso(
+                f"⚠️ Formato de mês não reconhecido: '{mes_scrapping}', usando mês atual")
+            return self._obter_mes_atual_formatado()
 
         except Exception as e:
-            raise Exception(
-                f"Erro ao converter formato do mês '{mes_scrapping}': {str(e)}")
+            self.log_progresso(
+                f"⚠️ Erro ao converter formato do mês '{mes_scrapping}': {str(e)}, usando mês atual")
+            return self._obter_mes_atual_formatado()
 
     def _obter_proximo_mes_esperado(self, ultimo_mes_planilha: str) -> str:
         """
         Calcula qual seria o próximo mês após o último da planilha
 
         Args:
-            ultimo_mes_planilha: Último mês na planilha (formato: abr.-25)
+            ultimo_mes_planilha: Último mês na planilha (formato: abr-25)
 
         Returns:
             Próximo mês esperado no mesmo formato
@@ -571,8 +637,8 @@ class RPAColetaIndices(BaseRPA):
         try:
             # Mapeia abreviações para números
             meses_abrev = {
-                'jan.': 1, 'fev.': 2, 'mar.': 3, 'abr.': 4, 'mai.': 5, 'jun.': 6,
-                'jul.': 7, 'ago.': 8, 'set.': 9, 'out.': 10, 'nov.': 11, 'dez.': 12
+                'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+                'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
             }
 
             # Parse do último mês da planilha
@@ -646,31 +712,41 @@ class RPAColetaIndices(BaseRPA):
             mes_dados = dados_ipca['mes']
             valor_coletado = f'{dados_ipca["valor"]}%'
 
-            # Procura se o mês já existe na planilha
+            # Procura se o mês já existe na planilha (comparando formato de data)
             linha_mes_existente = None
             for i, linha in enumerate(valores_existentes):
-                if len(linha) >= 2 and linha[0].strip().lower() == mes_dados.lower():
-                    linha_mes_existente = i + 1  # Google Sheets usa índice baseado em 1
-                    valor_existente = linha[1].strip()
-
-                    if valor_existente == valor_coletado:
-                        self.log_progresso(
-                            f"📋 IPCA {mes_dados}: Valor coletado ({valor_coletado}) "
-                            f"é igual ao valor existente na planilha. Nenhuma alteração necessária."
-                        )
-                        return
+                if len(linha) >= 2 and linha[0].strip():
+                    # Converte ambos os formatos para comparação
+                    data_planilha = linha[0].strip()
+                    # Se a planilha tem formato "MM-YY", converte para "01/MM/YY"
+                    if re.match(r'[0-9]{2}-[0-9]{2}', data_planilha):
+                        partes = data_planilha.split('-')
+                        data_planilha_normalizada = f"01/{partes[0]}/{partes[1]}"
                     else:
-                        self.log_progresso(
-                            f"🔄 IPCA {mes_dados}: Atualizando valor de {valor_existente} "
-                            f"para {valor_coletado} (linha {linha_mes_existente})"
-                        )
-                        # Atualiza valor na linha existente
-                        aba_ipca.update_acell(
-                            f'B{linha_mes_existente}', valor_coletado)
-                        self.log_progresso(
-                            f"✅ IPCA {mes_dados} atualizado com sucesso na linha {linha_mes_existente}"
-                        )
-                        return
+                        data_planilha_normalizada = data_planilha
+
+                    if data_planilha_normalizada == mes_dados:
+                        linha_mes_existente = i + 1  # Google Sheets usa índice baseado em 1
+                        valor_existente = linha[1].strip()
+
+                        if valor_existente == valor_coletado:
+                            self.log_progresso(
+                                f"📋 IPCA {mes_dados}: Valor coletado ({valor_coletado}) "
+                                f"é igual ao valor existente na planilha. Nenhuma alteração necessária."
+                            )
+                            return
+                        else:
+                            self.log_progresso(
+                                f"🔄 IPCA {mes_dados}: Atualizando valor de {valor_existente} "
+                                f"para {valor_coletado} (linha {linha_mes_existente})"
+                            )
+                            # Atualiza valor na linha existente
+                            aba_ipca.update_acell(
+                                f'B{linha_mes_existente}', valor_coletado)
+                            self.log_progresso(
+                                f"✅ IPCA {mes_dados} atualizado com sucesso na linha {linha_mes_existente}"
+                            )
+                            return
 
             # Se chegou aqui, o mês não existe na planilha - criar nova linha
             self.log_progresso(
@@ -715,31 +791,41 @@ class RPAColetaIndices(BaseRPA):
             mes_dados = dados_igpm['mes']
             valor_coletado = f'{dados_igpm["valor"]}%'
 
-            # Procura se o mês já existe na planilha
+            # Procura se o mês já existe na planilha (comparando formato de data)
             linha_mes_existente = None
             for i, linha in enumerate(valores_existentes):
-                if len(linha) >= 2 and linha[0].strip().lower() == mes_dados.lower():
-                    linha_mes_existente = i + 1  # Google Sheets usa índice baseado em 1
-                    valor_existente = linha[1].strip()
-
-                    if valor_existente == valor_coletado:
-                        self.log_progresso(
-                            f"📋 IGPM {mes_dados}: Valor coletado ({valor_coletado}) "
-                            f"é igual ao valor existente na planilha. Nenhuma alteração necessária."
-                        )
-                        return
+                if len(linha) >= 2 and linha[0].strip():
+                    # Converte ambos os formatos para comparação
+                    data_planilha = linha[0].strip()
+                    # Se a planilha tem formato "MM-YY", converte para "01/MM/YY"
+                    if re.match(r'[0-9]{2}-[0-9]{2}', data_planilha):
+                        partes = data_planilha.split('-')
+                        data_planilha_normalizada = f"01/{partes[0]}/{partes[1]}"
                     else:
-                        self.log_progresso(
-                            f"🔄 IGPM {mes_dados}: Atualizando valor de {valor_existente} "
-                            f"para {valor_coletado} (linha {linha_mes_existente})"
-                        )
-                        # Atualiza valor na linha existente
-                        aba_igpm.update_acell(
-                            f'B{linha_mes_existente}', valor_coletado)
-                        self.log_progresso(
-                            f"✅ IGPM {mes_dados} atualizado com sucesso na linha {linha_mes_existente}"
-                        )
-                        return
+                        data_planilha_normalizada = data_planilha
+
+                    if data_planilha_normalizada == mes_dados:
+                        linha_mes_existente = i + 1  # Google Sheets usa índice baseado em 1
+                        valor_existente = linha[1].strip()
+
+                        if valor_existente == valor_coletado:
+                            self.log_progresso(
+                                f"📋 IGPM {mes_dados}: Valor coletado ({valor_coletado}) "
+                                f"é igual ao valor existente na planilha. Nenhuma alteração necessária."
+                            )
+                            return
+                        else:
+                            self.log_progresso(
+                                f"🔄 IGPM {mes_dados}: Atualizando valor de {valor_existente} "
+                                f"para {valor_coletado} (linha {linha_mes_existente})"
+                            )
+                            # Atualiza valor na linha existente
+                            aba_igpm.update_acell(
+                                f'B{linha_mes_existente}', valor_coletado)
+                            self.log_progresso(
+                                f"✅ IGPM {mes_dados} atualizado com sucesso na linha {linha_mes_existente}"
+                            )
+                            return
 
             # Se chegou aqui, o mês não existe na planilha - criar nova linha
             self.log_progresso(

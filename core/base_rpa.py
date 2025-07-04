@@ -151,10 +151,19 @@ class BaseRPA(ABC):
                         usar_uc_chrome=self.usar_uc_chrome,
                         chrome_profile_path=self.chrome_profile_path
                     )
-                    self.logger.info(
-                        f"✅ Browser Selenium inicializado (headless={headless})")
+
+                    # Verificar se o browser foi realmente inicializado
+                    if self.browser and hasattr(self.browser, '_driver') and self.browser._driver:
+                        self.logger.info(
+                            f"✅ Browser Selenium inicializado (headless={headless})")
+                    else:
+                        self.logger.error(
+                            "❌ Browser não foi inicializado corretamente")
+                        self.browser = None
+
                 except Exception as e:
-                    self.logger.warning(f"⚠️ Browser não disponível: {str(e)}")
+                    self.logger.error(
+                        f"❌ Erro ao inicializar browser: {str(e)}")
                     self.browser = None
 
             return True

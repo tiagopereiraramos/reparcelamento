@@ -608,25 +608,24 @@ class RPAAnalisePlanilhas(BaseRPA):
             mes_atual = datetime.now().month
             ano_atual = datetime.now().year
 
-            # Mapeamento de meses em português para números
-            meses_map = {
-                'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
-                'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
-            }
-
             contratos_para_reajuste = []
 
             self.log_progresso(
-                f"Mês atual: {mes_atual} ({list(meses_map.keys())[mes_atual-1]})")
+                f"Mês atual: {mes_atual:02d} (formato numérico)")
 
             for linha, contrato in enumerate(dados_contratos, start=2):
                 try:
                     # Verifica se o contrato tem dados mínimos obrigatórios
                     cliente = str(contrato.get('Cliente', '')).strip()
+                    # CORRIGIDO: Tenta múltiplas variações do campo título
                     numero_titulo = str(contrato.get(
                         'numero_titulo', '')).strip()
+                    if not numero_titulo:
+                        numero_titulo = str(contrato.get('Titulo', '')).strip()
+                    if not numero_titulo:
+                        numero_titulo = str(contrato.get('Título', '')).strip()
 
-                    # Pula linhas vazias ou sem dados essenciais
+                    # Pula linhas vazias ou sem dados essenciais (precisa pelo menos cliente OU título)
                     if not cliente and not numero_titulo:
                         continue
 
@@ -642,152 +641,195 @@ class RPAAnalisePlanilhas(BaseRPA):
                             f"⚠️ Linha {linha}: Mês reajuste vazio ou inválido: '{mes_reajuste_str}'")
                         continue
 
-                    # Parse do formato "abr.-25", "jun.-25", etc.
-                    if '.' in mes_reajuste_str and '-' in mes_reajuste_str:
-                        partes = mes_reajuste_str.split('.-')
-                        if len(partes) == 2:
-                            mes_nome = partes[0].lower().strip()
-                            ano_str = partes[1].strip()
+                    # Parse do formato novo "05-25", "06-25", etc. ou formato antigo "mai.-25"
+                    if '-' in mes_reajuste_str:
+                        if '.' in mes_reajuste_str:
+                            # Formato antigo "mai.-25"
+                            meses_map = {
+                                'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+                                'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+                            }
+                            partes = mes_reajuste_str.split('.-')
+                            if len(partes) == 2:
+                                mes_nome = partes[0].lower().strip()
+                                ano_str = partes[1].strip()
 
-                            # Validação do nome do mês
-                            if mes_nome not in meses_map:
-                                self.log_progresso(
-                                    f"⚠️ Linha {linha}: Mês inválido: '{mes_nome}' em '{mes_reajuste_str}'")
-                                continue
-
-                            # Validação do ano
-                            if not ano_str or len(ano_str) != 2:
-                                self.log_progresso(
-                                    f"⚠️ Linha {linha}: Ano inválido: '{ano_str}' em '{mes_reajuste_str}'")
-                                continue
-
-                            # Converte nome do mês para número
-                            mes_reajuste = meses_map[mes_nome]
-
-                            # Converte ano (25 -> 2025, 24 -> 2024)
-                            try:
-                                ano_reajuste = int(ano_str)
-                                if ano_reajuste < 50:  # Assume 2000+
-                                    ano_reajuste += 2000
-                                elif ano_reajuste < 100:  # Assume 1900+
-                                    ano_reajuste += 1900
-                            except ValueError:
-                                self.log_progresso(
-                                    f"⚠️ Linha {linha}: Erro ao converter ano: '{ano_str}' em '{mes_reajuste_str}'")
-                                continue
-
-                            # LÓGICA CONFORME PDD: Filtrar títulos que devem ser reparcelados no mês
-                            # baseado na coluna "mês reajuste" e registrar no log
-
-                            if ano_atual == ano_reajuste and mes_atual == mes_reajuste:
-                                # ✅ ELEGÍVEL: Mês atual - APLICAR REGRAS PDD 9.1.1
-
-                                # Verifica se há pendências de IPTU básicas
-                                pendencia_pmfi = str(contrato.get(
-                                    'PENDÊNCIAS PMFI', '')).strip().upper()
-                                consulta_iptu_ok = pendencia_pmfi in [
-                                    'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
-
-                                if not consulta_iptu_ok:
+                                # Validação do nome do mês
+                                if mes_nome not in meses_map:
                                     self.log_progresso(
-                                        f"⚠️ Contrato com pendência IPTU não será listado: {cliente or 'Sem nome'} - Pendência: {pendencia_pmfi}")
+                                        f"⚠️ Linha {linha}: Mês inválido: '{mes_nome}' em '{mes_reajuste_str}'")
                                     continue
 
-                                # ✅ NOVO: APLICAR REGRAS PDD PARA VALIDAÇÃO DE INADIMPLÊNCIA
-                                titulo_final = str(numero_titulo or
-                                                   contrato.get('numero_titulo') or
-                                                   contrato.get('Titulo') or
-                                                   contrato.get('Título') or
-                                                   'N/A')
-
-                                # 🎯 INTEGRAÇÃO: Simula dados CSV do Sienge para validação PDD
-                                # Nota: Em produção, isso seria dados reais do CSV do Sienge
-                                dados_simulados_csv = self._simular_dados_csv_para_validacao(
-                                    contrato, titulo_final)
-
-                                if dados_simulados_csv is not None:
-                                    # Aplica validação de inadimplência PDD
-                                    resultado_pdd = processador_pdd.processar_dados_cliente_completo(
-                                        df_planilha=dados_simulados_csv,
-                                        cliente=str(cliente),
-                                        numero_titulo=str(titulo_final)
-                                    )
-
+                                # Validação do ano
+                                if not ano_str or len(ano_str) != 2:
                                     self.log_progresso(
-                                        f"🔍 Validação PDD para {cliente}: {resultado_pdd.get('status_cliente', 'N/A')}")
+                                        f"⚠️ Linha {linha}: Ano inválido: '{ano_str}' em '{mes_reajuste_str}'")
+                                    continue
 
-                                    # Se inadimplente, pula o contrato
-                                    if not resultado_pdd.get('pode_reparcelar', False):
-                                        self.log_progresso(
-                                            f"❌ Contrato INADIMPLENTE excluído: {cliente or 'Sem nome'} - {resultado_pdd.get('motivo_classificacao', 'N/A')}")
-                                        continue
+                                # Converte nome do mês para número
+                                mes_reajuste = meses_map[mes_nome]
 
-                                    self.log_progresso(
-                                        f"✅ Contrato ADIMPLENTE aprovado: {cliente or 'Sem nome'}")
-
-                                # Cria cópia com dados essenciais preservados + resultados PDD
-                                contrato_processado = contrato.copy()
-                                contrato_processado['linha_planilha'] = linha
-                                contrato_processado['mes_reajuste_original'] = mes_reajuste_str
-                                contrato_processado[
-                                    'motivo_elegibilidade'] = f"Mês de reajuste atual: {mes_reajuste_str}"
-
-                                # ✅ NOVO: Adiciona resultados da validação PDD
-                                if dados_simulados_csv is not None and 'resultado_pdd' in locals():
-                                    contrato_processado['validacao_pdd'] = json.dumps({
-                                        'status_cliente': resultado_pdd.get('status_cliente'),
-                                        'pode_reparcelar': resultado_pdd.get('pode_reparcelar'),
-                                        'nivel_risco': resultado_pdd.get('nivel_risco'),
-                                        'qtd_ct_vencidas': resultado_pdd.get('qtd_ct_vencidas', 0),
-                                        'regras_aplicadas': 'REGRAS_9_1_1_INTEGRADAS'
-                                    })
-                                else:
-                                    contrato_processado['validacao_pdd'] = json.dumps({
-                                        'status_cliente': 'PENDENTE_DADOS_CSV',
-                                        'pode_reparcelar': True,  # Assume OK se não há dados para validar
-                                        'observacao': 'Validação PDD será feita no RPA Sienge com dados reais'
-                                    })
-
-                                # Garante que campos essenciais estejam presentes
-                                contrato_processado['cliente'] = cliente or contrato_processado.get(
-                                    'Cliente', 'N/A')
-                                contrato_processado['numero_titulo'] = titulo_final
-
-                                # Atualiza coluna "Último reajuste" conforme PDD
-                                await self._atualizar_ultimo_reajuste(aba_base_calculo, linha, contrato_processado)
-
-                                contratos_para_reajuste.append(
-                                    contrato_processado)
-                                self.log_progresso(
-                                    f"✅ Contrato aprovado com PDD: {cliente or 'Sem nome'} - {mes_reajuste_str}")
-                                # Parse do JSON para acessar campos
+                                # Converte ano (25 -> 2025, 24 -> 2024)
                                 try:
-                                    validacao_pdd_dict = json.loads(
-                                        contrato_processado['validacao_pdd'])
+                                    ano_reajuste = int(ano_str)
+                                    if ano_reajuste < 50:  # Assume 2000+
+                                        ano_reajuste += 2000
+                                    elif ano_reajuste < 100:  # Assume 1900+
+                                        ano_reajuste += 1900
+                                except ValueError:
                                     self.log_progresso(
-                                        f"   📋 Título={titulo_final}, Validação PDD={validacao_pdd_dict.get('status_cliente')}")
-                                    self.log_progresso(
-                                        f"   📋 Linha: {linha}, Status: {validacao_pdd_dict.get('pode_reparcelar', 'N/A')}")
-                                except Exception:
-                                    self.log_progresso(
-                                        f"   📋 Título={titulo_final}, Validação PDD=ERRO_PARSE_JSON")
-
-                            elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
-                                # ⚠️ ATRASADO: Deveria ter sido processado antes
-                                self.log_progresso(
-                                    f"⚠️ Contrato atrasado: {cliente or 'Sem nome'} - {mes_reajuste_str} (deveria ter sido processado)")
-
+                                        f"⚠️ Linha {linha}: Erro ao converter ano: '{ano_str}' em '{mes_reajuste_str}'")
+                                    continue
                             else:
-                                # ❌ AINDA NÃO VENCEU: Mês seguinte conforme PDD
                                 self.log_progresso(
-                                    f"📅 Contrato para mês seguinte: {cliente or 'Sem nome'} - {mes_reajuste_str} (ainda não chegou a data)")
+                                    f"⚠️ Linha {linha}: Formato antigo inválido: '{mes_reajuste_str}' (esperado: 'mês.-ano')")
+                                continue
+                        else:
+                            # Formato novo "05-25", "06-25", etc.
+                            partes = mes_reajuste_str.split('-')
+                            if len(partes) == 2:
+                                mes_str = partes[0].strip()
+                                ano_str = partes[1].strip()
+
+                                # Validação do mês numérico
+                                try:
+                                    mes_reajuste = int(mes_str)
+                                    if mes_reajuste < 1 or mes_reajuste > 12:
+                                        self.log_progresso(
+                                            f"⚠️ Linha {linha}: Mês inválido: '{mes_str}' em '{mes_reajuste_str}' (deve ser 01-12)")
+                                        continue
+                                except ValueError:
+                                    self.log_progresso(
+                                        f"⚠️ Linha {linha}: Mês não numérico: '{mes_str}' em '{mes_reajuste_str}'")
+                                    continue
+
+                                # Validação do ano
+                                if not ano_str or len(ano_str) != 2:
+                                    self.log_progresso(
+                                        f"⚠️ Linha {linha}: Ano inválido: '{ano_str}' em '{mes_reajuste_str}'")
+                                    continue
+
+                                # Converte ano (25 -> 2025, 24 -> 2024)
+                                try:
+                                    ano_reajuste = int(ano_str)
+                                    if ano_reajuste < 50:  # Assume 2000+
+                                        ano_reajuste += 2000
+                                    elif ano_reajuste < 100:  # Assume 1900+
+                                        ano_reajuste += 1900
+                                except ValueError:
+                                    self.log_progresso(
+                                        f"⚠️ Linha {linha}: Erro ao converter ano: '{ano_str}' em '{mes_reajuste_str}'")
+                                    continue
+                            else:
+                                self.log_progresso(
+                                    f"⚠️ Linha {linha}: Formato novo inválido: '{mes_reajuste_str}' (esperado: 'MM-AA')")
+                                continue
+
+                        # LÓGICA CONFORME PDD: Filtrar títulos que devem ser reparcelados no mês
+                        # baseado na coluna "mês reajuste" e registrar no log
+
+                        if ano_atual == ano_reajuste and mes_atual == mes_reajuste:
+                            # ✅ ELEGÍVEL: Mês atual - APLICAR REGRAS PDD 9.1.1
+
+                            # Verifica se há pendências de IPTU básicas
+                            pendencia_pmfi = str(contrato.get(
+                                'PENDÊNCIAS PMFI', '')).strip().upper()
+                            consulta_iptu_ok = pendencia_pmfi in [
+                                'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
+
+                            if not consulta_iptu_ok:
+                                self.log_progresso(
+                                    f"⚠️ Contrato com pendência IPTU não será listado: {cliente or 'Sem nome'} - Pendência: {pendencia_pmfi}")
+                                continue
+
+                            # ✅ NOVO: APLICAR REGRAS PDD PARA VALIDAÇÃO DE INADIMPLÊNCIA
+                            titulo_final = str(numero_titulo or 'N/A')
+
+                            # 🎯 INTEGRAÇÃO: Simula dados CSV do Sienge para validação PDD
+                            # Nota: Em produção, isso seria dados reais do CSV do Sienge
+                            dados_simulados_csv = self._simular_dados_csv_para_validacao(
+                                contrato, titulo_final)
+
+                            if dados_simulados_csv is not None:
+                                # Aplica validação de inadimplência PDD
+                                resultado_pdd = processador_pdd.processar_dados_cliente_completo(
+                                    df_planilha=dados_simulados_csv,
+                                    cliente=str(cliente),
+                                    numero_titulo=str(titulo_final)
+                                )
+
+                                self.log_progresso(
+                                    f"🔍 Validação PDD para {cliente}: {resultado_pdd.get('status_cliente', 'N/A')}")
+
+                                # Se inadimplente, pula o contrato
+                                if not resultado_pdd.get('pode_reparcelar', False):
+                                    self.log_progresso(
+                                        f"❌ Contrato INADIMPLENTE excluído: {cliente or 'Sem nome'} - {resultado_pdd.get('motivo_classificacao', 'N/A')}")
+                                    continue
+
+                                self.log_progresso(
+                                    f"✅ Contrato ADIMPLENTE aprovado: {cliente or 'Sem nome'}")
+
+                            # Cria cópia com dados essenciais preservados + resultados PDD
+                            contrato_processado = contrato.copy()
+                            contrato_processado['linha_planilha'] = linha
+                            contrato_processado['mes_reajuste_original'] = mes_reajuste_str
+                            contrato_processado[
+                                'motivo_elegibilidade'] = f"Mês de reajuste atual: {mes_reajuste_str}"
+
+                            # ✅ NOVO: Adiciona resultados da validação PDD
+                            if dados_simulados_csv is not None and 'resultado_pdd' in locals():
+                                contrato_processado['validacao_pdd'] = json.dumps({
+                                    'status_cliente': resultado_pdd.get('status_cliente'),
+                                    'pode_reparcelar': resultado_pdd.get('pode_reparcelar'),
+                                    'nivel_risco': resultado_pdd.get('nivel_risco'),
+                                    'qtd_ct_vencidas': resultado_pdd.get('qtd_ct_vencidas', 0),
+                                    'regras_aplicadas': 'REGRAS_9_1_1_INTEGRADAS'
+                                })
+                            else:
+                                contrato_processado['validacao_pdd'] = json.dumps({
+                                    'status_cliente': 'PENDENTE_DADOS_CSV',
+                                    'pode_reparcelar': True,  # Assume OK se não há dados para validar
+                                    'observacao': 'Validação PDD será feita no RPA Sienge com dados reais'
+                                })
+
+                            # Garante que campos essenciais estejam presentes
+                            contrato_processado['cliente'] = cliente or contrato_processado.get(
+                                'Cliente', 'N/A')
+                            contrato_processado['numero_titulo'] = titulo_final
+
+                            # REMOVIDO: Não deve alterar "Último reajuste" - é dado de entrada para fórmula "Mês reajuste"
+                            # await self._atualizar_ultimo_reajuste(aba_base_calculo, linha, contrato_processado)
+
+                            contratos_para_reajuste.append(
+                                contrato_processado)
+                            self.log_progresso(
+                                f"✅ Contrato aprovado com PDD: {cliente or 'Sem nome'} - {mes_reajuste_str}")
+                            # Parse do JSON para acessar campos
+                            try:
+                                validacao_pdd_dict = json.loads(
+                                    contrato_processado['validacao_pdd'])
+                                self.log_progresso(
+                                    f"   📋 Título={titulo_final}, Validação PDD={validacao_pdd_dict.get('status_cliente')}")
+                                self.log_progresso(
+                                    f"   📋 Linha: {linha}, Status: {validacao_pdd_dict.get('pode_reparcelar', 'N/A')}")
+                            except Exception:
+                                self.log_progresso(
+                                    f"   📋 Título={titulo_final}, Validação PDD=ERRO_PARSE_JSON")
+
+                        elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
+                            # ⚠️ ATRASADO: Deveria ter sido processado antes
+                            self.log_progresso(
+                                f"⚠️ Contrato atrasado: {cliente or 'Sem nome'} - {mes_reajuste_str} (deveria ter sido processado)")
 
                         else:
+                            # ❌ AINDA NÃO VENCEU: Mês seguinte conforme PDD
                             self.log_progresso(
-                                f"⚠️ Linha {linha}: Formato inválido de mês reajuste: '{mes_reajuste_str}' (esperado: 'mês.-ano')")
+                                f"📅 Contrato para mês seguinte: {cliente or 'Sem nome'} - {mes_reajuste_str} (ainda não chegou a data)")
+
                     else:
                         self.log_progresso(
-                            f"⚠️ Linha {linha}: Formato de data inválido: '{mes_reajuste_str}' (deve conter '.-')")
+                            f"⚠️ Linha {linha}: Formato de data inválido: '{mes_reajuste_str}' (deve conter '-' para separar mês e ano)")
 
                 except (ValueError, TypeError, AttributeError) as e:
                     # Formato inválido, pula contrato
@@ -952,79 +994,31 @@ class RPAAnalisePlanilhas(BaseRPA):
 
     async def _atualizar_ultimo_reajuste(self, aba_base_calculo, linha: int, contrato: Dict[str, Any]):
         """
-        Atualiza coluna "Último reajuste" conforme PDD
-        Informa o dia/mês da base de cálculo/ano quando o contrato é registrado para reajuste
+        FUNÇÃO DESABILITADA - NÃO DEVE ALTERAR "Último reajuste"
+
+        MOTIVO: A coluna "Último reajuste" é um DADO DE ENTRADA que alimenta 
+        a fórmula da coluna "Mês reajuste". Alterá-la quebra o cálculo automático.
+
+        Esta coluna deve ser preenchida apenas manualmente ou por outros processos
+        externos ao RPA de análise de planilhas.
 
         Args:
             aba_base_calculo: Aba Base de cálculo
             linha: Número da linha do contrato
             contrato: Dados do contrato
         """
-        try:
-            # Data atual no formato dia/mês/ano
-            data_reajuste = datetime.now().strftime('%d/%m/%Y')
+        # FUNÇÃO DESABILITADA - NÃO EXECUTA NENHUMA AÇÃO
+        #
+        # IMPORTANTE: A coluna "Último reajuste" NÃO deve ser alterada pelo RPA
+        # porque é um dado de entrada que alimenta a fórmula da coluna "Mês reajuste".
+        #
+        # Modificar esta coluna quebra o cálculo automático do próximo mês de reajuste.
 
-            # Encontra coluna "Último reajuste"
-            cabecalhos = aba_base_calculo.row_values(1)
-            coluna_ultimo_reajuste = None
+        cliente = contrato.get('Cliente', contrato.get('cliente', 'N/A'))
+        self.log_progresso(
+            f"ℹ️ Função desabilitada para {cliente} - 'Último reajuste' não será alterado (preserva fórmulas)")
 
-            for i, cabecalho in enumerate(cabecalhos, start=1):
-                if 'ÚLTIMO REAJUSTE' in str(cabecalho).upper() or 'ULTIMO REAJUSTE' in str(cabecalho).upper():
-                    coluna_ultimo_reajuste = i
-                    break
-
-            if coluna_ultimo_reajuste:
-                # CORRIGIDO: Valida se coluna está dentro do limite válido (A-Z = 1-26)
-                if coluna_ultimo_reajuste <= 26:
-                    celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}'
-
-                    # CORRIGIDO: Tenta atualizar com tratamento robusto de erro
-                    try:
-                        aba_base_calculo.update(celula, data_reajuste)
-                        cliente = contrato.get(
-                            'Cliente', contrato.get('cliente', 'N/A'))
-                        self.log_progresso(
-                            f"✅ Último reajuste atualizado: {cliente} -> {data_reajuste}")
-                    except Exception as update_err:
-                        # Se der erro específico da API, tenta método alternativo
-                        if "Invalid value" in str(update_err):
-                            try:
-                                # Método alternativo usando range de células
-                                range_celula = f'{chr(64 + coluna_ultimo_reajuste)}{linha}:{chr(64 + coluna_ultimo_reajuste)}{linha}'
-                                aba_base_calculo.update(
-                                    range_celula, [[data_reajuste]])
-                                cliente = contrato.get(
-                                    'Cliente', contrato.get('cliente', 'N/A'))
-                                self.log_progresso(
-                                    f"✅ Último reajuste atualizado (alt): {cliente} -> {data_reajuste}")
-                            except Exception as alt_err:
-                                self.log_progresso(
-                                    f"⚠️ Falha completa ao atualizar: {str(alt_err)}")
-                        else:
-                            raise update_err
-                else:
-                    # Para colunas além de Z (26), usa notação diferente
-                    if coluna_ultimo_reajuste <= 702:  # Até ZZ
-                        primeira_letra = chr(
-                            64 + ((coluna_ultimo_reajuste - 1) // 26))
-                        segunda_letra = chr(
-                            64 + ((coluna_ultimo_reajuste - 1) % 26) + 1)
-                        celula = f'{primeira_letra}{segunda_letra}{linha}'
-                        aba_base_calculo.update(celula, data_reajuste)
-                        cliente = contrato.get(
-                            'Cliente', contrato.get('cliente', 'N/A'))
-                        self.log_progresso(
-                            f"✅ Último reajuste atualizado (ext): {cliente} -> {data_reajuste}")
-                    else:
-                        self.log_progresso(
-                            f"⚠️ Coluna muito avançada para atualizar: {coluna_ultimo_reajuste}")
-            else:
-                self.log_progresso(
-                    "⚠️ Coluna 'Último reajuste' não encontrada para atualizar")
-
-        except Exception as e:
-            self.log_progresso(
-                f"⚠️ Erro ao atualizar último reajuste: {str(e)}")
+        return  # Sai da função sem fazer alterações
 
     async def _salvar_fila_local(self, fila_processamento: List[Dict[str, Any]]):
         """
@@ -1175,7 +1169,7 @@ class RPAAnalisePlanilhas(BaseRPA):
 async def executar_analise_planilhas(
     planilha_calculo_id: str,
     planilha_apoio_id: str,
-    credenciais_google: str = None,
+    credenciais_google: Optional[str] = None,
     headless: Optional[bool] = None
 ) -> ResultadoRPA:
     """
