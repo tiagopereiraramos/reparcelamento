@@ -4,9 +4,11 @@ Teste COMPLETO do RPA Sienge - Sistema de Reparcelamento
 Executa reparcelamento completo com todas as fases até geração do arquivo de remessa
 Focado no desenvolvimento e debugging do fluxo completo
 
+ATUALIZADO: Usa novos métodos de processamento em lote do rpa_sienge.py
 Desenvolvido em Português Brasileiro
 """
 
+from core.mongodb_manager import mongodb_manager
 from rpa_sienge import RPASienge
 import asyncio
 import sys
@@ -25,44 +27,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 def credenciais_sienge_env() -> Dict[str, str]:
     """Carrega credenciais do Sienge das variáveis de ambiente"""
     return {
-        "url": os.getenv("SIENGE_URL", "https://sienge.com.br"),
-        "usuario": os.getenv("SIENGE_USUARIO", "teste"),
-        "senha": os.getenv("SIENGE_SENHA", "teste123"),
+        "url": os.getenv("SIENGE_URL", "https://jmservicos.sienge.com.br/sienge/8/index.html"),
+        "usuario": os.getenv("SIENGE_USUARIO", "tc@trajetoriaconsultoria.com.br"),
+        "senha": os.getenv("SIENGE_SENHA", ""),
         "empresa": os.getenv("SIENGE_EMPRESA", "1")
     }
 
-
 # --- Funções de Carregamento de Dados ---
-
-
-async def carregar_fila_contratos() -> List[Dict[str, Any]]:
-    """Carrega contratos da fila de processamento"""
-    try:
-        from core.data_manager import data_manager
-        await data_manager.inicializar()
-        print("🔍 Carregando fila de contratos...")
-        fila_dados = await data_manager.obter_fila_sienge()
-        contratos = fila_dados.get("contratos", []) if fila_dados else []
-
-        # Filtra apenas contratos não processados nem erro
-        contratos_pendentes = [c for c in contratos if c.get(
-            "status_processamento") not in ["processado", "erro"]]
-
-        if contratos_pendentes:
-            print(
-                f"✅ Fila carregada: {len(contratos_pendentes)} contratos pendentes")
-            for i, contrato in enumerate(contratos_pendentes[:3]):
-                print(
-                    f"   {i+1}. {contrato.get('numero_titulo', 'N/A')} - {contrato.get('cliente', 'N/A')} [{contrato.get('status_processamento', 'N/A')}]")
-            if len(contratos_pendentes) > 3:
-                print(f"   ... e mais {len(contratos_pendentes)-3} contratos")
-            return contratos_pendentes
-        else:
-            print("⚠️ Nenhum contrato pendente encontrado na fila.")
-            return []
-    except Exception as e:
-        print(f"❌ Erro ao carregar fila: {str(e)}")
-        return []
 
 
 async def carregar_indices_economicos() -> Dict[str, Any]:
@@ -97,668 +68,388 @@ async def carregar_indices_economicos() -> Dict[str, Any]:
         }
 
 
-# --- Teste Completo de Reparcelamento ---
-
-
-async def teste_reparcelamento_completo():
-    """
-    Teste COMPLETO do reparcelamento - todas as fases até geração do arquivo de remessa
-
-    FLUXO COMPLETO CONFORME PDD:
-    1. Login no Sienge
-    2. Consulta relatórios financeiros (webscraping)
-    3. Processamento da planilha baixada
-    4. Aplicação das regras PDD
-    5. RETROALIMENTAÇÃO DA PLANILHA (Passo 9.1.2 do PDD)
-    6. Cálculo de valores de reparcelamento
-    7. Webscraping de reparcelamento no Sienge
-    8. Geração de carnê atualizado
-    9. Geração do arquivo de remessa
-    """
-    print("🧪 TESTE COMPLETO - REPARCELAMENTO ATÉ REMESSA")
-    print("=" * 70)
-    print("🎯 FLUXO COMPLETO PDD: Login → Consulta → Processamento → Retroalimentação → Reparcelamento → Carnê → Remessa")
-    print("=" * 70)
-
+async def verificar_fila_contratos():
+    """Verifica e mostra estatísticas da fila de contratos"""
     try:
-        # 1. CARREGAR DADOS REAIS DA FILA
-        print("\n📊 FASE 1: CARREGAMENTO DE DADOS")
-        print("-" * 40)
-        contratos_fila = await carregar_fila_contratos()
-        if not contratos_fila:
-            print("❌ Nenhum contrato encontrado na fila.")
+        if not mongodb_manager.conectado:
+            await mongodb_manager.conectar()
+
+        if not mongodb_manager.conectado or mongodb_manager.database is None:
+            print("❌ Erro: MongoDB não conectado")
             return False
 
-        indices_economicos = await carregar_indices_economicos()
-        credenciais = credenciais_sienge_env()
+        collection = mongodb_manager.database.fila_contratos
 
-        print(f"✅ Dados carregados:")
-        print(f"   📄 Contratos: {len(contratos_fila)}")
-        print(f"   📈 IPCA: {indices_economicos['ipca']['valor']}%")
-        print(f"   📈 IGPM: {indices_economicos['igpm']['valor']}%")
+        # Contar por status
+        total = collection.count_documents({})
+        pendentes = collection.count_documents({"status": "PENDENTE"})
+        extraidos = collection.count_documents({"status": "EXTRAIDO"})
+        reparcelados = collection.count_documents({"status": "REPARCELADO"})
+        carne_gerados = collection.count_documents({"status": "CARNE_GERADO"})
+        processados = collection.count_documents({"status": "PROCESSADO"})
+        erros = collection.count_documents({"status": "ERRO"})
 
-        # BREAKPOINT 1: Dados carregados
-        print("\n⏸️  BREAKPOINT 1: Dados carregados com sucesso")
-        input("   Pressione ENTER para continuar para a FASE 2 (Login)...")
+        print(f"📊 ESTATÍSTICAS DA FILA DE CONTRATOS:")
+        print(f"   📄 Total: {total}")
+        print(f"   ⏳ Pendentes: {pendentes}")
+        print(f"   📥 Extraídos: {extraidos}")
+        print(f"   📤 Reparcelados: {reparcelados}")
+        print(f"   🎫 Carnês gerados: {carne_gerados}")
+        print(f"   ✅ Processados: {processados}")
+        print(f"   ❌ Com erro: {erros}")
 
-        # 2. INICIALIZAR RPA E LOGIN
-        print("\n🔐 FASE 2: INICIALIZAÇÃO E LOGIN")
-        print("-" * 40)
-        rpa = RPASienge()
-        await rpa.inicializar()
-        rpa._configurar_credenciais(credenciais)
-
-        resultado_login = await rpa._fazer_login_sienge()
-        if not resultado_login:
-            print("❌ Falha no login - não é possível continuar")
-            await rpa.finalizar()
+        if total == 0:
+            print("⚠️ Nenhum contrato encontrado na fila")
             return False
 
-        print("✅ Login realizado com sucesso")
-
-        # BREAKPOINT 2: Login realizado
-        print("\n⏸️  BREAKPOINT 2: Login realizado com sucesso")
-        input("   Pressione ENTER para continuar para a FASE 3 (Processamento fila completa)...")
-
-        # 3. PROCESSAR TODA A FILA EM LOOP (APROVEITANDO MESMA SESSÃO)
-        print("\n🔄 FASE 3: PROCESSAMENTO COMPLETO DA FILA")
-        print("-" * 40)
-        print(f"📊 Processando {len(contratos_fila)} contratos em sequência...")
-        print("🎯 OTIMIZAÇÃO: Aproveitando mesma sessão de login para todos os contratos")
-
-        contratos_processados = []
-        contratos_inadimplentes = []
-        contratos_com_erro = []
-
-        for idx, contrato_atual in enumerate(contratos_fila, 1):
-            try:
-                print(
-                    f"\n📄 CONTRATO {idx}/{len(contratos_fila)}: {contrato_atual['numero_titulo']}")
-                print(f"👤 CLIENTE: {contrato_atual['cliente']}")
-                print("=" * 50)
-
-                # Extrair parâmetros do contrato
-                parametros = {
-                    "cliente": contrato_atual["cliente"],
-                    "numero_titulo": contrato_atual["numero_titulo"],
-                    "parcelas_selecionadas": contrato_atual.get("parcelas_selecionadas", 12),
-                    "qtd_parcelas_ct_total": contrato_atual.get("qtd_parcelas_ct_total", 24),
-                    "valor_parcela_original": contrato_atual.get("valor_parcela_original", 1000.0),
-                    "saldo_anterior": contrato_atual.get("saldo_anterior", 24000.0)
-                }
-
-                # FASE 1: Consulta do relatório Sienge
-                print(f"\n📊 FASE 3.{idx} - CONSULTA RELATÓRIOS FINANCEIROS")
-                print("-" * 40)
-                print("🔍 Executando webscraping para consultar relatórios...")
-
-                resultado_webscraping = await rpa._executar_webscraping_relatorios(parametros)
-
-                if not resultado_webscraping.get("sucesso", False):
-                    print(
-                        f"❌ Erro na consulta do relatório: {resultado_webscraping.get('erro', 'Erro desconhecido')}")
-                    contratos_com_erro.append({
-                        "contrato": contrato_atual,
-                        "motivo": f"Erro na consulta: {resultado_webscraping.get('erro', 'Desconhecido')}"
-                    })
-
-                    # Atualizar status como erro
-                    await data_manager.atualizar_status_fila_sienge(
-                        contrato_atual.get(
-                            "id_fila", f"reajuste_{contrato_atual['numero_titulo']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"),
-                        "erro"
-                    )
-                    continue
-
-                print("✅ Relatórios consultados com sucesso")
-                saldo_total = resultado_webscraping.get("saldo_total", 0)
-                parcelas_pendentes = resultado_webscraping.get(
-                    "parcelas_pendentes", 0)
-                print(f"   📊 Saldo total: R$ {saldo_total:,.2f}")
-                print(f"   📄 Parcelas pendentes: {parcelas_pendentes}")
-
-                # FASE 2: Retroalimentação da planilha
-                print(
-                    f"\n📊 FASE 3.{idx} - RETROALIMENTAÇÃO DA PLANILHA (PDD 9.1.2)")
-                print("-" * 40)
-                print(
-                    "📋 CONFORME PDD: Dados extraídos do Sienge devem alimentar as fórmulas da planilha")
-
-                # Conectar ao Google Sheets
-                print("📊 Conectando ao Google Sheets...")
-                planilha = await rpa._conectar_google_sheets()
-                print("✅ Planilha aberta: BASE DE CÁLCULO REPARCELAMENTO 2025")
-
-                # Dados financeiros para preenchimento
-                dados_financeiros = {
-                    "cliente": parametros.get("cliente", ""),
-                    "numero_titulo": parametros.get("numero_titulo", ""),
-                    "dados_validacao": resultado_webscraping.get("dados_extraidos", {})
-                }
-
-                print(
-                    "📊 Preenchendo dados do relatório Sienge na planilha BASE DE CÁLCULO...")
-                resultado_planilha = await rpa._preencher_dados_relatorio_sienge(planilha, dados_financeiros)
-
-                # VERIFICAR SE PROCESSAMENTO DEVE SER INTERROMPIDO (CONFORME PDD 9.1.2)
-                if resultado_planilha and resultado_planilha.get("deve_interromper_processamento", False):
-                    print("🚫 PROCESSAMENTO INTERROMPIDO - CLIENTE INADIMPLENTE")
-                    print(
-                        "📋 Conforme PDD Seção 9.1.2: Cliente inadimplente detectado, reparcelamento NÃO autorizado")
-                    print("✅ Processo encerrado conforme regras de negócio")
-                    print(
-                        f"   ⚠️ PENDÊNCIAS SIENGE INAD: Inadimplência (preenchida na planilha)")
-                    print(f"   🚫 Reparcelamento: NÃO AUTORIZADO")
-                    print(
-                        f"   📋 Conforme PDD: Processo finalizado na etapa de retroalimentação")
-
-                    # Adicionar à lista de inadimplentes
-                    contratos_inadimplentes.append({
-                        "contrato": contrato_atual,
-                        "motivo": "Cliente inadimplente"
-                    })
-
-                    # Atualizar status como processado
-                    print(
-                        f"📊 Atualizando status na fila: {contrato_atual.get('id_fila')} → processado")
-                    status_update = await data_manager.atualizar_status_fila_sienge(
-                        contrato_atual.get(
-                            "id_fila", f"reajuste_{contrato_atual['numero_titulo']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"),
-                        "processado"
-                    )
-                    print(f"✅ Status atualizado: {status_update}")
-                    print(
-                        f"➡️ Prosseguindo para próximo contrato ({idx+1}/{len(contratos_fila)})...")
-                    continue
-
-                # Se chegou aqui, cliente é ADIMPLENTE - prosseguir com reparcelamento
-                print("✅ Cliente ADIMPLENTE - Prosseguindo com reparcelamento")
-
-                # FASE 3: Execução do reparcelamento no Sienge
-                print(f"\n📊 FASE 3.{idx} - EXECUÇÃO DO REPARCELAMENTO")
-                print("-" * 40)
-                print("🔧 Executando reparcelamento no sistema Sienge...")
-
-                # Aqui seria a execução do reparcelamento real
-                # Por enquanto apenas simulamos o sucesso
-                print("✅ Reparcelamento executado com sucesso")
-
-                # Adicionar à lista de processados
-                contratos_processados.append({
-                    "contrato": contrato_atual,
-                    "resultado": "Sucesso"
-                })
-
-                # Atualizar status como processado
-                await data_manager.atualizar_status_fila_sienge(
-                    contrato_atual.get(
-                        "id_fila", f"reajuste_{contrato_atual['numero_titulo']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"),
-                    "processado"
-                )
-
-                print(
-                    f"➡️ Prosseguindo para próximo contrato ({idx+1}/{len(contratos_fila)})...")
-
-            except Exception as e:
-                print(
-                    f"❌ Erro no processamento do contrato {contrato_atual.get('numero_titulo', 'N/A')}: {str(e)}")
-                contratos_com_erro.append({
-                    "contrato": contrato_atual,
-                    "motivo": str(e)
-                })
-
-                # Atualizar status como erro
-                await data_manager.atualizar_status_fila_sienge(
-                    contrato_atual.get(
-                        "id_fila", f"reajuste_{contrato_atual['numero_titulo']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"),
-                    "erro"
-                )
-                continue
-
-        # RELATÓRIO FINAL
-        print(f"\n📊 RELATÓRIO FINAL DO PROCESSAMENTO EM LOTE")
-        print("=" * 60)
-        print(
-            f"✅ Contratos processados com SUCESSO: {len(contratos_processados)}")
-        print(f"🚫 Contratos INADIMPLENTES: {len(contratos_inadimplentes)}")
-        print(f"❌ Contratos com ERRO: {len(contratos_com_erro)}")
-        print(
-            f"📊 Total processado: {len(contratos_fila)}/{len(contratos_fila)}")
-
-        if contratos_processados:
-            print(f"\n✅ PROCESSADOS COM SUCESSO:")
-            for item in contratos_processados:
-                contrato = item["contrato"]
-                print(
-                    f"   ✅ {contrato.get('numero_titulo')} - {contrato.get('cliente')}")
-
-        if contratos_inadimplentes:
-            print(f"\n🚫 INADIMPLENTES:")
-            for item in contratos_inadimplentes:
-                contrato = item["contrato"]
-                print(
-                    f"   🚫 {contrato.get('numero_titulo')} - {contrato.get('cliente')} ({item['motivo']})")
-
-        if contratos_com_erro:
-            print(f"\n❌ ERROS:")
-            for item in contratos_com_erro:
-                contrato = item["contrato"]
-                print(
-                    f"   ❌ {contrato.get('numero_titulo')} - {contrato.get('cliente')} ({item['motivo']})")
-
-        # Finalizar RPA
-        await rpa.finalizar()
-
-        # Retornar sucesso se pelo menos um contrato foi processado
-        return len(contratos_processados) > 0 or len(contratos_inadimplentes) > 0
+        return True
 
     except Exception as e:
-        print(f"💥 Erro crítico: {str(e)}")
-        if 'rpa' in locals():
-            await rpa.finalizar()
+        print(f"❌ Erro ao verificar fila: {str(e)}")
         return False
 
 
-# === VERSÃO ORIGINAL (ÚNICO CONTRATO) MANTIDA PARA REFERÊNCIA ===
+def escolher_modo_processamento():
+    """Permite ao usuário escolher o modo de processamento"""
+    print("\n🎯 MODO DE PROCESSAMENTO RPA SIENGE")
+    print("=" * 50)
+    print("Escolha o modo de execução:")
+    print("1. 📥 APENAS EXTRAÇÃO - Extrair relatórios (PENDENTE → EXTRAIDO)")
+    print("2. 📤 APENAS REPARCELAMENTO - Reparcelamento (EXTRAIDO → REPARCELADO)")
+    print("3. 🎫 APENAS GERAÇÃO CARNÊ - Gerar carnês (REPARCELADO → CARNE_GERADO)")
+    print("4. 🔄 PROCESSO COMPLETO - Extração + Reparcelamento + Carnê")
+    print("5. 🔧 CONTRATO ÚNICO - Modo legado para um contrato específico")
+    print("=" * 50)
 
-async def teste_reparcelamento_unico_contrato():
+    while True:
+        escolha = input("Digite sua escolha (1-5): ").strip()
+
+        if escolha == "1":
+            return "extracao"
+        elif escolha == "2":
+            return "reparcelamento"
+        elif escolha == "3":
+            return "carne"
+        elif escolha == "4":
+            return "completo"
+        elif escolha == "5":
+            return "unico"
+        else:
+            print("❌ Opção inválida! Digite 1, 2, 3, 4 ou 5.")
+
+
+def escolher_pausas_entre_contratos():
+    """Permite ao usuário escolher se quer pausas entre contratos"""
+    print("\n⏸️  CONFIGURAÇÃO DE PAUSAS ENTRE CONTRATOS")
+    print("=" * 50)
+    print("Deseja pausar entre o processamento de cada contrato?")
+    print("✅ Recomendado para desenvolvimento/debug: Controle total")
+    print("⚡ Processamento contínuo: Mais rápido, sem intervenção")
+    print("=" * 50)
+
+    while True:
+        escolha = input("Pausar entre contratos? (s/n): ").strip().lower()
+
+        if escolha in ["s", "sim", "y", "yes"]:
+            print("✅ Pausas ativadas - você controlará cada contrato")
+            return True
+        elif escolha in ["n", "nao", "não", "no"]:
+            print("⚡ Processamento contínuo ativado")
+            return False
+        else:
+            print("❌ Opção inválida! Digite 's' para sim ou 'n' para não.")
+
+# --- Teste Completo de Reparcelamento EM LOTE (NOVO) ---
+
+
+async def teste_reparcelamento_lote():
     """
-    VERSÃO ORIGINAL: Teste de um único contrato (mantida para casos específicos)
+    TESTE COMPLETO EM LOTE: Usa os novos métodos de processamento
+    Muito mais simples e eficiente que a versão anterior
     """
-    print("🧪 TESTE ÚNICO CONTRATO - REPARCELAMENTO ATÉ REMESSA")
+    print("🧪 TESTE COMPLETO - REPARCELAMENTO EM LOTE (VERSÃO 2.0)")
+    print("=" * 70)
+    print("🎯 USANDO NOVOS MÉTODOS: processar_fila_contratos_lote()")
+    print("✅ PERSISTÊNCIA ADEQUADA: Dados extraídos SIM, valores da planilha NÃO")
     print("=" * 70)
 
     try:
-        # 1. CARREGAR DADOS REAIS DA FILA
-        print("\n📊 FASE 1: CARREGAMENTO DE DADOS")
+        # 1. VERIFICAR FILA E CONFIGURAÇÕES
+        print("\n📊 FASE 1: VERIFICAÇÃO DA FILA")
         print("-" * 40)
-        contratos_fila = await carregar_fila_contratos()
-        if not contratos_fila:
-            print("❌ Nenhum contrato encontrado na fila.")
+
+        fila_valida = await verificar_fila_contratos()
+        if not fila_valida:
+            print("❌ Erro na verificação da fila. Abortando teste.")
             return False
 
         indices_economicos = await carregar_indices_economicos()
         credenciais = credenciais_sienge_env()
 
-        print(f"✅ Dados carregados:")
-        print(f"   📄 Contratos: {len(contratos_fila)}")
+        # Validar credenciais obrigatórias
+        if not credenciais.get("senha"):
+            print("❌ ERRO: SIENGE_SENHA não configurada nas variáveis de ambiente")
+            print("💡 Configure a variável SIENGE_SENHA antes de continuar")
+            return False
+
+        print(f"✅ Configurações carregadas:")
         print(f"   📈 IPCA: {indices_economicos['ipca']['valor']}%")
         print(f"   📈 IGPM: {indices_economicos['igpm']['valor']}%")
+        print(f"   🔑 Credenciais: Configuradas")
 
-        # BREAKPOINT 1: Dados carregados
-        print("\n⏸️  BREAKPOINT 1: Dados carregados com sucesso")
-        input("   Pressione ENTER para continuar para a FASE 2 (Login)...")
+        # 2. ESCOLHER MODO DE PROCESSAMENTO
+        modo = escolher_modo_processamento()
 
-        # 2. INICIALIZAR RPA E LOGIN
-        print("\n🔐 FASE 2: INICIALIZAÇÃO E LOGIN")
+        if modo == "unico":
+            return await teste_reparcelamento_unico_contrato()
+
+        # 3. ESCOLHER CONFIGURAÇÃO DE PAUSAS
+        pausar_entre_contratos = escolher_pausas_entre_contratos()
+
+        print(f"\n🎯 Configuração final:")
+        print(f"   📋 Modo: {modo.upper()}")
+        print(
+            f"   ⏸️  Pausas: {'Ativadas' if pausar_entre_contratos else 'Desativadas'}")
+
+        # BREAKPOINT 1: Configurações carregadas
+        print("\n⏸️  BREAKPOINT 1: Configurações carregadas com sucesso")
+        input("   Pressione ENTER para inicializar o RPA...")
+
+        # 3. INICIALIZAR RPA
+        print("\n🚀 FASE 2: INICIALIZAÇÃO DO RPA")
+        print("-" * 40)
+
+        # Browser visível por padrão para desenvolvimento/debug
+        headless = os.getenv("SIENGE_HEADLESS", "false").lower() == "true"
+        rpa = RPASienge(headless=headless)
+        await rpa.inicializar()
+
+        print(f"🌐 RPA inicializado (headless: {headless})")
+
+        # BREAKPOINT 2: RPA inicializado
+        print("\n⏸️  BREAKPOINT 2: RPA inicializado com sucesso")
+        input("   Pressione ENTER para executar processamento em lote...")
+
+        # 4. EXECUTAR PROCESSAMENTO EM LOTE (NOVO MÉTODO)
+        print(f"\n🔄 FASE 3: PROCESSAMENTO EM LOTE")
+        print("=" * 50)
+        print("🚀 Usando método processar_fila_contratos_lote()...")
+        print("✅ Duas fases automáticas: extração → reparcelamento")
+        print("✅ Persistência adequada integrada")
+        print("✅ Status da fila atualizado automaticamente")
+        print(
+            f"✅ Pausas entre contratos: {'ATIVADAS' if pausar_entre_contratos else 'DESATIVADAS'}")
+
+        # ✅ EXECUTAR PROCESSAMENTO CONFORME MODO ESCOLHIDO
+        if modo == "carne":
+            # Geração de carnês apenas
+            resultado = await rpa.processar_fila_geracao_carnes(
+                credenciais_sienge=credenciais,
+                pausar_entre_contratos=pausar_entre_contratos
+            )
+        elif modo == "completo":
+            # Processo completo: extração + reparcelamento + carnê
+            resultado = await rpa.processar_fila_contratos_lote(
+                credenciais_sienge=credenciais,
+                indices=indices_economicos,
+                fase="ambas",
+                pausar_entre_contratos=pausar_entre_contratos
+            )
+            # TODO: Adicionar geração de carnês após reparcelamentos
+        else:
+            # Modos originais (extração, reparcelamento, ambas)
+            resultado = await rpa.processar_fila_contratos_lote(
+                credenciais_sienge=credenciais,
+                indices=indices_economicos,
+                fase=modo,
+                pausar_entre_contratos=pausar_entre_contratos
+            )
+
+        # 5. RELATÓRIO FINAL
+        print(f"\n📊 RELATÓRIO FINAL")
+        print("=" * 60)
+
+        if resultado.get("sucesso"):
+            print("✅ PROCESSAMENTO CONCLUÍDO COM SUCESSO!")
+
+            if modo == "carne":
+                print(f"\n🎫 FASE GERAÇÃO DE CARNÊS:")
+                print(
+                    f"   ✅ Contratos processados: {resultado.get('contratos_processados', 0)}")
+                print(
+                    f"   ❌ Contratos com erro: {resultado.get('contratos_erro', 0)}")
+                print(
+                    f"   🏢 Empresas processadas: {resultado.get('empresas_processadas', 0)}")
+                print(f"   🚀 Início: {resultado.get('timestamp_inicio', '')}")
+                print(f"   🏁 Fim: {resultado.get('timestamp_fim', '')}")
+            else:
+                # Estatísticas da fase de extração
+                if resultado.get("fase_extracao", {}).get("executada"):
+                    extracao = resultado["fase_extracao"]
+                    print(f"\n📥 FASE EXTRAÇÃO:")
+                    print(
+                        f"   ✅ Sucessos: {extracao['contratos_processados']}")
+                    print(f"   ❌ Erros: {extracao['contratos_erro']}")
+
+                # Estatísticas da fase de reparcelamento
+                if resultado.get("fase_reparcelamento", {}).get("executada"):
+                    reparcelamento = resultado["fase_reparcelamento"]
+                    print(f"\n📤 FASE REPARCELAMENTO:")
+                    print(
+                        f"   ✅ Sucessos: {reparcelamento['contratos_processados']}")
+                    print(f"   ❌ Erros: {reparcelamento['contratos_erro']}")
+
+                # Tempo total
+                inicio = resultado.get('timestamp_inicio', '')
+                fim = resultado.get('timestamp_fim', '')
+                print(f"\n⏱️ TEMPO TOTAL:")
+                print(f"   🚀 Início: {inicio}")
+                print(f"   🏁 Fim: {fim}")
+
+            print(f"\n🎉 TESTE CONCLUÍDO COM SUCESSO!")
+            return True
+
+        else:
+            print(f"❌ ERRO NO PROCESSAMENTO:")
+            print(f"   💥 Erro: {resultado.get('erro', 'Erro desconhecido')}")
+            print(f"   🕒 Timestamp: {resultado.get('timestamp_erro', 'N/A')}")
+            return False
+
+    except Exception as e:
+        print(f"\n💥 ERRO CRÍTICO NO TESTE: {str(e)}")
+        import traceback
+        print(f"📋 Stack trace: {traceback.format_exc()}")
+        return False
+    finally:
+        try:
+            if 'rpa' in locals():
+                await rpa.finalizar()
+        except:
+            pass
+
+# --- Teste de Contrato Único (MODO LEGADO) ---
+
+
+async def teste_reparcelamento_unico_contrato():
+    """
+    MODO LEGADO: Teste de um único contrato (mantido para casos específicos)
+    Usa os métodos originais do RPA para um contrato por vez
+    """
+    print("🔧 TESTE ÚNICO CONTRATO - MODO LEGADO")
+    print("=" * 70)
+    print("⚠️ MODO LEGADO: Para teste/debug de um contrato específico")
+    print("💡 Para produção, use o modo em lote")
+
+    try:
+        # Carregar dados
+        print("\n📊 CARREGANDO DADOS")
+        print("-" * 40)
+
+        fila_valida = await verificar_fila_contratos()
+        if not fila_valida:
+            print("❌ Erro na verificação da fila. Abortando teste.")
+            return False
+
+        # Buscar contratos PENDENTES para escolha
+        if not mongodb_manager.conectado:
+            await mongodb_manager.conectar()
+
+        if mongodb_manager.database is None:
+            print("❌ Database não conectado")
+            return False
+
+        collection = mongodb_manager.database.fila_contratos
+        contratos_pendentes = list(collection.find({"status": "PENDENTE"}))
+
+        if not contratos_pendentes:
+            print("❌ Nenhum contrato PENDENTE encontrado")
+            return False
+
+        # Mostrar contratos disponíveis
+        print(f"\n📋 CONTRATOS PENDENTES DISPONÍVEIS:")
+        for i, contrato in enumerate(contratos_pendentes):
+            print(
+                f"   {i+1}. {contrato.get('numero_titulo')} - {contrato.get('cliente')}")
+
+        # Escolher contrato
+        while True:
+            try:
+                escolha = int(
+                    input(f"\nEscolha o contrato (1-{len(contratos_pendentes)}): "))
+                if 1 <= escolha <= len(contratos_pendentes):
+                    contrato_teste = contratos_pendentes[escolha - 1]
+                    break
+                else:
+                    print("❌ Número inválido!")
+            except ValueError:
+                print("❌ Digite um número válido!")
+
+        indices_economicos = await carregar_indices_economicos()
+        credenciais = credenciais_sienge_env()
+
+        print(
+            f"\n✅ Contrato selecionado: {contrato_teste.get('numero_titulo')} - {contrato_teste.get('cliente')}")
+
+        # Inicializar RPA
+        print("\n🚀 INICIALIZANDO RPA")
         print("-" * 40)
         rpa = RPASienge()
         await rpa.inicializar()
-        rpa._configurar_credenciais(credenciais)
 
-        resultado_login = await rpa._fazer_login_sienge()
-        if not resultado_login:
-            print("❌ Falha no login - não é possível continuar")
-            await rpa.finalizar()
-            return False
-
-        print("✅ Login realizado com sucesso")
-
-        # PROCESSAR PRIMEIRO CONTRATO DA FILA
-        contrato_teste = contratos_fila[0]
-        print(
-            f"\n📄 PROCESSANDO CONTRATO: {contrato_teste.get('numero_titulo')}")
-        print(f"👤 CLIENTE: {contrato_teste.get('cliente')}")
-        print("=" * 50)
-
-        # 4. CONSULTA RELATÓRIOS FINANCEIROS (WEBSCRAPING)
-        print("\n📊 FASE 3: CONSULTA RELATÓRIOS FINANCEIROS")
-        print("-" * 40)
-        print("🔍 Executando webscraping para consultar relatórios...")
-
-        dados_financeiros = await rpa._consultar_relatorios_financeiros(contrato_teste)
-
-        if not dados_financeiros.get("sucesso"):
-            print(
-                f"❌ Falha na consulta: {dados_financeiros.get('erro', 'Erro desconhecido')}")
-            await rpa.finalizar()
-            return False
-
-        print("✅ Relatórios consultados com sucesso")
-        print(
-            f"   📊 Saldo total: R$ {dados_financeiros.get('saldo_total', 0):,.2f}")
-        print(
-            f"   📄 Parcelas pendentes: {dados_financeiros.get('parcelas_pendentes', 0)}")
-
-        # BREAKPOINT 3: Relatórios consultados
-        print("\n⏸️  BREAKPOINT 3: Relatórios consultados com sucesso")
-        input(
-            "   Pressione ENTER para continuar para a FASE 4 (Retroalimentação planilha)...")
-
-        # 5. RETROALIMENTAR PLANILHA BASE DE CÁLCULO (PASSO 9.1.2 DO PDD)
-        print("\n📊 FASE 4: RETROALIMENTAÇÃO DA PLANILHA (PDD 9.1.2)")
-        print("-" * 40)
-        print("📋 CONFORME PDD: Dados extraídos do Sienge devem alimentar as fórmulas da planilha")
-
-        try:
-            planilha_id = os.getenv("PLANILHA_CALCULO_ID", "")
-            if planilha_id:
-                print("📊 Conectando ao Google Sheets...")
-                await rpa._conectar_google_sheets(os.getenv("GOOGLE_CREDENTIALS_PATH"))
-                planilha = rpa.cliente_sheets.open_by_key(planilha_id)
-                print(f"✅ Planilha aberta: {planilha.title}")
-
-                print(
-                    "📊 Preenchendo dados do relatório Sienge na planilha BASE DE CÁLCULO...")
-                resultado_planilha = await rpa._preencher_dados_relatorio_sienge(planilha, dados_financeiros)
-
-                # VERIFICAR SE PROCESSAMENTO DEVE SER INTERROMPIDO (CONFORME PDD 9.1.2)
-                if resultado_planilha and resultado_planilha.get("deve_interromper_processamento", False):
-                    print("🚫 PROCESSAMENTO INTERROMPIDO - CLIENTE INADIMPLENTE")
-                    print(
-                        "📋 Conforme PDD Seção 9.1.2: Cliente inadimplente detectado, reparcelamento NÃO autorizado")
-                    print("✅ Processo encerrado conforme regras de negócio")
-                    print(
-                        f"   ⚠️ PENDÊNCIAS SIENGE INAD: Inadimplência (preenchida na planilha)")
-                    print(f"   🚫 Reparcelamento: NÃO AUTORIZADO")
-                    print(
-                        f"   📋 Conforme PDD: Processo finalizado na etapa de retroalimentação")
-
-                    # CORRIGIR: ATUALIZAR STATUS PARA "processado" (inadimplente é processo concluído)
-                    try:
-                        from core.data_manager import data_manager
-                        id_fila = contrato_teste.get("id_fila", "")
-                        if id_fila:
-                            print(
-                                f"📊 Atualizando status na fila: {id_fila} → processado")
-                            resultado_status = await data_manager.atualizar_status_fila_por_id(
-                                id_fila,
-                                "processado",
-                                "Cliente inadimplente - processo finalizado conforme PDD 9.1.2"
-                            )
-                            print(
-                                f"✅ Status atualizado: {resultado_status}")
-                        else:
-                            print(
-                                "⚠️ id_fila não encontrado - status não atualizado")
-                    except Exception as e:
-                        print(f"⚠️ Erro ao atualizar status: {str(e)}")
-
-                    # Finalizar RPA adequadamente
-                    await rpa.finalizar()
-                    # Sucesso conforme PDD (processo correto para inadimplente)
-                    return True
-
-                print("✅ Planilha retroalimentada com sucesso")
-
-                # Verificar se as fórmulas estão calculando
-                print("🔍 Verificando se as fórmulas da planilha estão calculando...")
-                aba_base_calculo = planilha.worksheet("Base de cálculo")
-                valores_existentes = aba_base_calculo.get_all_values()
-                cabecalhos = valores_existentes[0]
-
-                # Procurar linha do contrato para verificar valores
-                linha_contrato = None
-                for i, linha in enumerate(valores_existentes[1:], start=2):
-                    if len(linha) >= 6:
-                        cliente_planilha = linha[2].strip() if len(
-                            linha) > 2 else ""
-                        titulo_planilha = linha[5].strip() if len(
-                            linha) > 5 else ""
-
-                        if (cliente_planilha.lower() == contrato_teste.get('cliente', '').lower() and
-                                titulo_planilha == str(contrato_teste.get('numero_titulo', ''))):
-                            linha_contrato = i
-                            break
-
-                if linha_contrato:
-                    print(f"✅ Contrato encontrado na linha {linha_contrato}")
-                    linha_dados = valores_existentes[linha_contrato - 1]
-
-                    # Verificar campos importantes
-                    campos_verificar = [
-                        "Parcelas a vencer",
-                        "Valor da Parcela Base",
-                        "Saldo devedor Base",
-                        "1º vencimento carnê",
-                        "% Reajuste total",
-                        "Parcela final",
-                        "Saldo devedor final"
-                    ]
-
-                    for campo in campos_verificar:
-                        coluna_idx = None
-                        for i, cabecalho in enumerate(cabecalhos):
-                            if campo.upper() in str(cabecalho).upper():
-                                coluna_idx = i
-                                break
-
-                        if coluna_idx is not None and coluna_idx < len(linha_dados):
-                            valor = linha_dados[coluna_idx]
-                            print(f"   📊 {campo}: {valor}")
-                        else:
-                            print(f"   ⚠️ {campo}: Não encontrado")
-                else:
-                    print("⚠️ Contrato não encontrado na planilha para verificação")
-
-            else:
-                print(
-                    "⚠️ PLANILHA_CALCULO_ID não configurada - pulando retroalimentação")
-        except Exception as e:
-            print(f"⚠️ Erro na retroalimentação: {str(e)}")
-            print("⚠️ Continuando sem retroalimentação...")
-
-        # BREAKPOINT 4: Planilha retroalimentada
-        print("\n⏸️  BREAKPOINT 4: Retroalimentação da planilha concluída")
-        input(
-            "   Pressione ENTER para continuar para a FASE 5 (Cálculos reparcelamento)...")
-
-        # 6. EXECUTAR REPARCELAMENTO (CÁLCULOS)
-        print("\n🔄 FASE 5: CÁLCULOS DE REPARCELAMENTO")
-        print("-" * 40)
-        print("🧮 Aplicando regras PDD e calculando valores...")
-
-        resultado_reparcelamento = await rpa._executar_etapa_reparcelamento(
+        # Executar método original para contrato único
+        resultado = await rpa.executar(
             contrato=contrato_teste,
+            credenciais_sienge=credenciais,
             indices=indices_economicos,
-            dados_financeiros=dados_financeiros,
+            etapa="completa",
             autorizar_reparcelamento=True,
             notificar_analista=False
         )
 
-        if not resultado_reparcelamento.sucesso:
-            print(
-                f"❌ Falha no reparcelamento: {resultado_reparcelamento.erro or resultado_reparcelamento.mensagem}")
-            await rpa.finalizar()
+        if resultado.sucesso:
+            print(f"\n✅ SUCESSO: {resultado.mensagem}")
+            print(f"📊 Dados: {resultado.dados}")
+            return True
+        else:
+            print(f"\n❌ FALHA: {resultado.mensagem}")
+            if resultado.erro:
+                print(f"💥 Erro: {resultado.erro}")
             return False
 
-        print("✅ Reparcelamento calculado com sucesso")
-
-        # Mostrar dados calculados
-        dados_reparcelamento = resultado_reparcelamento.dados.get(
-            "reparcelamento", {})
-        valores_sienge = dados_reparcelamento.get("valores_sienge", {})
-
-        print(
-            f"   💰 Valor anterior: R$ {dados_reparcelamento.get('valor_anterior', 0):,.2f}")
-        print(
-            f"   💰 Valor corrigido: R$ {dados_reparcelamento.get('valor_corrigido', 0):,.2f}")
-        print(
-            f"   📊 IGPM aplicado: {dados_reparcelamento.get('igpm_aplicado', 0)}%")
-        print(
-            f"   📄 Parcelas processadas: {dados_reparcelamento.get('parcelas_processadas', 0)}")
-
-        if valores_sienge:
-            print(f"   📋 Valores para Sienge:")
-            print(
-                f"      Detalhamento: {valores_sienge.get('detalhamento', 'N/A')}")
-            print(
-                f"      Valor total: R$ {valores_sienge.get('valor_total', 0):,.2f}")
-            print(
-                f"      Data primeiro vencimento: {valores_sienge.get('data_primeiro_vencimento', 'N/A')}")
-
-        # BREAKPOINT 5: Cálculos realizados
-        print("\n⏸️  BREAKPOINT 5: Cálculos de reparcelamento concluídos")
-        input("   Pressione ENTER para continuar para a FASE 6 (Webscraping reparcelamento)...")
-
-        # 7. EXECUTAR WEBSCRAPING DE REPARCELAMENTO
-        print("\n🌐 FASE 6: WEBSCRAPING DE REPARCELAMENTO")
-        print("-" * 40)
-        print("🔧 DESENVOLVIMENTO: Executando navegação e interação no Sienge...")
-
-        parametros_webscraping = {
-            "numero_titulo": contrato_teste.get("numero_titulo"),
-            "cliente": contrato_teste.get("cliente"),
-            "empreendimento": contrato_teste.get("empreendimento", ""),
-            "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047",
-            "valores_sienge": valores_sienge,
-            "parcelas_desmarcar": dados_reparcelamento.get("parcelas_desmarcar", []),
-            "total_parcelas_desmarcar": len(dados_reparcelamento.get("parcelas_desmarcar", [])),
-            "saldo_anterior": dados_reparcelamento.get("valor_anterior", 0),
-            "saldo_novo": dados_reparcelamento.get("valor_corrigido", 0),
-            "fator_correcao": dados_reparcelamento.get("fator_correcao", 1),
-            "igpm_aplicado": dados_reparcelamento.get("igpm_aplicado", 0),
-            "pode_reparcelar": dados_reparcelamento.get("pode_reparcelar", True),
-            "status_cliente": dados_reparcelamento.get("status_cliente", ""),
-            "qtd_ct_vencidas": dados_reparcelamento.get("qtd_ct_vencidas", 0),
-            "id_fila": contrato_teste.get("_id", ""),
-            "timestamp_carregamento": datetime.now().isoformat()
-        }
-
-        resultado_webscraping = await rpa._navegar_e_executar_reparcelamento(parametros_webscraping)
-
-        if resultado_webscraping.get("sucesso"):
-            print("✅ Webscraping de reparcelamento executado com sucesso!")
-            print(
-                f"   📄 Novo título: {resultado_webscraping.get('novo_titulo', 'N/A')}")
-            print(
-                f"   📊 Parcelas processadas: {resultado_webscraping.get('parcelas_processadas', 0)}")
-            print(
-                f"   📋 Passos PDD: {resultado_webscraping.get('passos_pdd_executados', 'N/A')}")
-        else:
-            print(
-                f"❌ Falha no webscraping: {resultado_webscraping.get('erro', 'Erro desconhecido')}")
-            print("🔧 DESENVOLVIMENTO: Erro capturado para análise e correção")
-
-        # BREAKPOINT 6: Webscraping concluído
-        print("\n⏸️  BREAKPOINT 6: Webscraping de reparcelamento concluído")
-        input("   Pressione ENTER para continuar para a FASE 7 (Geração carnê)...")
-
-        # 8. GERAR CARNÊ ATUALIZADO
-        print("\n📄 FASE 7: GERAÇÃO DE CARNÊ")
-        print("-" * 40)
-        print("🔧 DESENVOLVIMENTO: Gerando carnê atualizado...")
-
-        resultado_carne = await rpa._gerar_carne_sienge(contrato_teste)
-
-        if resultado_carne.get("sucesso"):
-            print("✅ Carnê gerado com sucesso!")
-            print(
-                f"   📁 Arquivo: {resultado_carne.get('nome_arquivo', 'N/A')}")
-            print(
-                f"   📂 Caminho: {resultado_carne.get('caminho_arquivo', 'N/A')}")
-            print(
-                f"   🕒 Timestamp: {resultado_carne.get('timestamp_geracao', 'N/A')}")
-        else:
-            print(
-                f"❌ Falha na geração do carnê: {resultado_carne.get('erro', 'Erro desconhecido')}")
-            print("🔧 DESENVOLVIMENTO: Erro capturado para análise e correção")
-
-        # BREAKPOINT 7: Carnê gerado
-        print("\n⏸️  BREAKPOINT 7: Geração de carnê concluída")
-        input("   Pressione ENTER para continuar para a FASE 8 (Geração remessa)...")
-
-        # 9. GERAR ARQUIVO DE REMESSA
-        print("\n📋 FASE 8: GERAÇÃO DO ARQUIVO DE REMESSA")
-        print("-" * 40)
-        print("🔧 DESENVOLVIMENTO: Gerando arquivo de remessa...")
-
-        # TODO: Implementar geração do arquivo de remessa
-        # Por enquanto, simular resultado
-        resultado_remessa = {
-            "sucesso": True,
-            "nome_arquivo": f"remessa_{contrato_teste.get('numero_titulo', 'indefinido')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            "caminho_arquivo": f"outputs/remessas/remessa_{contrato_teste.get('numero_titulo', 'indefinido')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            "timestamp_geracao": datetime.now().isoformat(),
-            "observacao": "Geração de remessa em desenvolvimento - resultado simulado"
-        }
-
-        if resultado_remessa.get("sucesso"):
-            print("✅ Arquivo de remessa gerado com sucesso!")
-            print(
-                f"   📁 Arquivo: {resultado_remessa.get('nome_arquivo', 'N/A')}")
-            print(
-                f"   📂 Caminho: {resultado_remessa.get('caminho_arquivo', 'N/A')}")
-            print(
-                f"   🕒 Timestamp: {resultado_remessa.get('timestamp_geracao', 'N/A')}")
-            print(
-                f"   📝 Observação: {resultado_remessa.get('observacao', 'N/A')}")
-        else:
-            print(
-                f"❌ Falha na geração da remessa: {resultado_remessa.get('erro', 'Erro desconhecido')}")
-
-        # BREAKPOINT 8: Remessa gerada
-        print("\n⏸️  BREAKPOINT 8: Geração de remessa concluída")
-        input("   Pressione ENTER para ver o resumo final...")
-
-        # 10. FINALIZAR E RESUMO
-        print("\n🎯 RESUMO FINAL DO TESTE")
-        print("=" * 50)
-        print("✅ Login: Realizado")
-        print("✅ Consulta relatórios: Realizada")
-        print("✅ Retroalimentação planilha: Realizada")
-        print("✅ Cálculos reparcelamento: Realizados")
-        print(
-            f"✅ Webscraping reparcelamento: {'Realizado' if resultado_webscraping.get('sucesso') else 'Falhou'}")
-        print(
-            f"✅ Geração carnê: {'Realizada' if resultado_carne.get('sucesso') else 'Falhou'}")
-        print(
-            f"✅ Geração remessa: {'Realizada' if resultado_remessa.get('sucesso') else 'Falhou'}")
-
-        await rpa.finalizar()
-
-        # Verificar se pelo menos os cálculos foram bem-sucedidos
-        sucesso_principal = resultado_reparcelamento.sucesso
-        if sucesso_principal:
-            print("\n🎉 TESTE PRINCIPAL CONCLUÍDO COM SUCESSO!")
-            print("💡 Os cálculos de reparcelamento funcionaram corretamente")
-            print("🔧 Webscraping e geração de arquivos em desenvolvimento")
-        else:
-            print("\n❌ TESTE PRINCIPAL FALHOU!")
-            print("💡 Verifique os logs acima para identificar o problema")
-
-        return sucesso_principal
-
     except Exception as e:
-        print(f"\n💥 ERRO CRÍTICO NO TESTE: {str(e)}")
-        print("🔧 DESENVOLVIMENTO: Erro capturado para análise e correção")
-        import traceback
-        print(f"📋 Stack trace: {traceback.format_exc()}")
+        print(f"\n💥 ERRO CRÍTICO: {str(e)}")
         return False
-
+    finally:
+        try:
+            if 'rpa' in locals():
+                await rpa.finalizar()
+        except:
+            pass
 
 # --- Função Principal ---
 
 
 async def main():
     """Função principal do sistema de testes"""
-    print("🤖 TESTE COMPLETO - RPA SIENGE REPARCELAMENTO")
-    print("Foco no desenvolvimento do fluxo completo até geração de remessa")
+    print("🤖 TESTE COMPLETO - RPA SIENGE REPARCELAMENTO V2.0")
+    print("🚀 NOVA ARQUITETURA: Processamento em lote otimizado")
+    print("✅ PERSISTÊNCIA ADEQUADA: Dados extraídos persistidos, valores da planilha sempre lidos em tempo real")
     print()
 
-    # Executa teste completo
-    print("🚀 Iniciando teste completo de reparcelamento...")
-    sucesso = await teste_reparcelamento_completo()
+    # Executa teste completo em lote (padrão)
+    print("🚀 Iniciando teste de reparcelamento em lote...")
+    sucesso = await teste_reparcelamento_lote()
 
     print("\n" + "=" * 70)
     if sucesso:
         print("✅ TESTE CONCLUÍDO COM SUCESSO!")
-        print("🎯 Fluxo principal funcionando - webscraping em desenvolvimento")
+        print("🎯 Nova arquitetura funcionando perfeitamente")
+        print("✅ Persistência adequada implementada")
+        print("✅ Collection fila_contratos integrada")
     else:
         print("❌ TESTE FALHOU - Verifique os logs acima")
         print("💡 Foque nos erros principais antes de continuar")
     print("=" * 70)
-
 
 if __name__ == "__main__":
     try:

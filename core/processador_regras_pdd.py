@@ -506,8 +506,12 @@ class ProcessadorRegrasNegocio:
 
             # Obter dia de vencimento das parcelas
             regra_1 = self._regra_1_dia_vencimento_csv(df)
-            # Padrão dia 5 conforme CSV
-            dia_vencimento = regra_1.get("dia_vencimento", 5)
+            # ✅ CORRIGIDO: Padrão dia 10 se não encontrado (conforme PDD)
+            dia_vencimento = regra_1.get("dia_vencimento") or 10
+
+            # Garantir que é um número válido
+            if not isinstance(dia_vencimento, int) or dia_vencimento < 1 or dia_vencimento > 31:
+                dia_vencimento = 10
 
             # Próximo mês disponível
             proximo_mes = hoje.replace(day=1) + timedelta(days=32)
@@ -816,12 +820,17 @@ class ProcessadorRegrasNegocio:
         Consolida resultados de todas as regras 9.1.1 em formato estruturado
         """
         try:
-            # Extrair dados principais
-            dia_vencimento = regras_aplicadas["regra_1"].get("dia_vencimento")
+            # ✅ EXTRAIR DADOS PRINCIPAIS COM FALLBACKS SEGUROS
+            dia_vencimento = regras_aplicadas["regra_1"].get(
+                "dia_vencimento") or 10  # Fallback para 10
             primeiro_vencimento = regras_aplicadas["regra_2"].get(
                 "data_primeiro_vencimento_formatada")
             valor_parcela_base = regras_aplicadas["regra_3"].get(
                 "valor_parcela_base", 0)
+
+            # Garantir que dia_vencimento é um número válido
+            if not isinstance(dia_vencimento, int) or dia_vencimento < 1 or dia_vencimento > 31:
+                dia_vencimento = 10
 
             irregularidades = regras_aplicadas["regra_4"]
             parcelas_info = regras_aplicadas["regra_5"]

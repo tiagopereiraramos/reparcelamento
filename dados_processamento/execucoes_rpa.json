@@ -756,5 +756,161 @@
     "mensagem": "",
     "erro": null,
     "_id_mongodb": "68674eb2b149728458c0ea9c"
+  },
+  {
+    "nome_rpa": "RPA_Analise_Planilhas",
+    "timestamp_inicio": "2025-07-04T09:40:37.851089",
+    "timestamp_fim": "2025-07-04T09:40:37.851091",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+        "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+        "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": true,
+      "tempo_execucao": 5.619175,
+      "total_passos": 2,
+      "id_rastreamento": "RPA_Analise_Planilhas_20250704_094032_2238"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 5.619175,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6867d9d55936de334010cb65"
+  },
+  {
+    "nome_rpa": "RPA_Analise_Planilhas",
+    "timestamp_inicio": "2025-07-04T09:42:38.431891",
+    "timestamp_fim": "2025-07-04T09:42:38.431895",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+        "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+        "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": true,
+      "tempo_execucao": 4.867386,
+      "total_passos": 2,
+      "id_rastreamento": "RPA_Analise_Planilhas_20250704_094233_5503"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 4.867386,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "6867da4e93efeba69e6b9806"
+  },
+  {
+    "nome_rpa": "RPA_Analise_Planilhas",
+    "timestamp_inicio": "2025-07-07T14:18:19.001593",
+    "timestamp_fim": "2025-07-07T14:18:19.001596",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+        "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+        "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": true,
+      "tempo_execucao": 4.886686,
+      "total_passos": 2,
+      "id_rastreamento": "RPA_Analise_Planilhas_20250707_141814_0990"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 4.886686,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "686c0f6b78026105ae2b821c"
+  },
+  {
+    "nome_rpa": "RPA_Analise_Planilhas",
+    "timestamp_inicio": "2025-07-07T14:33:52.785751",
+    "timestamp_fim": "2025-07-07T14:33:52.785754",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+        "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+        "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "127.0.0.1",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": true,
+      "tempo_execucao": 5.891511,
+      "total_passos": 2,
+      "id_rastreamento": "RPA_Analise_Planilhas_20250707_143346_8804"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 5.891511,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "686c1310e7fa12da1caabb83"
+  },
+  {
+    "nome_rpa": "RPA_Analise_Planilhas",
+    "timestamp_inicio": "2025-07-07T14:46:56.169891",
+    "timestamp_fim": "2025-07-07T14:46:56.169894",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+        "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+        "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "192.168.15.11",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": true,
+      "tempo_execucao": 5.199001,
+      "total_passos": 2,
+      "id_rastreamento": "RPA_Analise_Planilhas_20250707_144650_8417"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 5.199001,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "686c1620fba866eb050ff7dd"
+  },
+  {
+    "nome_rpa": "RPA_Analise_Planilhas",
+    "timestamp_inicio": "2025-07-07T15:22:18.430286",
+    "timestamp_fim": "2025-07-07T15:22:18.430288",
+    "parametros_entrada": {
+      "parametros_entrada": {
+        "planilha_calculo_id": "1NTDPDEltum8X3vBHvUetCNWVEcz453FfAZGRYGmmd8U",
+        "planilha_apoio_id": "1rnOZA-CYVQmuH7b6yALNlAe6ZiztrHsrpqEyd9j6tXY",
+        "credenciais_google": "credentials/gspread-459713-aab8a657f9b0.json"
+      },
+      "usuario_sistema": "tiagopereiraramos",
+      "ip_execucao": "192.168.15.11",
+      "ambiente": "local"
+    },
+    "resultado": {
+      "sucesso": true,
+      "tempo_execucao": 4.910462,
+      "total_passos": 2,
+      "id_rastreamento": "RPA_Analise_Planilhas_20250707_152213_5053"
+    },
+    "sucesso": true,
+    "tempo_execucao_segundos": 4.910462,
+    "mensagem": "",
+    "erro": null,
+    "_id_mongodb": "686c1e6aeda22806327b16e6"
   }
 ]

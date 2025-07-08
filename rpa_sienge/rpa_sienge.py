@@ -29,6 +29,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
 from platformdirs import user_downloads_dir
 
@@ -151,6 +152,9 @@ class RPASienge(BaseRPA):
 
             # Faz login no Sienge com rastreamento
             await self._fazer_login_sienge()
+            self.log_progresso(
+                "⏸️ Login realizado! Pausando para conferência manual...")
+            input("Pressione ENTER para continuar após o login...")
 
             # ETAPA 1: CONSULTA DE RELATÓRIOS (sempre executada)
             dados_financeiros = await self._executar_etapa_consulta(contrato)
@@ -336,10 +340,16 @@ class RPASienge(BaseRPA):
         try:
             cliente = contrato.get("cliente", "")
             numero_titulo = contrato.get("numero_titulo", "")
+            forcar_nova_extracao = contrato.get("forcar_nova_extracao", False)
 
             self.log_progresso(
                 f"Consultando saldo devedor presente para: {cliente}")
             self.log_progresso(f"Título: {numero_titulo}")
+
+            # 🚫 CACHE REMOVIDO PARA DESENVOLVIMENTO
+            # Webscraping sempre executado para permitir debug e desenvolvimento
+            self.log_progresso(
+                "🔍 Executando webscraping (cache desabilitado para desenvolvimento)")
 
             # WEBSCRAPING REAL - Navegação conforme PDD seção 7.3.1
             url_relatorio = "https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/relatorios/saldo-devedor"
@@ -449,9 +459,112 @@ class RPASienge(BaseRPA):
 
             # DADOS PROCESSADOS DA PLANILHA REAL
             if dados_planilha and dados_planilha.get("sucesso"):
-                dados_financeiros = dados_planilha
+                # Extrair dados validados para estrutura compatível
+                dados_validacao = dados_planilha.get("dados_validacao", {})
+                dados_financeiros = {
+                    "cliente": cliente,
+                    "numero_titulo": numero_titulo,
+                    "saldo_total": dados_validacao.get("saldo_total", 0.0),
+                    "parcelas_pendentes": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
+                    "parcelas_ct": dados_validacao.get("parcelas_ct_a_vencer_detalhes", []),
+                    "parcelas_rec_fat": dados_validacao.get("parcelas_rec_fat", []),
+                    "status_cliente": dados_validacao.get("status_cliente", "adimplente"),
+                    "relatorio_exportado": True,
+                    "dados_extraidos": dados_validacao,
+                    "sucesso": True,
+                    "timestamp_processamento": datetime.now().isoformat()
+                }
+
+                # ✅ PERSISTÊNCIA NO MONGODB
+                try:
+                    from core.mongodb_manager import mongodb_manager
+
+                    # ✅ CORREÇÃO: Usar instância global em vez de criar nova
+                    if not mongodb_manager.conectado:
+                        await mongodb_manager.conectar()
+
+                    # Documento completo para persistência
+                    documento_persistencia = {
+                        "_id": f"sienge_{numero_titulo}_{datetime.now().strftime('%Y%m%d')}",
+                        "numero_titulo": numero_titulo,
+                        "cliente": cliente,
+                        "dados_financeiros": dados_financeiros,
+                        "dados_validacao_pdd": dados_validacao,
+                        "arquivo_planilha": dados_planilha.get("arquivo_processado", ""),
+                        "arquivo_auditoria": dados_planilha.get("arquivo_auditoria_pdd", ""),
+                        "status_extracao": "EXTRAIDO",
+                        "timestamp_extracao": datetime.now().isoformat(),
+                        "versao_pdd": "9.1.1",
+                        "regras_aplicadas": dados_planilha.get("regras_pdd_aplicadas", {}),
+                        "metadata": {
+                            "usuario_execucao": os.getenv("USER", "sistema"),
+                            "ambiente": os.getenv("AMBIENTE", "desenvolvimento"),
+                            "versao_rpa": "3.0"
+                        }
+                    }
+
+                    # Salvar no banco
+                    await mongodb_manager.salvar_documento("dados_extraidos_sienge", documento_persistencia)
+                    self.log_progresso(
+                        f"✅ Dados persistidos no MongoDB: {documento_persistencia['_id']}")
+
+                    # Atualizar status do contrato na fila
+                    await mongodb_manager.atualizar_status_fila_contrato(
+                        numero_titulo,
+                        "EXTRAIDO",
+                        {
+                            "dados_extraidos": True,
+                            "saldo_total": dados_validacao.get("saldo_total", 0.0),
+                            "parcelas_pendentes": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
+                            "pode_reparcelar": dados_validacao.get("pode_reparcelar", False),
+                            "timestamp_extracao": datetime.now().isoformat()
+                        }
+                    )
+
+                    # Adicionar ID do documento aos dados_financeiros
+                    dados_financeiros["documento_mongodb_id"] = documento_persistencia["_id"]
+
+                except Exception as e:
+                    self.log_erro(
+                        f"⚠️ Erro na persistência MongoDB: {str(e)}", e)
+                    # Não falha o processo, mas registra o erro
+                    dados_financeiros["erro_persistencia"] = str(e)
             else:
-                # Fallback com dados vazios se planilha não processada
+                # ✅ FALLBACK - Tentar recuperar dados do banco antes de falhar
+                try:
+                    from core.mongodb_manager import mongodb_manager
+
+                    # ✅ CORREÇÃO: Usar instância global em vez de criar nova
+                    if not mongodb_manager.conectado:
+                        await mongodb_manager.conectar()
+
+                    # Buscar dados já extraídos no banco (últimas 7 dias)
+                    dados_banco = await mongodb_manager.buscar_dados_extraidos_recentes(numero_titulo, dias=7)
+
+                    if dados_banco:
+                        self.log_progresso(
+                            f"🔄 FALLBACK: Dados encontrados no banco para {numero_titulo}")
+                        self.log_progresso(
+                            f"📅 Extração original: {dados_banco.get('timestamp_extracao', 'N/A')}")
+
+                        # Usar dados do banco como fallback
+                        dados_financeiros = dados_banco.get(
+                            "dados_financeiros", {})
+                        dados_financeiros["fonte_dados"] = "FALLBACK_MONGODB"
+                        dados_financeiros["sucesso"] = True
+
+                        # Registrar uso do fallback
+                        await mongodb_manager.registrar_uso_fallback(numero_titulo, "dados_extraidos_sienge")
+
+                        return dados_financeiros
+                    else:
+                        self.log_progresso(
+                            f"❌ FALLBACK: Nenhum dado recente encontrado no banco para {numero_titulo}")
+
+                except Exception as e:
+                    self.log_erro(f"⚠️ Erro no fallback MongoDB: {str(e)}", e)
+
+                # Fallback com dados vazios se planilha não processada E não há dados no banco
                 dados_financeiros = {
                     "cliente":
                     cliente,
@@ -473,7 +586,8 @@ class RPASienge(BaseRPA):
                     False,
                     "erro":
                     dados_planilha.get("erro",
-                                       "Falha no processamento da planilha")
+                                       "Falha no processamento da planilha"),
+                    "fonte_dados": "ERRO_SEM_FALLBACK"
                 }
 
             self.log_progresso(
@@ -802,11 +916,40 @@ class RPASienge(BaseRPA):
                             "erro_calculo": calculo_resultado.get("erro")
                         })
 
-            # Simular processamento de reparcelamento com valores calculados
+            # ✅ EXECUTAR WEBSCRAPING REAL DE REPARCELAMENTO
+            self.log_progresso(
+                "🌐 Executando webscraping de reparcelamento no Sienge...")
+
+            # Montar parâmetros para webscraping
+            parametros_navegacao = {
+                "numero_titulo": contrato.get("numero_titulo", ""),
+                "cliente": contrato.get("cliente", ""),
+                "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047",
+                "valores_sienge": calculo_resultado.get("valores_sienge", {}),
+                "saldo_anterior": saldo_atual,
+                "saldo_novo": calculo_resultado.get("novo_saldo", saldo_atual),
+                "fator_correcao": calculo_resultado.get("fator_correcao", 1),
+                "igpm_aplicado": calculo_resultado.get("igpm_utilizado", 0),
+                "pode_reparcelar": dados_validacao.get("pode_reparcelar", False),
+                "status_cliente": dados_validacao.get("status_cliente", "adimplente"),
+                "qtd_ct_vencidas": dados_validacao.get("qtd_ct_vencidas", 0),
+                "valor_parcela_original": dados_validacao.get("valor_parcela_atual", 1000.0),
+                "qtd_parcelas_ct_total": dados_validacao.get("qtd_parcelas_ct_a_vencer", 12),
+                "dia_vencimento_identificado": dados_validacao.get("dia_vencimento_identificado", 10),
+                "timestamp_carregamento": datetime.now().isoformat()
+            }
+
+            # ✅ CHAMA O WEBSCRAPING REAL!
+            resultado_webscraping = await self._navegar_e_executar_reparcelamento(parametros_navegacao)
+
+            if not resultado_webscraping.get("sucesso", False):
+                raise Exception(
+                    f"Falha no webscraping: {resultado_webscraping.get('erro', 'Erro desconhecido')}")
+
+            # Estruturar resultado com dados do webscraping
             resultado_reparcelamento = {
                 "sucesso": True,
-                "novo_titulo_gerado":
-                f"REP_{contrato.get('numero_titulo', '')}_2025",
+                "novo_titulo_gerado": resultado_webscraping.get("novo_titulo_gerado", f"REP_{contrato.get('numero_titulo', '')}_2025"),
                 "valor_anterior": saldo_atual,
                 "valor_corrigido": calculo_resultado.get("novo_saldo"),
                 "igpm_aplicado": calculo_resultado.get("igpm_utilizado"),
@@ -814,6 +957,7 @@ class RPASienge(BaseRPA):
                 "parcelas_processadas": parcelas_pendentes,
                 "valores_sienge": calculo_resultado.get("valores_sienge"),
                 "indices_aplicados": indices,
+                "webscraping_resultado": resultado_webscraping,
                 "timestamp_reparcelamento": datetime.now().isoformat()
             }
 
@@ -855,66 +999,83 @@ class RPASienge(BaseRPA):
                 mensagem="Falha no processamento de reparcelamento",
                 erro=erro_msg)
 
-    async def _gerar_carne_sienge(self, contrato: Dict[str,
-                                                       Any]) -> Dict[str, Any]:
+    async def _gerar_carne_sienge(self, contrato: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Gera carnê atualizado no Sienge (placeholder)
+        Gera carnê atualizado no Sienge após reparcelamento
+
+        🔍 RESPONSABILIDADE: USUÁRIO (WEBSCRAPING)
+        📋 CONFORME: DIVISAO_RESPONSABILIDADES.md
+
+        IMPLEMENTAÇÃO NECESSÁRIA:
+        1. Navegar para tela de geração de carnê
+        2. Buscar contrato por número do título
+        3. Selecionar contrato na lista
+        4. Clicar em gerar carnê
+        5. Aguardar download/processamento
+        6. Verificar se carnê foi gerado com sucesso
+
+        Args:
+            contrato: Dados do contrato para gerar carnê
+
+        Returns:
+            Dict com resultado da geração do carnê
         """
         try:
-            self.log_progresso("📄 Gerando carnê atualizado...")
+            numero_titulo = contrato.get("numero_titulo", "")
+            cliente = contrato.get("cliente", "")
 
-            # TODO: Implementar webscraping para geração de carnê
+            self.log_progresso(
+                f"📄 Gerando carnê atualizado para contrato {numero_titulo}...")
+
+            # TODO: IMPLEMENTAR WEBSCRAPING (RESPONSABILIDADE DO USUÁRIO)
+            #
+            # PASSOS SUGERIDOS:
+            # 1. self.get_page("https://jmservicos.sienge.com.br/sienge/8/index.html#/financeiro/contas-receber/carne")
+            # 2. Localizar campo de busca por título/contrato
+            # 3. Inserir numero_titulo e buscar
+            # 4. Localizar linha do contrato nos resultados
+            # 5. Selecionar contrato (checkbox ou clique)
+            # 6. Clicar em botão "Gerar carnê"
+            # 7. Aguardar processamento e download
+            # 8. Verificar se arquivo foi baixado com sucesso
+
+            # PLACEHOLDER - REMOVER QUANDO IMPLEMENTAR WEBSCRAPING
+            self.log_progresso(
+                "⚠️ WEBSCRAPING NÃO IMPLEMENTADO - Simulando geração...")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            nome_arquivo = f"carne_{contrato.get('numero_titulo', 'indefinido')}_{timestamp}.pdf"
+            nome_arquivo = f"carne_{numero_titulo}_{timestamp}.pdf"
+            caminho_arquivo = f"outputs/carnes/{nome_arquivo}"
+
+            # Criar diretório se não existir
+            Path("outputs/carnes").mkdir(parents=True, exist_ok=True)
+
+            # SIMULAÇÃO DE SUCESSO (para teste)
+            self.log_progresso(
+                "✅ Carnê simulado com sucesso (IMPLEMENTAR WEBSCRAPING)")
 
             return {
                 "sucesso": True,
                 "nome_arquivo": nome_arquivo,
-                "caminho_arquivo": f"outputs/carnes/{nome_arquivo}",
-                "timestamp_geracao": datetime.now().isoformat()
+                "caminho_arquivo": caminho_arquivo,
+                "numero_titulo": numero_titulo,
+                "cliente": cliente,
+                "timestamp_geracao": datetime.now().isoformat(),
+                "observacoes": "PLACEHOLDER - Implementar webscraping real",
+                "webscraping_implementado": False
             }
 
         except Exception as e:
             erro_msg = f"Erro na geração do carnê: {str(e)}"
             self.log_erro(erro_msg, e)
-            return {"sucesso": False, "erro": erro_msg}
 
-    async def executar_reparcelamento_webscraping(self,
-                                                  numero_titulo: Optional[str] = None
-                                                  ) -> ResultadoRPA:
-        """
-        MÉTODO PRINCIPAL PARA EXECUÇÃO DO REPARCELAMENTO
-        Carrega dados da fila e executa webscraping no Sienge
-
-        Args:
-            numero_titulo: Número específico do título ou None para próximo da fila
-
-        Returns:
-            ResultadoRPA com sucesso/erro do processamento
-        """
-        if numero_titulo is None:
-            numero_titulo = ""
-        try:
-            self.log_progresso("🚀 INICIANDO EXECUÇÃO DE REPARCELAMENTO")
-            self.log_progresso("=" * 50)
-
-            # 1. CARREGAR DADOS DA FILA
-            # resultado_carga = await self.carregar_dados_fila_reparcelamento(
-            #     numero_titulo)
-            # O método 'carregar_dados_fila_reparcelamento' não existe na classe. Ajuste ou implemente conforme necessário.
-            self.log_progresso(
-                "[ATENÇÃO] O método 'carregar_dados_fila_reparcelamento' não está implementado nesta classe. Implemente ou ajuste o fluxo aqui.")
-            return ResultadoRPA(sucesso=False, mensagem="Método 'carregar_dados_fila_reparcelamento' não implementado.", erro="Método ausente")
-
-        except Exception as e:
-            erro_msg = f"Erro na execução do reparcelamento: {str(e)}"
-            self.log_erro(erro_msg, e)
-
-            return ResultadoRPA(sucesso=False,
-                                mensagem="Falha na execução do reparcelamento",
-                                erro=erro_msg)
-        # Garantir retorno padrão
-        return ResultadoRPA(sucesso=False, mensagem="Execução não concluída", erro="Fluxo inesperado")
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "numero_titulo": contrato.get("numero_titulo", ""),
+                "cliente": contrato.get("cliente", ""),
+                "timestamp_erro": datetime.now().isoformat(),
+                "webscraping_implementado": False
+            }
 
     async def _navegar_e_executar_reparcelamento(
             self, parametros: Dict[str, Any]) -> Dict[str, Any]:
@@ -1047,23 +1208,32 @@ class RPASienge(BaseRPA):
                     # Abrir planilha
                     planilha = self.cliente_sheets.open_by_key(planilha_id)
 
-                    # PREENCHER DADOS DO RELATÓRIO SIENGE (Passo 9.1.2 do PDD)
-                    # Isso alimenta as fórmulas da planilha para calcular automaticamente
+                    # ✅ BUSCAR DADOS EXTRAÍDOS DO MONGODB (VALORES CORRETOS)
+                    dados_mongodb = await self._buscar_dados_extraidos_mongodb(parametros.get("numero_titulo", ""))
+
+                    if not dados_mongodb:
+                        raise Exception(
+                            "Dados extraídos não encontrados no MongoDB - necessário executar FASE 3A primeiro")
+
+                    dados_validacao_mongodb = dados_mongodb.get(
+                        "dados_validacao", {})
+
+                    # ✅ PREENCHER DADOS DIRETOS DO MONGODB (CONFORME PERSISTIDOS NO NÍVEL RAIZ)
                     resultado_planilha = await self._preencher_dados_relatorio_sienge(planilha, {
-                        "cliente": parametros.get("cliente", ""),
-                        "numero_titulo": parametros.get("numero_titulo", ""),
+                        "cliente": dados_mongodb.get("cliente", parametros.get("cliente", "")),
+                        "numero_titulo": dados_mongodb.get("numero_titulo", parametros.get("numero_titulo", "")),
                         "dados_validacao": {
-                            # CORRIGIDO: usar total de parcelas do contrato, não apenas as selecionadas
-                            "qtd_parcelas_ct_a_vencer": parametros.get("qtd_parcelas_ct_total", parcelas_selecionadas),
-                            # CORRIGIDO: usar valor original do relatório
-                            "valor_parcela_atual": parametros.get("valor_parcela_original", 1000.0),
-                            "saldo_total": parametros.get("saldo_anterior", 0),
-                            "dia_vencimento": 10,  # Valor padrão conforme PDD
-                            "status_cliente": parametros.get("status_cliente", "adimplente"),
+                            # ✅ DADOS DIRETOS DO MONGODB NÍVEL RAIZ (CONFORME BANCO MOSTRADO)
+                            "qtd_parcelas_ct_a_vencer": dados_mongodb.get("parcelas_pendentes", 0),
+                            "valor_parcela_atual": dados_mongodb.get("valor_parcela_atual", 0.0),
+                            "saldo_total": dados_mongodb.get("saldo_total", 0.0),
+                            "dia_vencimento": dados_mongodb.get("dia_vencimento_identificado", 10),
+                            "status_cliente": dados_mongodb.get("status_cliente", "adimplente"),
+                            "cliente_inadimplente": dados_mongodb.get("cliente_inadimplente", False),
                             "parcelas_rec_fat": []
                         },
                         "regras_pdd_aplicadas": {
-                            "primeiro_vencimento_carne": (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')
+                            "primeiro_vencimento_carne": dados_mongodb.get("primeiro_vencimento_carne", (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y'))
                         }
                     })
 
@@ -1094,17 +1264,19 @@ class RPASienge(BaseRPA):
                         "⏸️ BREAKPOINT: Retroalimentação concluída!")
                     self.log_progresso(
                         "📋 Verifique na planilha se os campos foram preenchidos:")
+                    # ✅ MOSTRAR DADOS CORRETOS DO MONGODB NÍVEL RAIZ (QUE FORAM USADOS NA PLANILHA)
                     self.log_progresso(
-                        f"   📄 Parcelas a vencer: {parametros.get('qtd_parcelas_ct_total', parcelas_selecionadas)} (total do contrato)")
+                        f"   📄 Parcelas a vencer: {dados_mongodb.get('parcelas_pendentes', 0)} (do MongoDB)")
                     self.log_progresso(
                         f"   📄 Parcelas selecionadas: {parcelas_selecionadas} (para reparcelamento)")
                     self.log_progresso(
-                        f"   💰 Valor da Parcela Base: R$ {parametros.get('valor_parcela_original', 1000.0):,.2f} (do relatório Sienge)")
+                        f"   💰 Valor da Parcela Base: R$ {dados_mongodb.get('valor_parcela_atual', 0.0):,.2f} (do MongoDB)")
                     self.log_progresso(
-                        f"   💰 Saldo devedor Base: R$ {parametros.get('saldo_anterior', 0):,.2f}")
-                    self.log_progresso(f"   📅 Dia de vencimento: 10")
+                        f"   💰 Saldo devedor Base: R$ {dados_mongodb.get('saldo_total', 0.0):,.2f}")
                     self.log_progresso(
-                        f"   📅 1º vencimento carnê: {(datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y')}")
+                        f"   📅 Dia de vencimento: {dados_mongodb.get('dia_vencimento_identificado', 10)} (do MongoDB)")
+                    self.log_progresso(
+                        f"   📅 1º vencimento carnê: {dados_mongodb.get('primeiro_vencimento_carne', (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y'))}")
                     self.log_progresso(f"   📊 Indexador: IGPM")
                     self.log_progresso(f"   💰 Juros %: 8.0%")
                     self.log_progresso(f"   📋 Tipo condição: PM")
@@ -1193,82 +1365,98 @@ class RPASienge(BaseRPA):
                     self.log_progresso(
                         f"💰 Preenchendo valor total: R$ {valor_total:,.2f} (da planilha)")
 
+                    # ✅ FORMATAR VALOR PARA O SIENGE (TROCAR PONTO POR VÍRGULA)
+                    valor_total_formatado = str(valor_total).replace('.', ',')
+                    self.log_progresso(
+                        f"💰 Valor formatado para Sienge: {valor_total_formatado}")
+
+                    self.send_text(
+                        xpath='//input[@type="text" and @id="vlTotal"]', text=valor_total_formatado, clear=True)
                     # Quantidade de parcelas: parcelas a vencer da planilha
+                    time.sleep(1)
                     qtd_parcelas = valores_calculados.get(
                         "parcelas_a_vencer", 0)
                     self.log_progresso(
                         f"📄 Preenchendo quantidade de parcelas: {qtd_parcelas} (da planilha)")
-
+                    self.send_text(
+                        xpath='//input[@type="text" and @id="qtParcelas"]', text=str(qtd_parcelas))
                     # Data 1º vencimento: 1º vencimento carnê da planilha
                     data_primeiro_vencimento = valores_calculados.get(
                         "primeiro_vencimento_carne", "")
                     self.log_progresso(
                         f"📅 Preenchendo data 1º vencimento: {data_primeiro_vencimento} (da planilha)")
+                    self.send_text(
+                        xpath='//input[@type="text" and @id="dt1Vencto"]', text=str(data_primeiro_vencimento))
 
-                    # TODO: Implementar preenchimento dos campos com os valores da planilha
-                    # - Campo valor total
-                    # - Campo quantidade parcelas
-                    # - Campo data primeiro vencimento
-                    # - Campo indexador (1 IGP-M)
-                    # - Campo tipo de juros (Nenhum)
+                    # Campo indexador (1 IGP-M)
 
-                    # IMPLEMENTAR: Campos com valores fixos obrigatórios
-                    # - Portador: "1 Carteira" (NÃO alterar)
-                    # - Operação cobrança: "0 Cobrança em Carteira" (NÃO alterar)
-                    # - Indexador: "1 IGP-M" (SEMPRE IGP-M)
+                    indexador_obj = self.find_element(
+                        xpath='//input[@id="indexador.indexadorPK.cdIndexador"]')
+                    if indexador_obj:
+                        self.send_text(
+                            xpath='//input[@id="indexador.indexadorPK.cdIndexador"]', text="1")
+                        # tem que dar um TAB aqui para dar certo a pesquisa, usando o TAB do teclado
+                        indexador_obj.send_keys(Keys.TAB)
+                        time.sleep(1)  # Aguardar carregamento da pesquisa
+                    else:
+                        self.log_erro("Elemento não encontrado: indexador.indexadorPK.cdIndexador", Exception(
+                            "Elemento não encontrado: indexador.indexadorPK.cdIndexador"))
+                        return {"sucesso": False, "erro": "Elemento não encontrado: indexador.indexadorPK.cdIndexador"}
 
-                    # IMPLEMENTAR: Campos da planilha
-                    # - Valor total: valores_sienge["valor_total"]
-                    # - Quantidade parcelas: calculado pelo sistema
-                    # - Data 1º vencimento: valores_sienge["data_primeiro_vencimento"]
-
-                    # CONFIGURAÇÃO OBRIGATÓRIA DE JUROS (Passo 25 continuação)
-                    # - Tipo de juros: "Nenhum" (OBRIGATÓRIO)
-                    # - Percentual: NÃO alterar
-                    # - Data base: NÃO alterar
-                    # TODO: Clicar em "Confirmar"
-
+                    # Clicar em "Confirmar"
+                    self.click(
+                        xpath='//button[@type="button" and @id="CondicaoRowFormConfirmar"]')
+                    self.click(
+                        xpath='//input[@type="button" and @name="btNext" and @value="Próximo"]')
+                    time.sleep(1)
                     # PASSO 26-28: VALIDAÇÃO E FINALIZAÇÃO
+                    self.check_for_error()
+
+                    self.click(
+                        xpath='//input[@type="button" and @name="btNext" and @value="Próximo"]')
+                    time.sleep(1)
+
                     self.log_progresso(
                         "🔧 PASSOS 26-28: Processando finalização...")
 
-                    # IMPLEMENTAR: Validações automáticas do sistema
-                    # - Verificar mensagem de diferença entre valores
-                    # - Confirmar parcelas do novo parcelamento
                     # - Anotar valor da diferença
+                    # - Pegar o valor do campo diferença
+                    diferenca_valor = self.find_element(
+                        xpath='//input[@type="text" and @id="vlDiferenca"]')
+                    if diferenca_valor:
+                        # Aqui no caso preciso pegar o atributo value do campo
+                        diferenca_valor_text = diferenca_valor.get_attribute(
+                            "value")
+                        self.log_progresso(
+                            f"🔍 Valor da diferença: {diferenca_valor_text}")
+                        self.send_text(
+                            xpath='//input[@type="text" and @id="vlCorrecao"]', text=str(diferenca_valor_text))
+                        self.click(
+                            xpath='//input[@type="button" and @name="btSave" and @value="Salvar"]')
+                        time.sleep(1)
+                        self.check_for_error()
 
-                    # REGRA CRÍTICA: Replicar valor "Diferença" no campo "Correção"
-                    # TODO: Clicar em "Próximo"
-                    # TODO: Clicar em "OK"
-                    # TODO: Localizar campo "Correção"
-                    # TODO: Replicar exatamente o valor do campo "Diferença"
+                    else:
+                        self.log_erro("Elemento não encontrado: vlDiferenca", Exception(
+                            "Elemento não encontrado: vlDiferenca"))
+                        return {"sucesso": False, "erro": "Elemento não encontrado: vlDiferenca"}
 
-                    # TRATAMENTO DE ERRO ESPECÍFICO (Passo 27)
-                    # Mensagem: "O somatório do valor dos campos 'correção', 'juros' e 'aditivo'
-                    # deve ser igual ao valor do campo 'diferença'."
-                    # TODO: Se erro aparecer, repetir valor diferença no campo correção
+                    if self.check_for_error(xpath="//span[text()='Sucesso']/following::p[contains(text(), 'Reparcelamento realizado com sucesso.')]"):
+                        self.log_progresso(
+                            "📋 Todos os passos PDD (21-28) executados com sucesso")
 
-                    # CONFIRMAÇÃO FINAL (Passo 28)
-                    # TODO: Clicar em "Salvar"
-                    # TODO: Clicar em "OK" na mensagem
-                    # TODO: Verificar confirmação de atualização
-
-                    # PLACEHOLDER - SUBSTITUA PELA IMPLEMENTAÇÃO REAL
-                    novo_titulo_gerado = f"REP_{numero_titulo}_{datetime.now().strftime('%Y%m%d')}"
-
-                    self.log_progresso(
-                        f"✅ REPARCELAMENTO FINALIZADO - Novo título: {novo_titulo_gerado}")
-                    self.log_progresso(
-                        "📋 Todos os passos PDD (21-28) executados com sucesso")
-
-                    return {
-                        "sucesso": True,
-                        "novo_titulo": novo_titulo_gerado,
-                        "parcelas_processadas": parcelas_selecionadas,
-                        "valores_aplicados": valores_calculados,
-                        "passos_pdd_executados": "21-28",
-                        "timestamp_webscraping": datetime.now().isoformat()
-                    }
+                        return {
+                            "sucesso": True,
+                            "novo_titulo": "",
+                            "parcelas_processadas": parcelas_selecionadas,
+                            "valores_aplicados": valores_calculados,
+                            "passos_pdd_executados": "21-28",
+                            "timestamp_webscraping": datetime.now().isoformat()
+                        }
+                    else:
+                        self.log_erro("Erro ao executar reparcelamento", Exception(
+                            "Erro ao executar reparcelamento"))
+                        return {"sucesso": False, "erro": "Erro ao executar reparcelamento"}
 
         except Exception as e:
             erro_msg = f"Erro no webscraping PDD: {str(e)}"
@@ -1279,22 +1467,33 @@ class RPASienge(BaseRPA):
         return {"sucesso": False, "erro": "Fluxo inesperado no webscraping"}
 
     async def _atualizar_status_fila_reparcelamento(
-            self, id_fila: str, novo_status: str,
+            self, numero_titulo: str, novo_status: str,
             dados_resultado: Dict[str, Any]):
-        """Atualiza status do contrato na fila de reparcelamento"""
+        """Atualiza status do contrato na fila de reparcelamento usando mongodb_manager global"""
         try:
-            if id_fila is None or id_fila == "":
-                self.log_erro("id_fila não informado para atualização de status na fila!", Exception(
-                    "id_fila não informado para atualização de status na fila!"))
+            if numero_titulo is None or numero_titulo == "":
+                self.log_erro("numero_titulo não informado para atualização de status na fila!", Exception(
+                    "numero_titulo não informado para atualização de status na fila!"))
                 raise ValueError(
-                    "id_fila não informado para atualização de status na fila!")
+                    "numero_titulo não informado para atualização de status na fila!")
             if not isinstance(dados_resultado, dict):
                 dados_resultado = {}
-            from core.data_manager import data_manager
-            resultado = await data_manager.atualizar_status_fila_sienge(id_fila or '', novo_status)
-            self.log_progresso(
-                f"📊 Status atualizado na fila: {id_fila} → {novo_status} | Resultado: {resultado}"
-            )
+
+            # ✅ CORREÇÃO: Usar mongodb_manager global em vez de data_manager
+            from core.mongodb_manager import mongodb_manager
+
+            if mongodb_manager.conectado:
+                await mongodb_manager.atualizar_status_fila_contrato(
+                    numero_titulo,
+                    novo_status,
+                    dados_resultado
+                )
+                self.log_progresso(
+                    f"📊 Status atualizado na fila: {numero_titulo} → {novo_status}"
+                )
+            else:
+                self.log_erro("MongoDB não conectado - não foi possível atualizar status",
+                              Exception("MongoDB não conectado"))
         except Exception as e:
             self.log_erro(f"Erro ao atualizar status na fila: {str(e)}", e)
 
@@ -1410,6 +1609,8 @@ class RPASienge(BaseRPA):
                 "valor_parcela_original": dados_validacao.get("valor_parcela_atual", 1000.0),
                 # ADICIONADO: total de parcelas CT do contrato
                 "qtd_parcelas_ct_total": dados_validacao.get("qtd_parcelas_ct_a_vencer", 12),
+                # CORRIGIDO: dia de vencimento do relatório extraído
+                "dia_vencimento_identificado": dados_validacao.get("dia_vencimento_identificado", dados_validacao.get("dia_vencimento", 10)),
                 "timestamp_carregamento": datetime.now().isoformat()
             }
             self.log_progresso(
@@ -1446,7 +1647,7 @@ class RPASienge(BaseRPA):
         """
         try:
             if not caminho_credenciais:
-                caminho_credenciais = ".credentials/gspread-459713-aab8a657f9b0.json"
+                caminho_credenciais = "credentials/gspread-459713-aab8a657f9b0.json"
 
             self.log_progresso(
                 f"Conectando ao Google Sheets com credenciais: {caminho_credenciais}")
@@ -1466,6 +1667,8 @@ class RPASienge(BaseRPA):
             # Autoriza cliente
             self.cliente_sheets = gspread.authorize(credenciais)
             self.log_progresso("✅ Conectado ao Google Sheets com sucesso")
+
+            return self.cliente_sheets
 
         except Exception as e:
             raise Exception(f"Falha na conexão com Google Sheets: {str(e)}")
@@ -1865,57 +2068,96 @@ class RPASienge(BaseRPA):
 
     async def _preencher_dados_relatorio_sienge(self, planilha, dados_financeiros: Dict[str, Any]):
         """
-        Preenche dados do relatório Sienge na planilha Base de cálculo
-        Conforme PDD seção 9.1.2 + campos base necessários (SEM fórmulas)
+        Preenche dados extraídos do relatório Sienge na planilha BASE DE CÁLCULO
+        Conforme PDD seção 9.1.2 - dados do Sienge alimentam as fórmulas da planilha
 
-        CAMPOS QUE SÃO FÓRMULAS (NÃO PREENCHEMOS):
-        - % Reajuste total (fórmula complexa)
-        - Parcela final (calculada pela planilha)  
-        - Saldo devedor final (calculado pela planilha)
-        - Próximo reajuste (calculado pela planilha)
+        Args:
+            planilha: Instância da planilha Google Sheets
+            dados_financeiros: Dados extraídos do relatório Sienge
+
+        Returns:
+            Dict com resultado do preenchimento
         """
+        # ✅ CORREÇÃO: Import de datetime no escopo do método
+        from datetime import datetime, date, timedelta
+
         try:
             self.log_progresso(
                 "📊 Preenchendo dados do relatório Sienge na planilha BASE DE CÁLCULO...")
 
-            # Extrair dados validados
-            dados_validacao = dados_financeiros.get("dados_validacao", {})
-
-            # Verificar se cliente é inadimplente
-            status_cliente = dados_validacao.get("status_cliente", "").upper()
-            cliente_inadimplente = status_cliente == "INADIMPLENTE"
-
-            if cliente_inadimplente:
-                self.log_progresso("🚫 CLIENTE INADIMPLENTE DETECTADO!")
-                self.log_progresso(
-                    "📋 Conforme PDD: Preenchendo apenas PENDÊNCIAS SIENGE INAD e encerrando processamento")
-
-            # Preparar dados para preenchimento
+            # ✅ EXTRAIR DADOS DO CONTRATO (DIRETO DOS PARÂMETROS)
+            # Cliente e numero_titulo vêm no nível raiz dos dados_financeiros
             cliente = dados_financeiros.get("cliente", "")
             numero_titulo = dados_financeiros.get("numero_titulo", "")
 
-            # Valores extraídos do relatório
-            dia_vencimento = dados_validacao.get("dia_vencimento")
-            if not dia_vencimento:
-                dia_vencimento = 10  # Padrão conforme análise
+            # Dados de validação estão na estrutura aninhada
+            dados_validacao = dados_financeiros.get("dados_validacao", {})
+            cliente_inadimplente = dados_validacao.get(
+                "cliente_inadimplente", False)
+
+            # ✅ DEBUG: Mostrar dados recebidos
+            self.log_progresso(f"🔍 DEBUG - Cliente recebido: '{cliente}'")
+            self.log_progresso(
+                f"🔍 DEBUG - Número título recebido: '{numero_titulo}'")
+            self.log_progresso(
+                f"🔍 DEBUG - Dados validação disponíveis: {list(dados_validacao.keys())}")
+
+            if not cliente or not numero_titulo:
+                self.log_progresso("❌ Dados insuficientes para preenchimento")
+                self.log_progresso(
+                    f"❌ Cliente vazio: {not cliente}, Título vazio: {not numero_titulo}")
+                return {"deve_interromper_processamento": False}
+
+            # Acessar aba BASE DE CÁLCULO
+            aba_base_calculo = planilha.worksheet("Base de cálculo")
+
+            # ✅ PREPARAR DADOS PARA PREENCHIMENTO CONFORME PDD
+            # PRIORIDADE: dia_vencimento > dia_vencimento_identificado > fallback 10
+            dia_vencimento = dados_validacao.get("dia_vencimento") or dados_validacao.get(
+                "dia_vencimento_identificado") or 10
+
+            # Se for string, converter para int
+            if isinstance(dia_vencimento, str):
+                try:
+                    dia_vencimento = int(dia_vencimento)
+                except:
+                    dia_vencimento = 10
+
+            # Garantir que está entre 1 e 31 (dias válidos)
+            if not isinstance(dia_vencimento, int) or dia_vencimento < 1 or dia_vencimento > 31:
+                dia_vencimento = 10
+
+            self.log_progresso(
+                f"📅 Dia de vencimento extraído/calculado: {dia_vencimento}")
 
             primeiro_vencimento = dados_validacao.get(
                 "primeiro_vencimento_carne", "")
             if not primeiro_vencimento:
                 # Calcular baseado no dia de vencimento e mês base
-                from datetime import date, datetime
                 hoje = date.today()
                 proximo_mes = hoje.replace(day=1) + timedelta(days=32)
                 proximo_mes = proximo_mes.replace(day=1)
                 primeiro_vencimento = proximo_mes.replace(
                     day=dia_vencimento).strftime("%Y-%m-%d")
 
+            # ✅ CORREÇÃO: Preparar valor da parcela como número
+            valor_parcela_base = dados_validacao.get("valor_parcela_atual", 0)
+            if isinstance(valor_parcela_base, str):
+                try:
+                    # Remover formatação de moeda se houver
+                    valor_parcela_base = float(valor_parcela_base.replace(
+                        'R$', '').replace('.', '').replace(',', '.').strip())
+                except:
+                    valor_parcela_base = 0.0
+            elif not isinstance(valor_parcela_base, (int, float)):
+                valor_parcela_base = 0.0
+
             # Mapear dados para preenchimento na planilha
             dados_preenchimento = {
                 "PENDÊNCIAS SIENGE INAD": "Inadimplência" if cliente_inadimplente else "",
                 "PENDÊNCIAS SIENGE": dados_validacao.get("pendencias_sienge", ""),
                 "Parcelas a vencer": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
-                "Valor da Parcela Base": dados_validacao.get("valor_parcela_atual", 0),
+                "Valor da Parcela Base": valor_parcela_base,  # ✅ CORREÇÃO: Agora é sempre número
                 "Dia de vencimento de parcelas": dia_vencimento,
                 "1º vencimento carnê": primeiro_vencimento,
 
@@ -1928,7 +2170,7 @@ class RPASienge(BaseRPA):
             }
 
             # Buscar linha do contrato na planilha
-            todas_linhas = planilha.get_all_values()
+            todas_linhas = aba_base_calculo.get_all_values()
             cabecalho = todas_linhas[0] if todas_linhas else []
 
             # Encontrar linha do contrato
@@ -1974,18 +2216,28 @@ class RPASienge(BaseRPA):
                     celula = f"{chr(65 + coluna_idx)}{linha_contrato}"
 
                     try:
-                        # Formatar valor conforme tipo
-                        if isinstance(valor, (int, float)) and valor == 0:
-                            valor_formatado = valor
-                        elif campo == "1º vencimento carnê" and valor:
-                            valor_formatado = valor
+                        # ✅ CORREÇÃO: Formatação específica por campo
+                        if campo == "Valor da Parcela Base":
+                            # Enviar como número para que as fórmulas funcionem
+                            valor_formatado = valor_parcela_base
+                        elif campo == "Parcelas a vencer":
+                            # Enviar como número inteiro
+                            valor_formatado = int(valor) if valor else 0
                         elif campo == "Dia de vencimento de parcelas":
+                            # Enviar como número inteiro
                             valor_formatado = int(valor) if valor else 10
+                        elif campo == "1º vencimento carnê" and valor:
+                            # Manter como string de data
+                            valor_formatado = valor
+                        elif isinstance(valor, (int, float)) and valor == 0:
+                            # Números zero
+                            valor_formatado = valor
                         else:
+                            # Texto e outros valores
                             valor_formatado = str(valor) if valor else ""
 
                         # Enviar para planilha
-                        planilha.update(celula, valor_formatado)
+                        aba_base_calculo.update_acell(celula, valor_formatado)
                         campos_preenchidos += 1
 
                     except Exception as e:
@@ -2009,7 +2261,7 @@ class RPASienge(BaseRPA):
                 self.log_progresso(
                     f"📊 Parcelas pendentes: {dados_validacao.get('qtd_parcelas_ct_a_vencer', 0)}")
                 self.log_progresso(
-                    f"📊 Valor parcela atual: R$ {dados_validacao.get('valor_parcela_atual', 0):,.2f}")
+                    f"📊 Valor parcela atual: R$ {valor_parcela_base:,.2f}")
                 self.log_progresso(
                     f"📊 1º vencimento carnê: {primeiro_vencimento}")
                 return {"deve_interromper_processamento": False}
@@ -2324,23 +2576,37 @@ class RPASienge(BaseRPA):
             # Obter cabeçalhos para mapear colunas
             cabecalhos = aba_base_calculo.row_values(1)
 
+            # DEBUG: Mostrar todas as colunas disponíveis
+            self.log_progresso(
+                f"🔍 DEBUG - Colunas disponíveis na planilha ({len(cabecalhos)}):")
+            for i, cabecalho in enumerate(cabecalhos):
+                self.log_progresso(f"   {i}: '{cabecalho}'")
+
             # Mapear colunas importantes conforme PDD (APENAS CAMPOS COM VALORES/FÓRMULAS)
             colunas_mapeadas = {}
             for i, cabecalho in enumerate(cabecalhos):
-                cabecalho_upper = str(cabecalho).upper()
+                cabecalho_upper = str(cabecalho).upper().strip()
                 # Campos que têm valores calculados pelas fórmulas da planilha
-                if 'SALDO DEVEDOR FINAL' in cabecalho_upper:
+                # ✅ MELHORADO: Incluir "SALDO DEVEDOR" sem "FINAL"
+                if 'SALDO DEVEDOR FINAL' in cabecalho_upper or 'SALDO FINAL' in cabecalho_upper or 'SALDO DEVEDOR' in cabecalho_upper:
                     colunas_mapeadas['saldo_devedor_final'] = i
-                elif 'PARCELAS A VENCER' in cabecalho_upper:
+                elif 'PARCELAS A VENCER' in cabecalho_upper or 'QTD PARCELAS' in cabecalho_upper:
                     colunas_mapeadas['parcelas_a_vencer'] = i
-                elif '1º VENCIMENTO CARNÊ' in cabecalho_upper or '1º VENCIMENTO CARNE' in cabecalho_upper:
+                elif '1º VENCIMENTO CARNÊ' in cabecalho_upper or '1º VENCIMENTO CARNE' in cabecalho_upper or 'PRIMEIRO VENCIMENTO' in cabecalho_upper:
                     colunas_mapeadas['primeiro_vencimento_carne'] = i
-                elif 'PARCELA FINAL' in cabecalho_upper:
+                elif 'PARCELA FINAL' in cabecalho_upper or 'VALOR FINAL' in cabecalho_upper:
                     colunas_mapeadas['parcela_final'] = i
-                elif 'REAJUSTE TOTAL' in cabecalho_upper:
+                elif 'REAJUSTE TOTAL' in cabecalho_upper or '% REAJUSTE' in cabecalho_upper:
                     colunas_mapeadas['reajuste_total'] = i
-                elif 'VALOR DA PARCELA BASE' in cabecalho_upper:
+                elif 'VALOR DA PARCELA BASE' in cabecalho_upper or 'PARCELA BASE' in cabecalho_upper:
                     colunas_mapeadas['valor_parcela_base'] = i
+
+            # DEBUG: Mostrar colunas mapeadas
+            self.log_progresso(
+                f"🔍 DEBUG - Colunas mapeadas ({len(colunas_mapeadas)}):")
+            for campo, coluna in colunas_mapeadas.items():
+                self.log_progresso(
+                    f"   {campo}: coluna {coluna} ('{cabecalhos[coluna] if coluna < len(cabecalhos) else 'ERRO'}')")
 
             # Ler valores da linha do contrato
             valores_calculados = {}
@@ -2420,3 +2686,1126 @@ class RPASienge(BaseRPA):
                 "erro": erro_msg,
                 "valores_calculados": {}
             }
+
+    # ============================================================================
+    # PROCESSAMENTO EM LOTE DA FILA DE CONTRATOS
+    # ============================================================================
+    # Métodos para processar collection fila_contratos em duas fases separadas
+    # Persistência adequada: dados extraídos SIM, valores da planilha NÃO
+
+    async def processar_fila_contratos_lote(
+        self,
+        credenciais_sienge: Dict[str, str],
+        indices: Optional[Dict[str, Any]] = None,
+        fase: str = "ambas",  # "extracao", "reparcelamento", "ambas"
+        # Pausar entre cada contrato para controle manual
+        pausar_entre_contratos: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Processa todos os contratos da fila em lote com duas fases separadas
+
+        Args:
+            credenciais_sienge: Credenciais de acesso ao Sienge
+            indices: Índices econômicos (IPCA/IGPM)
+            fase: "extracao", "reparcelamento" ou "ambas"
+            pausar_entre_contratos: Se True, pausará entre cada contrato para controle manual
+
+        Returns:
+            Dict com resultado do processamento
+        """
+        try:
+            self.log_progresso(
+                "🚀 INICIANDO PROCESSAMENTO EM LOTE DA FILA DE CONTRATOS")
+            self.log_progresso("=" * 60)
+
+            # Configura credenciais
+            self._configurar_credenciais(credenciais_sienge)
+
+            # Login no Sienge
+            await self._fazer_login_sienge()
+
+            # Conectar ao MongoDB
+            from core.mongodb_manager import mongodb_manager
+            if not mongodb_manager.conectado:
+                await mongodb_manager.conectar()
+
+            resultado_geral = {
+                "fase_extracao": {"executada": False, "contratos_processados": 0, "contratos_erro": 0},
+                "fase_reparcelamento": {"executada": False, "contratos_processados": 0, "contratos_erro": 0},
+                "contratos_detalhes": [],
+                "timestamp_inicio": datetime.now().isoformat()
+            }
+
+            # FASE 3A: EXTRAÇÃO DE RELATÓRIOS
+            if fase in ["extracao", "ambas"]:
+                self.log_progresso(
+                    "\n📥 FASE 3A: EXTRAÇÃO DE RELATÓRIOS EM LOTE")
+                self.log_progresso("=" * 50)
+
+                resultado_extracao = await self._executar_fase_extracao_lote(pausar_entre_contratos)
+                resultado_geral["fase_extracao"] = resultado_extracao
+
+                if resultado_extracao["contratos_processados"] == 0 and fase == "ambas":
+                    self.log_progresso(
+                        "❌ Nenhum contrato extraído - interrompendo processamento")
+                    return resultado_geral
+
+                if fase == "extracao":
+                    return resultado_geral
+
+            # FASE 3B: REPARCELAMENTO
+            if fase in ["reparcelamento", "ambas"]:
+                self.log_progresso("\n📤 FASE 3B: REPARCELAMENTO EM LOTE")
+                self.log_progresso("=" * 50)
+
+                resultado_reparcelamento = await self._executar_fase_reparcelamento_lote(indices or {}, pausar_entre_contratos)
+                resultado_geral["fase_reparcelamento"] = resultado_reparcelamento
+
+            # Resultado final
+            resultado_geral["timestamp_fim"] = datetime.now().isoformat()
+            resultado_geral["sucesso"] = True
+
+            self.log_progresso("\n✅ PROCESSAMENTO EM LOTE CONCLUÍDO")
+            self.log_progresso("=" * 60)
+
+            return resultado_geral
+
+        except Exception as e:
+            erro_msg = f"Erro no processamento em lote: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "timestamp_erro": datetime.now().isoformat()
+            }
+        finally:
+            await self.finalizar()
+
+    async def _executar_fase_extracao_lote(self, pausar_entre_contratos: bool = True) -> Dict[str, Any]:
+        """
+        Executa FASE 3A: Extração de relatórios para todos os contratos PENDENTES
+        """
+        try:
+            # Buscar contratos PENDENTES
+            contratos_pendentes = await self._buscar_contratos_por_status("PENDENTE")
+
+            if not contratos_pendentes:
+                self.log_progresso(
+                    "⚠️ Nenhum contrato com status PENDENTE encontrado")
+                return {"executada": True, "contratos_processados": 0, "contratos_erro": 0}
+
+            self.log_progresso(
+                f"🔍 Encontrados {len(contratos_pendentes)} contratos para extração")
+
+            contratos_sucesso = 0
+            contratos_erro = 0
+
+            # Processar cada contrato
+            for idx, contrato in enumerate(contratos_pendentes, 1):
+                try:
+                    numero_titulo = contrato.get("numero_titulo", "")
+                    cliente = contrato.get("cliente", "")
+
+                    self.log_progresso(
+                        f"\n📄 EXTRAÇÃO {idx}/{len(contratos_pendentes)}: {numero_titulo}")
+                    self.log_progresso(f"👤 CLIENTE: {cliente}")
+                    self.log_progresso("-" * 40)
+
+                    # Atualizar status para EXTRAINDO
+                    await self._atualizar_status_contrato(numero_titulo, "EXTRAINDO", {
+                        "tentativa_extracao": contrato.get("tentativa_extracao", 1),
+                        "timestamp_inicio_extracao": datetime.now().isoformat()
+                    })
+
+                    # Executar extração
+                    resultado_extracao = await self._consultar_relatorios_financeiros(contrato)
+
+                    if resultado_extracao.get("sucesso"):
+                        # Atualizar status para EXTRAIDO com dados específicos do PDD
+                        dados_extraidos_pdd = resultado_extracao.get(
+                            "dados_extraidos", {})
+                        await self._atualizar_status_contrato(numero_titulo, "EXTRAIDO", {
+                            "dados_extraidos": True,
+
+                            # ✅ DADOS ESPECÍFICOS DO PDD 9.1.1 - PERSISTIR
+                            "saldo_total": resultado_extracao.get("saldo_total", 0.0),
+                            "parcelas_pendentes": dados_extraidos_pdd.get("qtd_parcelas_ct_a_vencer", 0),
+                            "parcelas_vencidas": dados_extraidos_pdd.get("qtd_ct_vencidas", 0),
+                            "valor_parcela_atual": dados_extraidos_pdd.get("valor_parcela_atual", 0.0),
+                            # ✅ CORRIGIDO: Fallback para 10 ao invés de 0
+                            "dia_vencimento_identificado": dados_extraidos_pdd.get("dia_vencimento_identificado", dados_extraidos_pdd.get("dia_vencimento", 10)),
+                            "primeiro_vencimento_carne": dados_extraidos_pdd.get("primeiro_vencimento_carne", ""),
+                            "pendencias_sienge_inad": dados_extraidos_pdd.get("pendencias_sienge_inad", ""),
+                            "pendencias_sienge": dados_extraidos_pdd.get("pendencias_sienge", ""),
+                            "cliente_inadimplente": dados_extraidos_pdd.get("cliente_inadimplente", False),
+                            "status_cliente": dados_extraidos_pdd.get("status_cliente", "adimplente"),
+                            "pode_reparcelar": dados_extraidos_pdd.get("pode_reparcelar", False),
+
+                            # Metadados da extração
+                            "timestamp_extracao_concluida": datetime.now().isoformat(),
+                            "fonte_dados": resultado_extracao.get("fonte_dados", "webscraping")
+                        })
+
+                        contratos_sucesso += 1
+                        self.log_progresso(
+                            f"✅ Extração concluída: {numero_titulo}")
+
+                    else:
+                        # Atualizar status para ERRO
+                        await self._atualizar_status_contrato(numero_titulo, "ERRO", {
+                            "erro_extracao": resultado_extracao.get("erro", "Erro na extração"),
+                            "timestamp_erro": datetime.now().isoformat(),
+                            "fase_erro": "EXTRACAO_RELATORIOS"
+                        })
+
+                        contratos_erro += 1
+                        self.log_progresso(
+                            f"❌ Erro na extração: {numero_titulo}")
+
+                    # Pausa entre contratos se solicitada
+                    if pausar_entre_contratos and idx < len(contratos_pendentes):
+                        self.log_progresso(
+                            f"\n⏸️  PAUSA ENTRE CONTRATOS: {idx}/{len(contratos_pendentes)} processados")
+                        input(
+                            f"   Pressione ENTER para processar próximo contrato ({idx+1}/{len(contratos_pendentes)})...")
+
+                except Exception as e:
+                    contratos_erro += 1
+                    self.log_erro(
+                        f"Erro no contrato {numero_titulo}: {str(e)}", e)
+
+                    await self._atualizar_status_contrato(numero_titulo, "ERRO", {
+                        "erro_extracao": str(e),
+                        "timestamp_erro": datetime.now().isoformat(),
+                        "fase_erro": "EXTRACAO_RELATORIOS"
+                    })
+
+            self.log_progresso(f"\n📊 RESUMO FASE 3A:")
+            self.log_progresso(f"   ✅ Sucessos: {contratos_sucesso}")
+            self.log_progresso(f"   ❌ Erros: {contratos_erro}")
+
+            return {
+                "executada": True,
+                "contratos_processados": contratos_sucesso,
+                "contratos_erro": contratos_erro
+            }
+
+        except Exception as e:
+            self.log_erro(f"Erro na fase de extração: {str(e)}", e)
+            return {"executada": False, "contratos_processados": 0, "contratos_erro": 0}
+
+    async def _executar_fase_reparcelamento_lote(self, indices: Dict[str, Any], pausar_entre_contratos: bool = True) -> Dict[str, Any]:
+        """
+        Executa FASE 3B: Reparcelamento para todos os contratos EXTRAIDOS
+        """
+        try:
+            # Buscar contratos EXTRAIDOS
+            contratos_extraidos = await self._buscar_contratos_por_status("EXTRAIDO")
+
+            if not contratos_extraidos:
+                self.log_progresso(
+                    "⚠️ Nenhum contrato com status EXTRAIDO encontrado")
+                return {"executada": True, "contratos_processados": 0, "contratos_erro": 0}
+
+            self.log_progresso(
+                f"🔧 Encontrados {len(contratos_extraidos)} contratos para reparcelamento")
+
+            contratos_sucesso = 0
+            contratos_erro = 0
+
+            # Processar cada contrato
+            for idx, contrato in enumerate(contratos_extraidos, 1):
+                try:
+                    numero_titulo = contrato.get("numero_titulo", "")
+                    cliente = contrato.get("cliente", "")
+
+                    self.log_progresso(
+                        f"\n📄 REPARCELAMENTO {idx}/{len(contratos_extraidos)}: {numero_titulo}")
+                    self.log_progresso(f"👤 CLIENTE: {cliente}")
+                    self.log_progresso("-" * 40)
+
+                    # Atualizar status para PROCESSANDO
+                    await self._atualizar_status_contrato(numero_titulo, "PROCESSANDO", {
+                        "etapa_atual": "REPARCELAMENTO",
+                        "timestamp_inicio_processamento": datetime.now().isoformat()
+                    })
+
+                    # Buscar dados extraídos do MongoDB (NÃO PERSISTE valores da planilha)
+                    dados_financeiros = await self._buscar_dados_extraidos_mongodb(numero_titulo)
+
+                    if not dados_financeiros:
+                        raise Exception(
+                            "Dados financeiros não encontrados no MongoDB")
+
+                    # Executar reparcelamento (valores da planilha sempre lidos em tempo real)
+                    resultado_reparcelamento = await self._executar_etapa_reparcelamento(
+                        contrato=contrato,
+                        indices=indices,
+                        dados_financeiros=dados_financeiros,
+                        autorizar_reparcelamento=True,
+                        notificar_analista=False
+                    )
+
+                    if resultado_reparcelamento.sucesso:
+                        # Atualizar status para REPARCELADO
+                        await self._atualizar_status_contrato(numero_titulo, "REPARCELADO", {
+                            "processo_completo": True,
+                            "resultado_final": "SUCESSO",
+                            "timestamp_finalizacao": datetime.now().isoformat()
+                        })
+
+                        contratos_sucesso += 1
+                        self.log_progresso(
+                            f"✅ Reparcelamento concluído: {numero_titulo}")
+
+                    else:
+                        # Atualizar status para ERRO
+                        await self._atualizar_status_contrato(numero_titulo, "ERRO", {
+                            "erro_reparcelamento": resultado_reparcelamento.erro or resultado_reparcelamento.mensagem,
+                            "timestamp_erro": datetime.now().isoformat(),
+                            "fase_erro": "REPARCELAMENTO"
+                        })
+
+                        contratos_erro += 1
+                        self.log_progresso(
+                            f"❌ Erro no reparcelamento: {numero_titulo}")
+
+                    # Pausa entre contratos se solicitada
+                    if pausar_entre_contratos and idx < len(contratos_extraidos):
+                        self.log_progresso(
+                            f"\n⏸️  PAUSA ENTRE CONTRATOS: {idx}/{len(contratos_extraidos)} processados")
+                        input(
+                            f"   Pressione ENTER para processar próximo contrato ({idx+1}/{len(contratos_extraidos)})...")
+
+                except Exception as e:
+                    contratos_erro += 1
+                    self.log_erro(
+                        f"Erro no contrato {numero_titulo}: {str(e)}", e)
+
+                    await self._atualizar_status_contrato(numero_titulo, "ERRO", {
+                        "erro_reparcelamento": str(e),
+                        "timestamp_erro": datetime.now().isoformat(),
+                        "fase_erro": "REPARCELAMENTO"
+                    })
+
+            self.log_progresso(f"\n📊 RESUMO FASE 3B:")
+            self.log_progresso(f"   ✅ Sucessos: {contratos_sucesso}")
+            self.log_progresso(f"   ❌ Erros: {contratos_erro}")
+
+            return {
+                "executada": True,
+                "contratos_processados": contratos_sucesso,
+                "contratos_erro": contratos_erro
+            }
+
+        except Exception as e:
+            self.log_erro(f"Erro na fase de reparcelamento: {str(e)}", e)
+            return {"executada": False, "contratos_processados": 0, "contratos_erro": 0}
+
+    async def _buscar_contratos_por_status(self, status: str) -> List[Dict[str, Any]]:
+        """
+        Busca contratos na collection fila_contratos por status
+
+        Args:
+            status: Status dos contratos a buscar (PENDENTE, EXTRAIDO, etc.)
+
+        Returns:
+            Lista de contratos encontrados
+        """
+        try:
+            from core.mongodb_manager import mongodb_manager
+
+            if not mongodb_manager.conectado:
+                await mongodb_manager.conectar()
+
+            if not mongodb_manager.conectado or mongodb_manager.database is None:
+                self.log_erro("MongoDB não conectado ou database não disponível",
+                              Exception("MongoDB não conectado"))
+                return []
+
+            collection = mongodb_manager.database.fila_contratos
+            cursor = collection.find({"status": status})
+            contratos = list(cursor)
+
+            self.log_progresso(
+                f"🔍 Encontrados {len(contratos)} contratos com status {status}")
+
+            return contratos
+
+        except Exception as e:
+            self.log_erro(f"Erro ao buscar contratos: {str(e)}", e)
+            return []
+
+    async def _atualizar_status_contrato(self, numero_titulo: str, status: str, dados_adicionais: Dict[str, Any]):
+        """
+        Atualiza status de um contrato na collection fila_contratos
+
+        Args:
+            numero_titulo: Número do título do contrato
+            status: Novo status
+            dados_adicionais: Dados adicionais para atualizar
+        """
+        try:
+            from core.mongodb_manager import mongodb_manager
+
+            if mongodb_manager.conectado:
+                await mongodb_manager.atualizar_status_fila_contrato(
+                    numero_titulo,
+                    status,
+                    dados_adicionais
+                )
+                self.log_progresso(
+                    f"📊 Status atualizado: {numero_titulo} → {status}")
+            else:
+                self.log_erro("MongoDB não conectado - status não atualizado",
+                              Exception("MongoDB não conectado"))
+
+        except Exception as e:
+            self.log_erro(f"Erro ao atualizar status: {str(e)}", e)
+
+    async def _buscar_dados_extraidos_mongodb(self, numero_titulo: str) -> Optional[Dict[str, Any]]:
+        """
+        Busca dados específicos extraídos do Sienge no MongoDB (conforme PDD 9.1.1)
+
+        Args:
+            numero_titulo: Número do título do contrato
+
+        Returns:
+            Dict com dados extraídos estruturados ou None se não encontrado
+        """
+        try:
+            import asyncio  # Importação local para evitar problemas de escopo
+            from core.mongodb_manager import mongodb_manager
+
+            if not mongodb_manager.conectado or mongodb_manager.database is None:
+                self.log_erro("MongoDB não conectado - não pode buscar dados extraídos",
+                              Exception("MongoDB não conectado"))
+                return None
+
+            def _buscar_contrato():
+                if mongodb_manager.database is None:
+                    return None
+                collection = mongodb_manager.database.fila_contratos
+                contrato = collection.find_one(
+                    {"numero_titulo": numero_titulo})
+                return contrato
+
+            contrato = await asyncio.get_event_loop().run_in_executor(
+                mongodb_manager.executor, _buscar_contrato
+            )
+
+            if not contrato:
+                self.log_erro(f"Contrato {numero_titulo} não encontrado no MongoDB",
+                              Exception("Contrato não encontrado"))
+                return None
+
+            # ✅ RETORNAR DADOS DIRETOS DO MONGODB (CONFORME ESTRUTURA DO BANCO)
+            # Retorna o documento inteiro do MongoDB para uso direto
+            dados_extraidos = contrato.copy()  # Cópia completa do documento MongoDB
+
+            self.log_progresso(
+                f"✅ Dados extraídos recuperados do MongoDB para: {numero_titulo}")
+            return dados_extraidos
+
+        except Exception as e:
+            self.log_erro(f"Erro ao buscar dados extraídos: {str(e)}", e)
+            return None
+
+    # ============================================================================
+    # MÉTODO PARA VALORES DA PLANILHA (SEMPRE LEITURA EM TEMPO REAL)
+    # ============================================================================
+    # CRÍTICO: Valores da planilha NUNCA são persistidos no MongoDB
+    # Sempre lidos diretamente da planilha a cada execução
+
+    async def obter_valores_calculados_planilha_tempo_real(
+        self,
+        numero_titulo: str,
+        cliente: str,
+        planilha_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Obtém valores calculados da planilha em tempo real (NÃO persistidos)
+
+        CRÍTICO: Conforme solicitado pelo usuário, valores da planilha nunca são 
+        persistidos e sempre lidos diretamente da planilha
+
+        Args:
+            numero_titulo: Número do título
+            cliente: Nome do cliente
+            planilha_id: ID da planilha (se não fornecido, pega do ambiente)
+
+        Returns:
+            Dict com valores calculados pela planilha
+        """
+        try:
+            if not planilha_id:
+                planilha_id = os.getenv("PLANILHA_CALCULO_ID")
+
+            if not planilha_id:
+                raise Exception(
+                    "PLANILHA_CALCULO_ID não configurada no ambiente")
+
+            self.log_progresso(
+                f"📊 Lendo valores da planilha em tempo real: {numero_titulo}")
+            self.log_progresso(
+                "⚠️ ATENÇÃO: Valores da planilha NÃO são persistidos (conforme solicitado)")
+
+            # Sempre ler diretamente da planilha
+            resultado = await self._ler_valores_calculados_planilha(
+                planilha_id=planilha_id,
+                cliente=cliente,
+                numero_titulo=numero_titulo
+            )
+
+            if resultado.get("sucesso"):
+                self.log_progresso("✅ Valores lidos da planilha com sucesso")
+                return resultado.get("valores_calculados", {})
+            else:
+                raise Exception(
+                    f"Falha ao ler planilha: {resultado.get('erro')}")
+
+        except Exception as e:
+            self.log_erro(f"Erro ao obter valores da planilha: {str(e)}", e)
+            return {}
+
+    async def processar_fila_geracao_carnes(
+        self,
+        credenciais_sienge: Dict[str, str],
+        pausar_entre_contratos: bool = True
+    ) -> Dict[str, Any]:
+        """
+        FASE 3C: Processamento de geração de carnês em lote
+        Busca contratos com status REPARCELADO e gera carnês por empresa
+
+        Args:
+            credenciais_sienge: Credenciais do Sienge
+            pausar_entre_contratos: Se deve pausar entre cada contrato
+
+        Returns:
+            Dict com resultado do processamento
+        """
+        try:
+            self.log_progresso("🎫 🚀 INICIANDO GERAÇÃO DE CARNÊS EM LOTE")
+            self.log_progresso("=" * 60)
+
+            inicio = datetime.now()
+
+            # Fazer login no Sienge
+            self._configurar_credenciais(credenciais_sienge)
+            await self._fazer_login_sienge()
+            self.log_progresso("✅ Login no Sienge realizado com sucesso")
+
+            # Buscar contratos reparcelados
+            contratos_reparcelados = await self._buscar_contratos_por_status("REPARCELADO")
+
+            if not contratos_reparcelados:
+                self.log_progresso(
+                    "⚠️ Nenhum contrato com status REPARCELADO encontrado")
+                return {
+                    "sucesso": True,
+                    "contratos_processados": 0,
+                    "contratos_erro": 0,
+                    "empresas_processadas": 0,
+                    "timestamp_inicio": inicio.isoformat(),
+                    "timestamp_fim": datetime.now().isoformat(),
+                    "detalhes": "Nenhum contrato para gerar carnê"
+                }
+
+            self.log_progresso(
+                f"🎫 Encontrados {len(contratos_reparcelados)} contratos para geração de carnê")
+
+            # Agrupar contratos por empresa (para eficiência)
+            contratos_por_empresa = await self._agrupar_contratos_por_empresa(contratos_reparcelados)
+
+            contratos_processados = 0
+            contratos_erro = 0
+            empresas_processadas = 0
+
+            # Processar cada empresa
+            for empresa, contratos_empresa in contratos_por_empresa.items():
+                self.log_progresso(f"\n🏢 PROCESSANDO EMPRESA: {empresa}")
+                self.log_progresso(
+                    f"📋 {len(contratos_empresa)} contratos para esta empresa")
+                self.log_progresso("-" * 50)
+
+                try:
+                    # Preparar parâmetros para geração de carnê da empresa
+                    parametros_empresa = await self._preparar_parametros_carne_empresa(empresa, contratos_empresa)
+
+                    if pausar_entre_contratos:
+                        self.log_progresso(
+                            f"⏸️ PAUSAR ANTES DA EMPRESA: {empresa}")
+                        input(
+                            f"   Pressione ENTER para processar empresa {empresa}...")
+
+                    # TODO: USUÁRIO - Implementar webscraping de geração de carnê
+                    resultado_carne = await self._gerar_carne_empresa_sienge(parametros_empresa)
+
+                    if resultado_carne.get("sucesso", False):
+                        # Atualizar status dos contratos para CARNE_GERADO
+                        for idx, contrato in enumerate(contratos_empresa, 1):
+                            await self._atualizar_status_contrato(
+                                contrato["numero_titulo"],
+                                "CARNE_GERADO",
+                                {
+                                    "arquivo_remessa": resultado_carne.get("arquivo_remessa", ""),
+                                    "timestamp_carne_gerado": datetime.now().isoformat(),
+                                    "empresa": empresa
+                                }
+                            )
+                            # Pausa entre contratos se solicitado
+                            if pausar_entre_contratos and idx < len(contratos_empresa):
+                                self.log_progresso(
+                                    f"\n⏸️  PAUSA ENTRE CONTRATOS: {idx}/{len(contratos_empresa)} processados na empresa {empresa}")
+                                input(
+                                    f"   Pressione ENTER para processar próximo contrato ({idx+1}/{len(contratos_empresa)})...")
+
+                        contratos_processados += len(contratos_empresa)
+                        empresas_processadas += 1
+                        self.log_progresso(
+                            f"✅ Carnês gerados para empresa {empresa}: {len(contratos_empresa)} contratos")
+                    else:
+                        contratos_erro += len(contratos_empresa)
+                        self.log_progresso(
+                            f"❌ Erro na geração de carnês para empresa {empresa}")
+
+                except Exception as e:
+                    self.log_erro(
+                        f"Erro no processamento da empresa {empresa}: {str(e)}", e)
+                    contratos_erro += len(contratos_empresa)
+
+            fim = datetime.now()
+
+            self.log_progresso("\n🎫 GERAÇÃO DE CARNÊS CONCLUÍDA")
+            self.log_progresso("=" * 60)
+            self.log_progresso(
+                f"✅ Contratos processados: {contratos_processados}")
+            self.log_progresso(f"❌ Contratos com erro: {contratos_erro}")
+            self.log_progresso(
+                f"🏢 Empresas processadas: {empresas_processadas}")
+            self.log_progresso(f"⏱️ Tempo total: {fim - inicio}")
+
+            return {
+                "sucesso": contratos_erro == 0,
+                "contratos_processados": contratos_processados,
+                "contratos_erro": contratos_erro,
+                "empresas_processadas": empresas_processadas,
+                "timestamp_inicio": inicio.isoformat(),
+                "timestamp_fim": fim.isoformat()
+            }
+
+        except Exception as e:
+            erro_msg = f"Erro na geração de carnês em lote: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg,
+                "timestamp_erro": datetime.now().isoformat()
+            }
+
+    async def _agrupar_contratos_por_empresa(self, contratos: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Agrupa contratos por empresa para geração eficiente de carnês
+        """
+        try:
+            contratos_agrupados = {}
+
+            for contrato in contratos:
+                # Usar campo 'empresa' do contrato (vem do campo 'Loteamento' da planilha)
+                empresa_loteamento = contrato.get("empresa", "").strip()
+
+                # Se não tem empresa definida, usar padrão
+                if not empresa_loteamento:
+                    empresa_loteamento = "EMPRESA_PADRAO"
+
+                # Buscar nome correto da empresa na collection empresa_sicredi
+                empresa_correta = await self._buscar_nome_empresa_sicredi(empresa_loteamento)
+
+                # Agrupar por empresa correta
+                if empresa_correta not in contratos_agrupados:
+                    contratos_agrupados[empresa_correta] = []
+
+                contratos_agrupados[empresa_correta].append(contrato)
+
+            self.log_progresso(
+                f"📊 Contratos agrupados: {len(contratos_agrupados)} empresas")
+
+            # Log detalhado do agrupamento
+            for empresa, lista_contratos in contratos_agrupados.items():
+                self.log_progresso(
+                    f"   🏢 {empresa}: {len(lista_contratos)} contratos")
+
+            return contratos_agrupados
+
+        except Exception as e:
+            self.log_erro(
+                f"Erro ao agrupar contratos por empresa: {str(e)}", e)
+            # Fallback: agrupar todos em empresa padrão
+            return {"EMPRESA_PADRAO": contratos}
+
+    async def _preparar_parametros_carne_empresa(self, empresa: str, contratos: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Prepara parâmetros para geração de carnê de uma empresa específica
+        A empresa já foi corrigida pelo método _buscar_nome_empresa_sicredi
+
+        Args:
+            empresa: Nome correto da empresa (já buscado na collection empresa_sicredi)
+            contratos: Lista de contratos da empresa
+
+        Returns:
+            Dict com parâmetros para webscraping
+        """
+        try:
+            # Calcular período conforme PDD 10.2
+            primeiro_vencimento = None
+            for contrato in contratos:
+                vencimento = contrato.get("primeiro_vencimento_carne", "")
+                if vencimento:
+                    primeiro_vencimento = vencimento
+                    break
+
+            if not primeiro_vencimento:
+                # Fallback: próximo mês
+                proximo_mes = datetime.now().replace(day=1) + timedelta(days=32)
+                primeiro_vencimento = proximo_mes.replace(
+                    day=10).strftime("%d/%m/%Y")
+
+            # Data final: mesmo mês/dia do ano seguinte
+            try:
+                data_inicial = datetime.strptime(
+                    primeiro_vencimento, "%Y-%m-%d")
+                data_inicial_formatada = data_inicial.strftime("%d/%m/%Y")
+                data_final = data_inicial.replace(year=data_inicial.year + 1)
+                data_final_formatada = data_final.strftime("%d/%m/%Y")
+            except:
+                # Fallback se formato estiver diferente
+                data_inicial_formatada = primeiro_vencimento
+                ano_atual = datetime.now().year
+                data_final_formatada = primeiro_vencimento.replace(
+                    str(ano_atual), str(ano_atual + 1))
+
+            # Filtrar apenas contratos sem pendências (conforme PDD 10.2)
+            contratos_validos = []
+            for contrato in contratos:
+                # Verificar pendências conforme PDD
+                pendencia_pmfi = contrato.get("pendencias_pmfi", "")
+                pendencia_sienge_inad = contrato.get(
+                    "pendencias_sienge_inad", "")
+                pendencia_sienge = contrato.get("pendencias_sienge", "")
+
+                if not pendencia_pmfi and not pendencia_sienge_inad and not pendencia_sienge:
+                    contratos_validos.append(contrato)
+                else:
+                    self.log_progresso(
+                        f"⚠️ Contrato {contrato.get('numero_titulo')} tem pendências - carnê não será gerado")
+
+            parametros = {
+                "empresa": empresa,  # Nome correto da empresa
+                # Nome original do Loteamento
+                "empresa_original": contratos[0].get("empresa", "") if contratos else "",
+                "contratos": contratos_validos,
+                "data_inicial": data_inicial_formatada,
+                "data_final": data_final_formatada,
+                "total_contratos": len(contratos_validos),
+                "total_contratos_pendencias": len(contratos) - len(contratos_validos)
+            }
+
+            self.log_progresso(f"📋 Parâmetros preparados para {empresa}:")
+            self.log_progresso(
+                f"   📅 Período: {data_inicial_formatada} → {data_final_formatada}")
+            self.log_progresso(
+                f"   ✅ Contratos válidos: {len(contratos_validos)}")
+            self.log_progresso(
+                f"   ⚠️ Contratos com pendências: {len(contratos) - len(contratos_validos)}")
+
+            return parametros
+
+        except Exception as e:
+            self.log_erro(
+                f"Erro ao preparar parâmetros da empresa {empresa}: {str(e)}", e)
+            return {
+                "empresa": empresa,
+                "contratos": contratos,
+                "erro": str(e)
+            }
+
+    async def _gerar_carne_empresa_sienge(self, parametros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        TODO: USUÁRIO - Implementar webscraping para geração de carnê no Sienge
+
+        Deve implementar conforme PDD 10.2:
+        1. Navegar: Financeiro → Contas a Receber → Cobrança Escritural → Geração de Arquivos de remessa
+        2. Preencher período (data_inicial → data_final)
+        3. Selecionar empresa (nome correto da empresa_sicredi)
+        4. Configurar conta corrente
+        5. Marcar opções obrigatórias
+        6. Gerar arquivo de remessa
+
+        Args:
+            parametros: Parâmetros preparados pelo processamento
+
+        Returns:
+            Dict com resultado da geração
+        """
+        try:
+            empresa = parametros.get("empresa", "")  # Nome correto da empresa
+            empresa_original = parametros.get(
+                "empresa_original", "")  # Nome original do Loteamento
+            contratos = parametros.get("contratos", [])
+
+            self.log_progresso(
+                f"🎫 TODO: Implementar webscraping para geração de carnê")
+            self.log_progresso(f"📋 Empresa (corrigida): {empresa}")
+            if empresa_original and empresa_original != empresa:
+                self.log_progresso(f"📋 Empresa (original): {empresa_original}")
+            self.log_progresso(f"📋 Contratos: {len(contratos)}")
+            self.log_progresso(
+                f"📅 Período: {parametros.get('data_inicial')} → {parametros.get('data_final')}")
+
+            # TODO: IMPLEMENTAR WEBSCRAPING CONFORME PDD 10.2
+            # Navegar para Financeiro → Contas a Receber → Cobrança Escritural → Geração de Arquivos de remessa
+            self.get(
+                url='https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1919')
+            time.sleep(5)
+            with self.on_iframe(xpath='//iframe[@id="iFramePage"]'):
+                if self.check_for_error(xpath='(//img[contains(@src, "botProcurar.png") and @title="Abre a consulta"])[1]'):
+                    self.log_progresso(
+                        "✅ Página de geração de carnê encontrada")
+                    self.click(xpath='(//img[@title="Abre a consulta"])[1]')
+                    time.sleep(1)
+                    with self.on_iframe(xpath='//iframe[@id="layerFormConsulta"]'):
+                        empresa_campo_pesquisa = self.find_element(
+                            xpath='//input[@id="entity.nmEmpresa"]')
+                        if empresa_campo_pesquisa:
+                            self.send_text(
+                                xpath='//input[@id="entity.nmEmpresa"]', text=empresa)
+                            time.sleep(1)
+                            self.click(
+                                xpath='//input[@id="pbProcurar" and @type="button"]')
+                            time.sleep(1)
+                            # verificar se a empresa foi encontrada
+                            # navegar nos resultados e pegar o primeiro valor
+                            tabela_resultados = self.find_element(
+                                xpath='//table[@id="tabelaResultado"]')
+                            if tabela_resultados:
+                                # Localiza a primeira linha, significa se nao achar nada tem que lancar excecao no padrao de erro
+                                # self.log_erro("Página de geração de carnê não encontrada", Exception("Página de geração de carnê não encontrada")) return {"sucesso": False, "erro": "Página de geração de carnê não encontrada"}
+                                primeira_linha = tabela_resultados.find_element(
+                                    By.XPATH, ".//tbody/tr[1]")
+                                if not primeira_linha:
+                                    self.log_erro("Nenhuma linha encontrada na grid de resultados.", Exception(
+                                        "Nenhuma linha encontrada na grid de resultados."))
+                                    return {"sucesso": False, "erro": "Nenhuma linha encontrada na grid de resultados."}
+                                    # Localiza o radio na primeira célula
+                                radio = primeira_linha.find_element(
+                                    By.XPATH, "./td[1]/input[@type='radio']")
+                                if not radio:
+                                    self.log_erro("Nenhum radio button encontrado na primeira linha da grid.", Exception(
+                                        "Nenhum radio button encontrado na primeira linha da grid."))
+                                    return {"sucesso": False, "erro": "Nenhum radio button encontrado na primeira linha da grid."}
+                                # 4. Clica no primeiro radio button da primeira linha
+                                radio.click()
+                    time.sleep(1)
+                    with self.on_iframe(xpath='//iframe[@id="iFramePage"]'):
+                        self.click(
+                            xpath='//input[@id="pbSelecionar" and @type="button"]')
+                        time.sleep(1)
+                        self.click(
+                            xpath='//input[@id="entity.flIncluirTituloInadimplente" and @type="checkbox"]')
+                        time.sleep(1)
+                        self.click(
+                            xpath='//input[@id="entity.flIncluirTituloSubJudice" and @type="checkbox"]')
+                        time.sleep(1)
+                        self.click(
+                            xpath='(//img[contains(@src, "botProcurar.png") and @title="Abre a consulta"])[13]')
+                        with self.on_iframe(xpath='//iframe[@id="layerFormConsulta"]'):
+                            # verificar se a empresa foi encontrada
+                            # navegar nos resultados e pegar o primeiro valor
+                            nome_conta_corrente_pesquisa = self.find_element(
+                                xpath='//input[@id="entity.nmConta" and @type="text"]')
+                            if nome_conta_corrente_pesquisa:
+                                self.send_text(
+                                    xpath='//input[@id="entity.nmConta" and @type="text"]', text=empresa)
+                                time.sleep(1)
+                                self.click(
+                                    xpath='//input[@id="pbProcurar" and @type="button"]')
+                                time.sleep(1)
+                                # verificar se a empresa foi encontrada
+                                # navegar nos resultados e pegar o primeiro valor
+                                tabela_resultados = self.find_element(
+                                    xpath='//table[@id="tabelaResultado"]')
+                                if tabela_resultados:
+                                    # Localiza a primeira linha, significa se nao achar nada tem que lancar excecao no padrao de erro
+                                    primeira_linha = tabela_resultados.find_element(
+                                        By.XPATH, ".//tbody/tr[1]")
+                                    if not primeira_linha:
+                                        self.log_erro("Nenhuma linha encontrada na grid de resultados.", Exception(
+                                            "Nenhuma linha encontrada na grid de resultados."))
+                                        return {"sucesso": False, "erro": "Nenhuma linha encontrada na grid de resultados."}
+                                        # Localiza o radio na primeira célula
+                                    radio = primeira_linha.find_element(
+                                        By.XPATH, "./td[1]/input[@type='radio']")
+                                    if not radio:
+                                        self.log_erro("Nenhum radio button encontrado na primeira linha da grid.", Exception(
+                                            "Nenhum radio button encontrado na primeira linha da grid."))
+                                        return {"sucesso": False, "erro": "Nenhum radio button encontrado na primeira linha da grid."}
+                                    # 4. Clica no primeiro radio button da primeira linha
+                                    radio.click()
+                        time.sleep(1)
+                        with self.on_iframe(xpath='//iframe[@id="iFramePage"]'):
+                            # ✅ IMPLEMENTAÇÃO: Gerar nome do arquivo de remessa conforme PDD 10.2
+                            # Pegar o valor do número da conta do cliente:
+                            numero_conta_cliente = self.find_element(
+                                xpath='//input[@id="entity.contaCorrente.contaCorrentePK.nuConta" and @type="text"]')
+                            if numero_conta_cliente:
+                                numero_conta_cliente_text = numero_conta_cliente.text
+                                self.log_progresso(
+                                    f"🔍 Número da conta do cliente: {numero_conta_cliente_text}")
+
+                                # Obter sequencial para esta empresa
+                                sequencial_remessa = self.find_element(
+                                    xpath='//input[@id="entity.contaCorrente.nuRemessaCob" and @type="text"]')
+                                if sequencial_remessa:
+                                    sequencial_remessa_text = sequencial_remessa.text
+                                    self.log_progresso(
+                                        f"🔍 Sequencial da remessa: {sequencial_remessa_text}")
+                                # Gerar nome do arquivo conforme PDD 10.2
+                                nome_arquivo_remessa = self._gerar_nome_arquivo_remessa(
+                                    empresa=empresa,
+                                    numero_conta=str(
+                                        numero_conta_cliente_text) if numero_conta_cliente_text else "",
+                                    sequencial=sequencial_remessa_text
+                                )
+
+                                self.log_progresso(
+                                    f"📄 Arquivo de remessa: {nome_arquivo_remessa}")
+
+                                # TODO: Preencher campo "Nome de arquivo de remessa" no Sienge
+                                self.send_text(
+                                    xpath='//input[@id="entity.nmArquivoRemessa" and @type="text"]', text=nome_arquivo_remessa)
+                                time.sleep(1)
+                                mensagem_remessa = self.find_element(
+                                    xpath='//input[@id="entity.contaCorrente.cdMensagemRemessa" and @type="text"]')
+                                if mensagem_para:
+                                    self.send_text(
+                                        xpath='//input[@id="entity.dsMensagemPara" and @type="text"]', text="1")
+                                    time.sleep(1)
+                                    mensagem_remessa.send_keys(Keys.TAB)
+                                    time.sleep(1)
+
+                                    mensagem_remessa.send_keys(Keys.ENTER)
+                                    time.sleep(1)
+                                    self.check_for_error()
+                                    time.sleep(1)
+                                    self.click(
+                                        xpath='//input[@id="pbFechar" and @type="button"]')
+                                else:
+                                    self.log_erro("Mensagem para não encontrada.", Exception(
+                                        "Mensagem para não encontrada."))
+                            else:
+                                self.log_erro("Número da conta do cliente não encontrado.", Exception(
+                                    "Número da conta do cliente não encontrado."))
+                                return {"sucesso": False, "erro": "Número da conta do cliente não encontrado."}
+
+            # Por enquanto, simular sucesso para desenvolvimento
+
+            self.log_progresso(
+                "⚠️ SIMULAÇÃO: Carnê gerado com sucesso (implementar webscraping real)")
+
+            return {
+                "sucesso": True,
+                "arquivo_remessa": nome_arquivo_remessa if 'nome_arquivo_remessa' in locals() else f"REMESSA_{empresa}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rem",
+                "contratos_processados": len(contratos),
+                "empresa": empresa,
+                "empresa_original": empresa_original,
+                "timestamp_geracao": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            erro_msg = f"Erro na geração de carnê para empresa {parametros.get('empresa', 'N/A')}: {str(e)}"
+            self.log_erro(erro_msg, e)
+            return {
+                "sucesso": False,
+                "erro": erro_msg
+            }
+
+    async def _buscar_nome_empresa_sicredi(self, empresa_loteamento: str) -> str:
+        """
+        Busca o nome correto da empresa na collection empresa_sicredi
+        usando query de contains (tudo maiúsculo)
+
+        Args:
+            empresa_loteamento: Nome da empresa do campo 'Loteamento' da planilha
+
+        Returns:
+            Nome correto da empresa ou o original se não encontrado
+        """
+        try:
+            from core.mongodb_manager import mongodb_manager
+
+            if not mongodb_manager.conectado:
+                await mongodb_manager.conectar()
+
+            if not hasattr(mongodb_manager, 'database') or mongodb_manager.database is None:
+                self.log_progresso(
+                    "⚠️ MongoDB não conectado - usando nome original")
+                return empresa_loteamento
+
+            # Converter para maiúsculo para busca
+            empresa_upper = empresa_loteamento.upper().strip()
+
+            if not empresa_upper:
+                return empresa_loteamento
+
+            # Buscar na collection empresa_sicredi
+            collection = mongodb_manager.database.empresa_sicredi
+
+            # Query de contains (case insensitive)
+            resultado = collection.find_one({
+                "$or": [
+                    {"nome": {"$regex": empresa_upper, "$options": "i"}},
+                    {"nome_abreviado": {"$regex": empresa_upper, "$options": "i"}},
+                    {"codigo": {"$regex": empresa_upper, "$options": "i"}}
+                ]
+            })
+
+            if resultado:
+                nome_correto = resultado.get("nome", empresa_loteamento)
+                self.log_progresso(
+                    f"✅ Empresa encontrada: '{empresa_loteamento}' → '{nome_correto}'")
+                return nome_correto
+            else:
+                self.log_progresso(
+                    f"⚠️ Empresa não encontrada na collection empresa_sicredi: '{empresa_loteamento}'")
+                return empresa_loteamento
+
+        except Exception as e:
+            self.log_erro(
+                f"Erro ao buscar empresa '{empresa_loteamento}': {str(e)}", e)
+            return empresa_loteamento
+
+    async def _atualizar_status_carne_gerado(self, contratos: List[Dict[str, Any]], resultado_carne: Dict[str, Any]):
+        """
+        Atualiza status dos contratos para CARNE_GERADO após geração bem-sucedida
+
+        Args:
+            contratos: Lista de contratos processados
+            resultado_carne: Resultado da geração do carnê
+        """
+        try:
+            from core.mongodb_manager import mongodb_manager
+
+            if not mongodb_manager.conectado:
+                await mongodb_manager.conectar()
+
+            if not hasattr(mongodb_manager, 'database') or mongodb_manager.database is None:
+                self.log_progresso(
+                    "⚠️ MongoDB não conectado - não foi possível atualizar status")
+                return
+
+            collection = mongodb_manager.database.fila_contratos
+            contratos_atualizados = 0
+
+            for contrato in contratos:
+                numero_titulo = contrato.get("numero_titulo", "")
+                if numero_titulo:
+                    # Atualizar status para CARNE_GERADO
+                    resultado_update = collection.update_one(
+                        {"numero_titulo": numero_titulo},
+                        {
+                            "$set": {
+                                "status": "CARNE_GERADO",
+                                "timestamp_carne_gerado": datetime.now().isoformat(),
+                                "arquivo_remessa": resultado_carne.get("arquivo_remessa", ""),
+                                "empresa_carne": resultado_carne.get("empresa", ""),
+                                "empresa_original_carne": resultado_carne.get("empresa_original", ""),
+                                "contratos_processados_carne": resultado_carne.get("contratos_processados", 0)
+                            }
+                        }
+                    )
+
+                    if resultado_update.modified_count > 0:
+                        contratos_atualizados += 1
+                        self.log_progresso(
+                            f"✅ Status atualizado para CARNE_GERADO: {numero_titulo}")
+                    else:
+                        self.log_progresso(
+                            f"⚠️ Contrato não encontrado para atualização: {numero_titulo}")
+
+            self.log_progresso(
+                f"📊 Total de contratos atualizados: {contratos_atualizados}")
+
+        except Exception as e:
+            self.log_erro(
+                f"Erro ao atualizar status para CARNE_GERADO: {str(e)}", e)
+
+    def _gerar_nome_arquivo_remessa(self, empresa: str, numero_conta: str, sequencial: int = 1) -> str:
+        """
+        Gera nome do arquivo de remessa conforme PDD 10.2
+
+        Regras:
+        - Primeiros 5 dígitos da conta corrente
+        - Número do mês (2 dígitos)
+        - Número do dia (2 dígitos)
+        - Ponto (.)
+        - Número sequencial da remessa
+
+        Exceções:
+        - Rio Almada: usar 06300 ao invés da conta
+        - SPE RESIDENCIAL PARQUE DA LAGOA: usar 01870 ao invés da conta
+
+        Args:
+            empresa: Nome da empresa
+            numero_conta: Número da conta corrente
+            sequencial: Número sequencial da remessa (padrão: 1)
+
+        Returns:
+            Nome do arquivo de remessa formatado
+        """
+        try:
+            # Obter data atual
+            data_atual = datetime.now()
+            mes = data_atual.month
+            dia = data_atual.day
+
+            # Regras específicas conforme PDD 10.2
+            if "RIO ALMADA" in empresa.upper():
+                prefixo_conta = "06300"
+                self.log_progresso(
+                    f"🏢 Rio Almada detectado - usando prefixo: {prefixo_conta}")
+            elif "SPE RESIDENCIAL PARQUE DA LAGOA" in empresa.upper():
+                prefixo_conta = "01870"
+                self.log_progresso(
+                    f"🏢 SPE RESIDENCIAL PARQUE DA LAGOA detectado - usando prefixo: {prefixo_conta}")
+            else:
+                # Usar primeiros 5 dígitos da conta corrente
+                if numero_conta and len(numero_conta) >= 5:
+                    prefixo_conta = numero_conta[:5]
+                else:
+                    # Fallback se não conseguir extrair 5 dígitos
+                    prefixo_conta = numero_conta if numero_conta else "00000"
+                    self.log_progresso(
+                        f"⚠️ Conta inválida - usando fallback: {prefixo_conta}")
+
+            # Formatar componentes
+            mes_formatado = f"{mes:02d}"
+            dia_formatado = f"{dia:02d}"
+            sequencial_formatado = f"{sequencial:04d}"
+
+            # Montar nome do arquivo conforme PDD
+            nome_arquivo = f"{prefixo_conta}{mes_formatado}{dia_formatado}.{sequencial_formatado}"
+
+            self.log_progresso(
+                f"📄 Nome arquivo remessa gerado: {nome_arquivo}")
+            self.log_progresso(f"   🏢 Empresa: {empresa}")
+            self.log_progresso(
+                f"   📅 Data: {dia_formatado}/{mes_formatado}/{data_atual.year}")
+            self.log_progresso(f"   🔢 Sequencial: {sequencial_formatado}")
+
+            return nome_arquivo
+
+        except Exception as e:
+            self.log_erro(
+                f"Erro ao gerar nome do arquivo de remessa: {str(e)}", e)
+            # Fallback em caso de erro
+            return f"REMESSA_{empresa}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rem"

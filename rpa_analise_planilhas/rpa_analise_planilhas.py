@@ -849,16 +849,17 @@ class RPAAnalisePlanilhas(BaseRPA):
     async def _gerar_fila_processamento(self, contratos_reajuste: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Gera fila de processamento para os próximos RPAs (Sienge e Sicredi)
+        ✅ ATUALIZADO: Compatível com novo modelo "um a um" + data_manager.py
 
         Args:
             contratos_reajuste: Lista de contratos que precisam reajuste
 
         Returns:
-            Fila de processamento estruturada
+            Fila de processamento estruturada para novo modelo
         """
         try:
             self.log_progresso(
-                "Gerando fila de processamento para RPAs Sienge e Sicredi")
+                "Gerando fila de processamento compatível com modelo 'um a um'")
 
             fila_processamento = []
 
@@ -879,6 +880,7 @@ class RPAAnalisePlanilhas(BaseRPA):
                                    contrato.get('ultimo_reajuste') or
                                    'N/A')
 
+                # ✅ NOVO: Estrutura compatível com modelo "um a um" + persistência MongoDB
                 item_fila = {
                     "id_fila": f"reajuste_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     "numero_titulo": numero_titulo,
@@ -891,9 +893,33 @@ class RPAAnalisePlanilhas(BaseRPA):
                     "ultimo_reajuste": ultimo_reajuste,
                     "dias_desde_ultimo_reajuste": contrato.get('dias_desde_ultimo_reajuste', 0),
                     "linha_planilha": contrato.get('linha_planilha', 0),
-                    "status_processamento": "pendente",
-                    "prioridade": self._calcular_prioridade(contrato),
+
+                    # ✅ NOVO: Status granular para modelo "um a um"
+                    "status_processamento": "PENDENTE",  # Status inicial padronizado
                     "timestamp_identificacao": datetime.now().isoformat(),
+                    "timestamp_ultima_atualizacao": datetime.now().isoformat(),
+
+                    # ✅ NOVO: Campos para controle de processo e fallback
+                    "tentativas_processamento": 0,
+                    "max_tentativas": 3,
+                    "forcar_nova_extracao": False,  # Flag para forçar webscraping
+                    "origem_identificacao": "rpa_analise_planilhas",
+
+                    # ✅ NOVO: Campos para auditoria e rastreamento
+                    "validacao_pdd_previa": contrato.get('validacao_pdd', '{}'),
+                    "motivo_elegibilidade": contrato.get('motivo_elegibilidade', ''),
+                    "mes_reajuste_original": contrato.get('mes_reajuste_original', ''),
+                    "prioridade": self._calcular_prioridade(contrato),
+
+                    # ✅ NOVO: Metadados para sistema de persistência
+                    "metadata": {
+                        "versao_fila": "2.0_um_a_um",
+                        "data_identificacao": datetime.now().isoformat(),
+                        "usuario_identificacao": os.getenv("USER", "sistema"),
+                        "ambiente": os.getenv("AMBIENTE", "desenvolvimento")
+                    },
+
+                    # Dados completos preservados para compatibilidade
                     "dados_completos": contrato
                 }
 
@@ -903,11 +929,11 @@ class RPAAnalisePlanilhas(BaseRPA):
             fila_processamento.sort(
                 key=lambda x: x['prioridade'], reverse=True)
 
-            # Salva fila no MongoDB para os próximos RPAs
-            await self._salvar_fila_mongodb(fila_processamento)
+            # ✅ NOVO: Salva fila usando data_manager.py (MongoDB + JSON)
+            await self._salvar_fila_data_manager(fila_processamento)
 
             self.log_progresso(
-                f"✅ Fila de processamento gerada com {len(fila_processamento)} itens")
+                f"✅ Fila de processamento gerada com {len(fila_processamento)} itens (modelo um a um)")
 
             return fila_processamento
 
@@ -948,48 +974,123 @@ class RPAAnalisePlanilhas(BaseRPA):
 
         return prioridade
 
-    async def _salvar_fila_mongodb(self, fila_processamento: List[Dict[str, Any]]):
+    async def _salvar_fila_data_manager(self, fila_processamento: List[Dict[str, Any]]):
         """
-        Salva fila usando sistema unificado (MongoDB + JSON simultâneo)
+        ✅ CORRIGIDO: Salva cada contrato como documento individual na collection fila_processamento_sienge
+        Conforme implementação original - um documento por contrato para processamento individual
 
         Args:
             fila_processamento: Lista de itens da fila
         """
         try:
+            # ✅ USA EXCLUSIVAMENTE data_manager.py
             from core.data_manager import data_manager
 
-            # Prepara estrutura da fila para o RPA Sienge
             if fila_processamento:
+                self.log_progresso(
+                    f"💾 Salvando {len(fila_processamento)} contratos individualmente no MongoDB...")
+
+                contratos_salvos = 0
+                contratos_falharam = 0
+
+                # ✅ CORRIGIDO: Salva cada contrato como documento separado
                 for contrato in fila_processamento:
-                    contrato["status_processamento"] = "pendente"
-                    contrato["timestamp_identificacao"] = datetime.now().isoformat()
-                    contrato["processado_em"] = None
-                    contrato["erro_processamento"] = None
+                    try:
+                        # ✅ FORMATO PADRONIZADO conforme solicitado + CAMPOS ESPECÍFICOS PDD
+                        documento_contrato = {
+                            # MongoDB gerará _id automaticamente
+                            "numero_titulo": contrato["numero_titulo"],
+                            "cliente": contrato["cliente"],
+                            # Campo 'Loteamento' da planilha
+                            "empresa": contrato.get("empreendimento", ""),
+                            "status": "PENDENTE",  # Status inicial sempre PENDENTE
+                            "tentativa_extracao": 1,
+                            "timestamp_inicio_extracao": datetime.now().isoformat(),
+                            "timestamp_ultima_atualizacao": datetime.now(),
 
-                estrutura_fila = {
-                    "total_contratos": len(fila_processamento),
-                    "status_geral": "ativo",
-                    "contratos": fila_processamento
-                }
+                            # Campos que serão preenchidos durante processamento
+                            "dados_extraidos": False,
+                            "parcelas_pendentes": 0,
+                            "pode_reparcelar": True,  # Inicialmente True, será validado no Sienge
+                            "saldo_total": 0,
+                            "timestamp_extracao": "",
+                            "fonte_dados": "",
+                            "timestamp_extracao_concluida": "",
+                            "etapa_atual": "",
+                            "timestamp_inicio_processamento": "",
+                            "processo_completo": False,
+                            "resultado_final": "",
+                            "timestamp_finalizacao": "",
 
-                # ✅ USA SISTEMA UNIFICADO - MongoDB + JSON simultâneo
-                resultados = await data_manager.salvar_fila_sienge(estrutura_fila)
+                            # ✅ NOVOS CAMPOS ESPECÍFICOS DO PDD 9.1.1 - Valores padrão/vazios
+                            "parcelas_vencidas": 0,
+                            "valor_parcela_atual": 0.0,
+                            "dia_vencimento_identificado": 0,
+                            "primeiro_vencimento_carne": "",
+                            "pendencias_sienge_inad": "",
+                            "pendencias_sienge": "",
+                            "cliente_inadimplente": False,
+                            "status_cliente": "pendente_validacao"  # Será validado no RPA Sienge
+                        }
 
-                if resultados["mongodb"] == "sucesso" and resultados["json"] == "sucesso":
-                    self.log_progresso(
-                        f"✅ Fila salva em MongoDB + JSON: {len(fila_processamento)} contratos")
-                elif resultados["json"] == "sucesso":
-                    self.log_progresso(
-                        f"📄 Fila salva em JSON: {len(fila_processamento)} contratos (MongoDB indisponível)")
-                else:
-                    self.log_progresso(
-                        f"⚠️ Problemas ao salvar fila: {resultados}")
+                        # ✅ CORRIGIDO: Usa mongodb_manager diretamente para salvar cada contrato
+                        from core.mongodb_manager import mongodb_manager
+
+                        if not mongodb_manager.conectado:
+                            await mongodb_manager.conectar()
+
+                        # ✅ CORRIGIDO: Salva na collection fila_contratos
+                        if mongodb_manager.conectado and hasattr(mongodb_manager, 'database') and mongodb_manager.database is not None:
+                            collection = mongodb_manager.database.fila_contratos
+                            # Usar insert_one para permitir _id automático do MongoDB
+                            collection.insert_one(documento_contrato)
+
+                        contratos_salvos += 1
+
+                        self.log_progresso(
+                            f"✅ Contrato salvo individualmente: {contrato['cliente']} - {contrato['numero_titulo']}")
+
+                    except Exception as e:
+                        contratos_falharam += 1
+                        self.log_progresso(
+                            f"❌ Erro ao salvar contrato {contrato.get('numero_titulo', 'N/A')}: {str(e)}")
+
+                # ✅ TAMBÉM salva resumo da fila para compatibilidade
+                try:
+                    from core.mongodb_manager import mongodb_manager
+
+                    estrutura_fila_resumo = {
+                        "_id": f"fila_resumo_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        "total_contratos": len(fila_processamento),
+                        "contratos_salvos": contratos_salvos,
+                        "contratos_falharam": contratos_falharam,
+                        "status_geral": "ativo",
+                        "timestamp_criacao": datetime.now().isoformat(),
+                        "origem": "rpa_analise_planilhas",
+                        "versao": "2.0_individual"
+                    }
+
+                    if mongodb_manager.conectado and hasattr(mongodb_manager, 'database') and mongodb_manager.database is not None:
+                        collection_resumos = mongodb_manager.database.fila_resumos
+                        collection_resumos.insert_one(estrutura_fila_resumo)
+                except Exception as e:
+                    self.log_progresso(f"⚠️ Erro ao salvar resumo: {str(e)}")
+
+                # ✅ Também salva em JSON local para backup
+                await self._salvar_fila_local(fila_processamento)
+
+                self.log_progresso(
+                    f"✅ SEPARAÇÃO CONCLUÍDA: {contratos_salvos} contratos salvos individualmente")
+                self.log_progresso(
+                    f"📊 Resumo: {contratos_salvos} sucessos, {contratos_falharam} falhas")
+
             else:
                 self.log_progresso("⚠️ Nenhum item para salvar na fila")
 
         except Exception as e:
-            self.log_progresso(f"❌ Erro ao salvar fila: {str(e)}")
-            # Último fallback para método local
+            self.log_erro(
+                f"❌ Erro ao salvar fila separadamente: {str(e)}", e)
+            # Fallback para método local como último recurso
             await self._salvar_fila_local(fila_processamento)
 
     async def _atualizar_ultimo_reajuste(self, aba_base_calculo, linha: int, contrato: Dict[str, Any]):
@@ -1132,36 +1233,6 @@ class RPAAnalisePlanilhas(BaseRPA):
     def log_progresso(self, mensagem: str):
         """Log de progresso formatado"""
         self.logger.info(mensagem)
-
-    async def _salvar_fila_processamento(self, contratos_para_reajuste: List[Dict[str, Any]]):
-        """
-        Salva a fila de contratos no arquivo único acumulativo
-        """
-        try:
-            pasta_dados = 'dados_processamento'
-            arquivo_fila = os.path.join(
-                str(pasta_dados or ''), "fila_contratos_sienge.json")
-            if not arquivo_fila:
-                arquivo_fila = 'fila_processamento.json'
-            with open(str(arquivo_fila), 'w', encoding='utf-8') as f:
-                json.dump(contratos_para_reajuste, f,
-                          indent=2, ensure_ascii=False)
-
-            self.log_progresso(
-                f"📄 Fila salva no arquivo único: {arquivo_fila} ({len(contratos_para_reajuste)} contratos)")
-
-            # Tentar salvar também no MongoDB se disponível
-            try:
-                if self.mongo_manager and self.mongo_manager.conectado:
-                    await self.mongo_manager.database.fila_processamento_sienge.replace_one(
-                        {}, contratos_para_reajuste, upsert=True
-                    )
-                    self.log_progresso("💾 Fila também salva no MongoDB")
-            except Exception as e:
-                self.log_progresso(f"⚠️ MongoDB indisponível: {str(e)}")
-
-        except Exception as e:
-            self.log_progresso(f"❌ Erro ao salvar fila: {str(e)}")
 
 # Função auxiliar para uso direto
 
