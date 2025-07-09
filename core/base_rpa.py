@@ -517,10 +517,10 @@ class BaseRPA(ABC):
             return self.browser.find_elements(xpath, condition)
         return []
 
-    def click(self, xpath: str) -> None:
+    def click(self, xpath: str, checkbox_action: Optional[str] = None, force_action: bool = False) -> None:
         """Clica em elemento (delegate para browser)"""
         if self.browser:
-            return self.browser.click(xpath)
+            return self.browser.click(xpath, checkbox_action, force_action)
 
     def send_text(self,
                   xpath: str,
@@ -587,7 +587,9 @@ class BaseRPA(ABC):
         """Context manager para iframe (delegate para browser)"""
         if self.browser:
             return self.browser.on_iframe(xpath)
-        return None
+        # Retornar um context manager vazio se browser não estiver disponível
+        from contextlib import nullcontext
+        return nullcontext()
 
     def on_window(self, has_element: str, retry: int = 10):
         """Context manager para janela com elemento específico (delegate para browser)"""
@@ -621,6 +623,39 @@ class BaseRPA(ABC):
             return self.browser.select_option_by_similarity(
                 xpath, option, similarity_threshold, timeout, verify
             )
+
+    def mark_checkboxes_by_contract_name(self,
+                                         contract_name: str,
+                                         grid_selector: str = "#tabelaAgrupParcelaGrid",
+                                         checkbox_selector: str = "input[type='checkbox'][id*='flSelecionado_']",
+                                         case_sensitive: bool = False) -> Dict[str, Any]:
+        """
+        Marca checkboxes em uma grid baseado no nome do contrato (delegate para browser)
+        Usa exatamente o código JavaScript que funcionou 100%
+
+        Args:
+            contract_name: Nome do contrato a ser buscado
+            grid_selector: Seletor CSS da tabela/grid (padrão: "#tabelaAgrupParcelaGrid")
+            checkbox_selector: Seletor CSS para os checkboxes (padrão: input[type='checkbox'][id*='flSelecionado_'])
+            case_sensitive: Se a busca deve ser case-sensitive
+
+        Returns:
+            Dict com informações sobre a operação:
+            {
+                "sucesso": bool,
+                "total_marcados": int,
+                "erro": str (se houver)
+            }
+        """
+        if self.browser:
+            return self.browser.mark_checkboxes_by_contract_name(
+                contract_name, grid_selector, checkbox_selector, case_sensitive
+            )
+        return {
+            "sucesso": False,
+            "total_marcados": 0,
+            "erro": "Browser não inicializado"
+        }
 
     def close(self):
         """Fecha o browser (delegate para browser)"""

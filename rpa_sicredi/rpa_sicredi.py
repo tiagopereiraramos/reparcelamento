@@ -85,8 +85,12 @@ class RPASicredi(BaseRPA):
                     erro="Parâmetros 'arquivo_remessa' e 'credenciais_sicredi' são obrigatórios"
                 )
 
-            # Configura credenciais
-            self._configurar_credenciais(credenciais)
+            # Configura credenciais com dados de processamento
+            credenciais_completas = {
+                **credenciais,
+                "dados_processamento": dados_processamento
+            }
+            await self._configurar_credenciais(credenciais_completas)
 
             # Faz login no Sicredi WebBank
             await self._fazer_login_sicredi()
@@ -163,7 +167,29 @@ class RPASicredi(BaseRPA):
             # Sempre faz logout
             await self._fazer_logout_sicredi()
 
-    def _configurar_credenciais(self, credenciais: Dict[str, Any]):
+    async def _buscar_cnpj_empresa(self, empresa_nome: str) -> Optional[str]:
+        """
+        Busca CNPJ da empresa de forma assíncrona
+        """
+        try:
+            from core.data_manager import data_manager
+            self.log_progresso(f"🔍 Buscando CNPJ para empresa: {empresa_nome}")
+
+            cnpj_encontrado = await data_manager.buscar_cnpj_por_empresa(empresa_nome)
+
+            if cnpj_encontrado:
+                self.log_progresso(f"✅ CNPJ encontrado: {cnpj_encontrado}")
+            else:
+                self.log_progresso(
+                    f"⚠️ CNPJ não encontrado para empresa: {empresa_nome}")
+
+            return cnpj_encontrado
+        except Exception as e:
+            self.log_progresso(
+                f"❌ Erro ao buscar CNPJ para empresa {empresa_nome}: {str(e)}")
+            return None
+
+    async def _configurar_credenciais(self, credenciais: Dict[str, Any]):
         """
         Configura credenciais do Sicredi
         Compatível com versões legadas: aceita credenciais sem CNPJ.
@@ -171,10 +197,31 @@ class RPASicredi(BaseRPA):
         self.url_sicredi = credenciais.get("url", "")
         self.usuario_sicredi = credenciais.get("usuario", "")
         self.senha_sicredi = credenciais.get("senha", "")
-        # Compatibilidade: só define CNPJ se vier nas credenciais
+
+        # Busca CNPJ dinamicamente se não fornecido
         if "cnpj" in credenciais:
             self.cnpj_empresa = credenciais["cnpj"]
-        # Não força None se não vier, mantém valor anterior
+        else:
+            # Tenta buscar CNPJ dos dados de processamento
+            dados_processamento = credenciais.get("dados_processamento", {})
+            if dados_processamento:
+                # Busca CNPJ do contrato ou empresa
+                self.cnpj_empresa = (
+                    dados_processamento.get("cnpj_empresa") or
+                    dados_processamento.get("cnpj") or
+                    None
+                )
+
+                if not self.cnpj_empresa and dados_processamento.get("empresa"):
+                    # Busca dinâmica por empresa usando data_manager
+                    empresa_nome = dados_processamento['empresa']
+                    cnpj_encontrado = await self._buscar_cnpj_empresa(empresa_nome)
+
+                    if cnpj_encontrado:
+                        self.cnpj_empresa = cnpj_encontrado
+                    else:
+                        self.log_progresso(
+                            f"⚠️ CNPJ não encontrado para empresa: {empresa_nome}")
 
         if not all([self.url_sicredi, self.usuario_sicredi, self.senha_sicredi]):
             raise Exception("Credenciais incompletas para o Sicredi")

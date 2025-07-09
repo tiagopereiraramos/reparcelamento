@@ -399,8 +399,9 @@ class RPAColetaIndices(BaseRPA):
             link_pdf = links_pdf[0]
 
             # 4. Baixar o PDF pelo navegador (Selenium) e processar da pasta de download
-            # Descobre o diretório padrão de download configurado
-            downloads_dir = os.path.expanduser("~/Downloads/RPA_DOWNLOADS")
+            # Descobre o diretório padrão de download configurado usando platformdirs
+            from platformdirs import user_downloads_dir
+            downloads_dir = os.path.join(user_downloads_dir(), "RPA_DOWNLOADS")
             limpar_pasta_download(downloads_dir)
             link_pdf.click()  # dispara o download
 

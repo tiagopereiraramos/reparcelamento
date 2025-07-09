@@ -916,7 +916,7 @@ class RPAAnalisePlanilhas(BaseRPA):
                         "versao_fila": "2.0_um_a_um",
                         "data_identificacao": datetime.now().isoformat(),
                         "usuario_identificacao": os.getenv("USER", "sistema"),
-                        "ambiente": os.getenv("AMBIENTE", "desenvolvimento")
+                        "ambiente": os.getenv("AMBIENTE", "producao")
                     },
 
                     # Dados completos preservados para compatibilidade

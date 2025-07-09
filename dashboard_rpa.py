@@ -1,2 +1,0 @@
-The code will be modified to load environment variables using `dotenv` and `os`, and then use these variables to populate the default values of the `planilha_calculo_id`, `planilha_apoio_id`, and `planilha_id` input fields in the Streamlit application.
-</tool_code>

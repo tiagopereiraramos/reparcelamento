@@ -143,8 +143,13 @@ def escolher_pausas_entre_contratos():
     print("\n⏸️  CONFIGURAÇÃO DE PAUSAS ENTRE CONTRATOS")
     print("=" * 50)
     print("Deseja pausar entre o processamento de cada contrato?")
-    print("✅ Recomendado para desenvolvimento/debug: Controle total")
-    print("⚡ Processamento contínuo: Mais rápido, sem intervenção")
+    print("✅ RECOMENDADO para desenvolvimento/debug:")
+    print("   - Controle total sobre cada contrato")
+    print("   - Pode acompanhar cada etapa")
+    print("   - Pode interromper se necessário")
+    print("⚡ Processamento contínuo (mais rápido):")
+    print("   - Sem intervenção manual")
+    print("   - Execução automática completa")
     print("=" * 50)
 
     while True:
@@ -152,9 +157,11 @@ def escolher_pausas_entre_contratos():
 
         if escolha in ["s", "sim", "y", "yes"]:
             print("✅ Pausas ativadas - você controlará cada contrato")
+            print("   💡 Você poderá acompanhar cada etapa do processamento")
             return True
         elif escolha in ["n", "nao", "não", "no"]:
             print("⚡ Processamento contínuo ativado")
+            print("   💡 Execução automática sem intervenção")
             return False
         else:
             print("❌ Opção inválida! Digite 's' para sim ou 'n' para não.")
@@ -173,6 +180,12 @@ async def teste_reparcelamento_lote():
     print("✅ PERSISTÊNCIA ADEQUADA: Dados extraídos SIM, valores da planilha NÃO")
     print("=" * 70)
 
+    # BREAKPOINT 0: Início do teste
+    print("\n⏸️  BREAKPOINT 0: Início do teste")
+    print("   🧪 Teste de reparcelamento em lote")
+    print("   📋 Vamos configurar o teste passo a passo")
+    input("   Pressione ENTER para começar...")
+
     try:
         # 1. VERIFICAR FILA E CONFIGURAÇÕES
         print("\n📊 FASE 1: VERIFICAÇÃO DA FILA")
@@ -182,6 +195,11 @@ async def teste_reparcelamento_lote():
         if not fila_valida:
             print("❌ Erro na verificação da fila. Abortando teste.")
             return False
+
+        # BREAKPOINT 0.5: Fila verificada
+        print("\n⏸️  BREAKPOINT 0.5: Fila de contratos verificada")
+        print("   ✅ Fila válida - contratos disponíveis para processamento")
+        input("   Pressione ENTER para carregar índices e credenciais...")
 
         indices_economicos = await carregar_indices_economicos()
         credenciais = credenciais_sienge_env()
@@ -213,6 +231,11 @@ async def teste_reparcelamento_lote():
 
         # BREAKPOINT 1: Configurações carregadas
         print("\n⏸️  BREAKPOINT 1: Configurações carregadas com sucesso")
+        print("   📋 Modo: {modo.upper()}")
+        print(
+            "   ⏸️  Pausas: {'Ativadas' if pausar_entre_contratos else 'Desativadas'}")
+        print("   📈 IPCA: {indices_economicos['ipca']['valor']}%")
+        print("   📈 IGPM: {indices_economicos['igpm']['valor']}%")
         input("   Pressione ENTER para inicializar o RPA...")
 
         # 3. INICIALIZAR RPA
@@ -221,13 +244,18 @@ async def teste_reparcelamento_lote():
 
         # Browser visível por padrão para desenvolvimento/debug
         headless = os.getenv("SIENGE_HEADLESS", "false").lower() == "true"
+        print(f"🌐 Inicializando RPA (headless: {headless})...")
+
         rpa = RPASienge(headless=headless)
         await rpa.inicializar()
 
-        print(f"🌐 RPA inicializado (headless: {headless})")
+        print(f"✅ RPA inicializado com sucesso (headless: {headless})")
 
         # BREAKPOINT 2: RPA inicializado
         print("\n⏸️  BREAKPOINT 2: RPA inicializado com sucesso")
+        print("   🤖 Browser: {'Visível' if not headless else 'Headless'}")
+        print("   🔗 URL: {credenciais['url']}")
+        print("   👤 Usuário: {credenciais['usuario']}")
         input("   Pressione ENTER para executar processamento em lote...")
 
         # 4. EXECUTAR PROCESSAMENTO EM LOTE (NOVO MÉTODO)
@@ -240,14 +268,24 @@ async def teste_reparcelamento_lote():
         print(
             f"✅ Pausas entre contratos: {'ATIVADAS' if pausar_entre_contratos else 'DESATIVADAS'}")
 
+        # BREAKPOINT 3: Antes do processamento
+        print("\n⏸️  BREAKPOINT 3: Antes do processamento")
+        print("   🎯 Modo selecionado: {modo.upper()}")
+        print(
+            "   ⏸️  Pausas entre contratos: {'ATIVADAS' if pausar_entre_contratos else 'DESATIVADAS'}")
+        print("   📊 Contratos na fila: Serão processados automaticamente")
+        input("   Pressione ENTER para iniciar o processamento...")
+
         # ✅ EXECUTAR PROCESSAMENTO CONFORME MODO ESCOLHIDO
         if modo == "carne":
+            print("\n🎫 INICIANDO: Geração de carnês apenas")
             # Geração de carnês apenas
             resultado = await rpa.processar_fila_geracao_carnes(
                 credenciais_sienge=credenciais,
                 pausar_entre_contratos=pausar_entre_contratos
             )
         elif modo == "completo":
+            print("\n🔄 INICIANDO: Processo completo (extração + reparcelamento + carnê)")
             # Processo completo: extração + reparcelamento + carnê
             resultado = await rpa.processar_fila_contratos_lote(
                 credenciais_sienge=credenciais,
@@ -257,6 +295,7 @@ async def teste_reparcelamento_lote():
             )
             # TODO: Adicionar geração de carnês após reparcelamentos
         else:
+            print(f"\n📋 INICIANDO: Modo {modo.upper()}")
             # Modos originais (extração, reparcelamento, ambas)
             resultado = await rpa.processar_fila_contratos_lote(
                 credenciais_sienge=credenciais,
@@ -264,6 +303,11 @@ async def teste_reparcelamento_lote():
                 fase=modo,
                 pausar_entre_contratos=pausar_entre_contratos
             )
+
+        # BREAKPOINT 4: Processamento concluído
+        print("\n⏸️  BREAKPOINT 4: Processamento concluído")
+        print("   📊 Resultado obtido, gerando relatório...")
+        input("   Pressione ENTER para ver o relatório final...")
 
         # 5. RELATÓRIO FINAL
         print(f"\n📊 RELATÓRIO FINAL")

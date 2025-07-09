@@ -11,7 +11,7 @@ import os
 from contextlib import contextmanager
 import random
 from time import sleep
-from typing import Iterator, List, Optional, Callable
+from typing import Iterator, List, Optional, Callable, Dict, Any
 
 # Tentar importar Selenium
 try:
@@ -181,24 +181,19 @@ class RPABrowser:
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--no-sandbox")
 
-        # Configurações de download - usar pasta RPA parametrizada
-        downloads_base = os.path.expanduser("~/Downloads")
+        # Configurações de download - usar platformdirs para cross-platform
+        from platformdirs import user_downloads_dir
+
         rpa_downloads_folder = os.getenv(
             'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
 
-        # Garantir concatenação correta do caminho - todos os casos
-        if downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
-            # Caso: "/Downloads/" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-            downloads_dir = downloads_base + rpa_downloads_folder[1:]
-        elif downloads_base.endswith('/') and not rpa_downloads_folder.startswith('/'):
-            # Caso: "/Downloads/" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-            downloads_dir = downloads_base + rpa_downloads_folder
-        elif not downloads_base.endswith('/') and rpa_downloads_folder.startswith('/'):
-            # Caso: "/Downloads" + "/RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-            downloads_dir = downloads_base + rpa_downloads_folder
-        else:
-            # Caso: "/Downloads" + "RPA_DOWNLOADS" -> "/Downloads/RPA_DOWNLOADS"
-            downloads_dir = os.path.join(downloads_base, rpa_downloads_folder)
+        # Tratar barra inicial se houver (como no rpa_sienge.py)
+        if rpa_downloads_folder and rpa_downloads_folder.startswith('/'):
+            rpa_downloads_folder = rpa_downloads_folder[1:]
+
+        # Usar platformdirs para cross-platform automático
+        downloads_dir = os.path.join(
+            user_downloads_dir(), rpa_downloads_folder)
 
         os.makedirs(downloads_dir, exist_ok=True)
 
@@ -296,8 +291,32 @@ class RPABrowser:
             raise NoSuchElementException(
                 f"Elementos com xpath {xpath} não encontrados. {exc}")
 
-    def click(self, xpath: str) -> None:
-        """Clica em elemento com tratamento de erros"""
+    def click(self, xpath: str, checkbox_action: Optional[str] = None, force_action: bool = False) -> None:
+        """
+        Clica em elemento com tratamento de erros
+
+        Args:
+            xpath: XPath do elemento
+            checkbox_action: Ação específica para checkbox ("check", "uncheck", "toggle", None)
+                           None = comportamento padrão (clica normalmente)
+            force_action: Se True, força a ação mesmo se estado já for o desejado
+
+        Exemplos:
+            # Comportamento legado (sem alteração)
+            browser.click("//button[@id='submit']")
+
+            # Para checkboxes - marcar (só se não estiver marcado)
+            browser.click("//input[@type='checkbox']", checkbox_action="check")
+
+            # Para checkboxes - desmarcar (só se estiver marcado)
+            browser.click("//input[@type='checkbox']", checkbox_action="uncheck")
+
+            # Para checkboxes - alternar estado
+            browser.click("//input[@type='checkbox']", checkbox_action="toggle")
+
+            # Forçar ação mesmo se estado já for o desejado
+            browser.click("//input[@type='checkbox']", checkbox_action="check", force_action=True)
+        """
         if not self._driver:
             raise Exception("Browser não inicializado")
 
@@ -305,12 +324,95 @@ class RPABrowser:
         self._driver.execute_script("arguments[0].scrollIntoView(true);",
                                     element)
 
+        # Detectar se é checkbox e aplicar lógica específica
+        if checkbox_action and self._is_checkbox(element):
+            self._handle_checkbox_click(element, checkbox_action, force_action)
+        else:
+            # Comportamento padrão (legado)
+            try:
+                element.click()
+            except (ElementClickInterceptedException,
+                    ElementNotInteractableException,
+                    StaleElementReferenceException):
+                self._driver.execute_script("arguments[0].click();", element)
+
+    def _is_checkbox(self, element) -> bool:
+        """Verifica se elemento é um checkbox"""
         try:
-            element.click()
+            # Verificar por tipo de input
+            if element.tag_name.lower() == "input":
+                input_type = element.get_attribute("type")
+                if input_type and input_type.lower() in ["checkbox", "radio"]:
+                    return True
+
+            # Verificar por role ARIA
+            role = element.get_attribute("role")
+            if role and role.lower() in ["checkbox", "radio"]:
+                return True
+
+            # Verificar por classes CSS comuns
+            class_attr = element.get_attribute("class") or ""
+            checkbox_classes = ["checkbox", "check-box",
+                                "form-check-input", "custom-control-input"]
+            if any(cls in class_attr.lower() for cls in checkbox_classes):
+                return True
+
+            return False
+        except:
+            return False
+
+    def _handle_checkbox_click(self, element, action: str, force_action: bool = False):
+        """Gerencia clique em checkbox baseado na ação desejada"""
+        try:
+            current_state = element.is_selected()
+
+            if action == "check":
+                if not current_state:
+                    element.click()
+                    self.logger.info("✅ Checkbox marcado com sucesso")
+                elif force_action:
+                    element.click()
+                    self.logger.info("✅ Checkbox marcado (forçado)")
+                else:
+                    self.logger.info(
+                        "ℹ️ Checkbox já estava marcado - nenhuma ação necessária")
+
+            elif action == "uncheck":
+                if current_state:
+                    element.click()
+                    self.logger.info("✅ Checkbox desmarcado com sucesso")
+                elif force_action:
+                    element.click()
+                    self.logger.info("✅ Checkbox desmarcado (forçado)")
+                else:
+                    self.logger.info(
+                        "ℹ️ Checkbox já estava desmarcado - nenhuma ação necessária")
+
+            elif action == "toggle":
+                element.click()
+                new_state = element.is_selected()
+                self.logger.info(
+                    f"🔄 Checkbox alternado: {'marcado' if new_state else 'desmarcado'}")
+            else:
+                # Comportamento padrão se ação inválida
+                element.click()
+
         except (ElementClickInterceptedException,
                 ElementNotInteractableException,
                 StaleElementReferenceException):
-            self._driver.execute_script("arguments[0].click();", element)
+            # Fallback para JavaScript se clique normal falhar
+            if self._driver:
+                if action == "check" and (not element.is_selected() or force_action):
+                    self._driver.execute_script(
+                        "arguments[0].checked = true; arguments[0].click();", element)
+                    self.logger.info("✅ Checkbox marcado via JavaScript")
+                elif action == "uncheck" and (element.is_selected() or force_action):
+                    self._driver.execute_script(
+                        "arguments[0].checked = false; arguments[0].click();", element)
+                    self.logger.info("✅ Checkbox desmarcado via JavaScript")
+                else:
+                    self._driver.execute_script(
+                        "arguments[0].click();", element)
 
     def get_text(self, xpath: str, timeout: int = 10) -> str:
         """Obtém texto do elemento"""
@@ -601,6 +703,86 @@ class RPABrowser:
         raise NoSuchElementException(
             f"Failed to select option '{closest_option}' in select element with xpath '{xpath}'."
         )
+
+    def mark_checkboxes_by_contract_name(
+        self,
+        contract_name: str,
+        grid_selector: str = "#tabelaAgrupParcelaGrid",
+        checkbox_selector: str = "input[type='checkbox'][id*='flSelecionado_']",
+        case_sensitive: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Marca checkboxes em uma grid baseado no nome do contrato
+        Usa exatamente o código JavaScript que funcionou 100%
+
+        Args:
+            contract_name: Nome do contrato a ser buscado
+            grid_selector: Seletor CSS da tabela/grid (padrão: "#tabelaAgrupParcelaGrid")
+            checkbox_selector: Seletor CSS para os checkboxes (padrão: input[type='checkbox'][id*='flSelecionado_'])
+            case_sensitive: Se a busca deve ser case-sensitive
+
+        Returns:
+            Dict com informações sobre a operação:
+            {
+                "sucesso": bool,
+                "total_marcados": int,
+                "erro": str (se houver)
+            }
+        """
+        if not self._driver:
+            raise Exception("Browser não inicializado")
+
+        try:
+
+            # Executar exatamente o seu código JavaScript que funcionou
+            js_script = f"""
+            // Troque pelo nome que deseja buscar
+            const nomeBuscado = "{contract_name}";
+
+            // Seleciona todas as linhas da grid
+            const linhas = document.querySelectorAll("{grid_selector} tr");
+
+            let totalMarcados = 0;
+
+            linhas.forEach(linha => {{
+                // Procura célula com o nome exato (pode ajustar para case-insensitive se quiser)
+                const textoLinha = "{case_sensitive}" === "true" ? linha.textContent : linha.textContent.toLowerCase();
+                const nomeBusca = "{case_sensitive}" === "true" ? nomeBuscado : nomeBuscado.toLowerCase();
+                
+                if (textoLinha.includes(nomeBusca)) {{
+                    // Procura o checkbox dentro da linha
+                    const checkbox = linha.querySelector("{checkbox_selector}");
+                    if (checkbox && !checkbox.checked && !checkbox.disabled && checkbox.offsetParent !== null) {{
+                        checkbox.click(); // Marca o checkbox (dispara eventos JS)
+                        totalMarcados++;
+                    }}
+                }}
+            }});
+
+            console.log(`Total de checkboxes marcados para "${{nomeBuscado}}": ${{totalMarcados}}`);
+            return totalMarcados;
+            """
+
+            total_marcados = self._driver.execute_script(js_script)
+
+            self.logger.info(
+                f"✅ Grid processada: {total_marcados} checkboxes marcados para '{contract_name}'"
+            )
+
+            return {
+                "sucesso": True,
+                "total_marcados": total_marcados,
+                "erro": None
+            }
+
+        except Exception as e:
+            error_msg = f"Erro ao marcar checkboxes para '{contract_name}': {str(e)}"
+            self.logger.error(error_msg)
+            return {
+                "sucesso": False,
+                "total_marcados": 0,
+                "erro": error_msg
+            }
 
     def __del__(self):
         """Destrutor - garante que browser seja fechado"""

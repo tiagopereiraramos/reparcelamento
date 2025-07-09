@@ -276,13 +276,89 @@ class ProcessadorRegrasNegocio:
                 self.logger.warning(
                     f"📈 ⚠️ Dia de vencimento não encontrado - usando padrão: {dia_vencimento}")
 
-            # Próximo mês disponível
-            proximo_mes = hoje.replace(day=1) + timedelta(days=32)
-            proximo_mes = proximo_mes.replace(day=1)
+            # 1.1. Tentar obter o mês base do reparcelamento (coluna 'Mês reajuste')
+            mes_base = None
+            ano_base = None
+            # Garantir que df é DataFrame
+            import pandas as pd
+            if not isinstance(df, pd.DataFrame):
+                df = pd.DataFrame(df)
+            if 'Mês reajuste' in df.columns:
+                mes_reajuste_str = str(df.iloc[0]['Mês reajuste']).strip()
+                if mes_reajuste_str and mes_reajuste_str not in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
+                    try:
+                        # Tentar formatos comuns
+                        formatos = ["%d/%m/%Y", "%Y-%m-%d",
+                                    "%d-%m-%Y", "%m/%d/%Y"]
+                        for formato in formatos:
+                            try:
+                                data_base = datetime.strptime(
+                                    mes_reajuste_str, formato)
+                                mes_base = data_base.month
+                                ano_base = data_base.year
+                                break
+                            except ValueError:
+                                continue
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Não foi possível interpretar o mês base do reparcelamento: {e}")
 
-            # 2. CALCULAR 1º VENCIMENTO DO NOVO CARNÊ
-            primeiro_vencimento_novo_carne = proximo_mes.replace(
-                day=dia_vencimento)
+            # 1.2. Obter tipo de reajuste e data de assinatura do contrato
+            tipo_reajuste = None
+            data_assinatura = None
+            if 'Tipo reajuste' in df.columns:
+                tipo_reajuste = str(
+                    df.iloc[0]['Tipo reajuste']).strip().lower()
+            if 'Assinatura ultimo Contrato' in df.columns:
+                assinatura_str = str(
+                    df.iloc[0]['Assinatura ultimo Contrato']).strip()
+                if assinatura_str and assinatura_str not in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
+                    formatos = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y"]
+                    for formato in formatos:
+                        try:
+                            data_assinatura = datetime.strptime(
+                                assinatura_str, formato)
+                            break
+                        except ValueError:
+                            continue
+
+            # 2. CALCULAR 1º VENCIMENTO DO NOVO CARNÊ CONFORME PDD
+            primeiro_vencimento_novo_carne = None
+            if mes_base and ano_base and dia_vencimento:
+                if tipo_reajuste and 'anivers' in tipo_reajuste and data_assinatura:
+                    # Reajuste Aniversário
+                    dia_aniversario = data_assinatura.day
+                    if dia_vencimento < dia_aniversario:
+                        # Vencimento antes do aniversário: mês seguinte ao mês base
+                        mes_venc = mes_base + 1
+                        ano_venc = ano_base
+                        if mes_venc > 12:
+                            mes_venc = 1
+                            ano_venc += 1
+                        primeiro_vencimento_novo_carne = datetime(
+                            ano_venc, mes_venc, dia_vencimento)
+                        self.logger.info(
+                            f"📈 Reajuste Aniversário: vencimento antes do aniversário. 1º vencimento: {primeiro_vencimento_novo_carne.strftime('%d/%m/%Y')}")
+                    else:
+                        # Vencimento após ou igual ao aniversário: mês base
+                        primeiro_vencimento_novo_carne = datetime(
+                            ano_base, mes_base, dia_vencimento)
+                        self.logger.info(
+                            f"📈 Reajuste Aniversário: vencimento após/aniversário. 1º vencimento: {primeiro_vencimento_novo_carne.strftime('%d/%m/%Y')}")
+                else:
+                    # Reajuste Anual ou padrão
+                    primeiro_vencimento_novo_carne = datetime(
+                        ano_base, mes_base, dia_vencimento)
+                    self.logger.info(
+                        f"📈 Reajuste Anual/padrão. 1º vencimento: {primeiro_vencimento_novo_carne.strftime('%d/%m/%Y')}")
+            else:
+                # Fallback: próximo mês disponível
+                proximo_mes = hoje.replace(day=1) + timedelta(days=32)
+                proximo_mes = proximo_mes.replace(day=1)
+                primeiro_vencimento_novo_carne = proximo_mes.replace(
+                    day=dia_vencimento)
+                self.logger.info(
+                    f"📈 Fallback: próximo mês. 1º vencimento: {primeiro_vencimento_novo_carne.strftime('%d/%m/%Y')}")
 
             # 3. CALCULAR DATA LIMITE (60 DIAS ANTES)
             data_limite = primeiro_vencimento_novo_carne - timedelta(days=60)
@@ -326,12 +402,14 @@ class ProcessadorRegrasNegocio:
                     return None
 
             # 6. APLICAR PROCESSAMENTO DE DATAS
+            parcelas_ct = pd.DataFrame(parcelas_ct)
             parcelas_ct["Data_vencimento_processada"] = parcelas_ct["Data vencimento"].apply(
                 processar_data_vencimento)
 
             # 7. FILTRAR PARCELAS COM DATAS VÁLIDAS
             parcelas_validas = parcelas_ct[parcelas_ct["Data_vencimento_processada"].notna(
             )].copy()
+            parcelas_validas = pd.DataFrame(parcelas_validas)
 
             if parcelas_validas.empty:
                 self.logger.warning(
@@ -349,6 +427,7 @@ class ProcessadorRegrasNegocio:
             parcelas_inadimplentes = parcelas_validas[
                 parcelas_validas["Data_vencimento_processada"] < data_limite
             ]
+            parcelas_inadimplentes = pd.DataFrame(parcelas_inadimplentes)
 
             qtd_parcelas_inadimplentes = len(parcelas_inadimplentes)
 
@@ -367,9 +446,19 @@ class ProcessadorRegrasNegocio:
             # 10. PREPARAR LISTA DE PARCELAS PROBLEMÁTICAS
             parcelas_problematicas = []
             for _, parcela in parcelas_inadimplentes.iterrows():
+                vencimento_proc = parcela.get("Data_vencimento_processada")
+                if vencimento_proc is None:
+                    vencimento_proc = ''
+                if not hasattr(vencimento_proc, 'strftime') and vencimento_proc != '':
+                    try:
+                        vencimento_proc = pd.to_datetime(vencimento_proc)
+                    except Exception:
+                        vencimento_proc = ''
+                vencimento_str = vencimento_proc.strftime(
+                    "%d/%m/%Y") if hasattr(vencimento_proc, 'strftime') else str(vencimento_proc)
                 parcelas_problematicas.append({
                     "parcela": parcela.get("Parcela/Condição", "N/A"),
-                    "vencimento": parcela["Data_vencimento_processada"].strftime("%d/%m/%Y"),
+                    "vencimento": vencimento_str,
                     "valor": parcela.get("Valor a receber", 0),
                     "status": parcela.get("Status da parcela", "N/A")
                 })

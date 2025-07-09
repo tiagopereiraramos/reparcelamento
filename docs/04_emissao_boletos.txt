@@ -15,7 +15,7 @@ do banco Sicredi, empresa por empresa (CNPJ).
    - Preencher data inicial = 1º vencimento do carnê
    - Data final = mesma data mês seguinte ano seguinte
    - Selecionar unidade (empresa)
-   - Gerar remessa com nome padrão: [5 dígitos da conta][dd][mm].[sequencial]
+   - Gerar remessa com nome padrão: 
 
 3. Acesso ao Sicredi:
    - URL: https://www.sicredi.com.br/home/

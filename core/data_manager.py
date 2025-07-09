@@ -80,7 +80,7 @@ class DataManagerUnificado:
 
         if force_simulation:
             self.logger.info(
-                "🧪 MODO SIMULAÇÃO FORÇADA - MongoDB desabilitado para testes")
+                "📊 MODO SIMULAÇÃO - MongoDB desabilitado para testes")
             self.mongodb_ativo = False
             self._garantir_estrutura_dados()
             await self._criar_dados_simulados()
@@ -968,26 +968,61 @@ class DataManagerUnificado:
         Busca o CNPJ correspondente ao nome da empresa (case-insensitive, contains) na collection 'empresas_sicredi'.
         MongoDB principal, fallback JSON vazio.
         """
-        if self.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+        from core.logger_avancado import LoggerAvancado
+        logger = LoggerAvancado("BuscaCNPJ")
+        logger.info(f"🔍 Buscando CNPJ para empresa: '{nome_empresa}'")
+
+        # Verificar conexão diretamente no mongodb_manager
+        logger.info(
+            f"📊 Status conexão: MONGODB_DISPONIVEL={MONGODB_DISPONIVEL}, mongodb_manager.conectado={mongodb_manager.conectado if mongodb_manager else 'None'}")
+
+        if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
             try:
-                def _find_cnpj():
-                    if mongodb_manager.database is not None:
-                        collection = mongodb_manager.database.empresas_sicredi
-                        # Busca por regex case-insensitive (contains)
-                        doc = collection.find_one({
-                            "unidade": {"$regex": nome_empresa, "$options": "i"}
-                        })
-                        if doc:
-                            return doc.get("cnpj")
-                    return None
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    cnpj = await asyncio.get_event_loop().run_in_executor(executor, _find_cnpj)
-                return cnpj
+                if mongodb_manager.database is not None:
+                    collection = mongodb_manager.database.empresas_sicredi
+                    logger.info(f"📋 Collection: {collection.name}")
+
+                    # Teste: contar documentos
+                    total_docs = collection.count_documents({})
+                    logger.info(
+                        f"📊 Total de documentos na collection: {total_docs}")
+
+                    # Busca por regex case-insensitive (contains) em múltiplos campos
+                    query = {
+                        "$or": [
+                            {"unidade": {"$regex": nome_empresa, "$options": "i"}},
+                            {"nome": {"$regex": nome_empresa, "$options": "i"}},
+                            {"nome_abreviado": {"$regex": nome_empresa, "$options": "i"}}
+                        ]
+                    }
+                    logger.info(f"🔎 Query MongoDB: {query}")
+
+                    # Teste: buscar primeiro documento para verificar se a collection funciona
+                    primeiro_doc = collection.find_one()
+                    logger.info(
+                        f"🔎 Primeiro documento da collection: {primeiro_doc}")
+
+                    doc = collection.find_one(query)
+                    logger.info(f"🔎 Documento retornado pela query: {doc}")
+
+                    if doc:
+                        logger.info(
+                            f"✅ Empresa encontrada: {doc.get('unidade') or doc.get('nome') or doc.get('nome_abreviado')} → CNPJ: {doc.get('cnpj')}")
+                        return doc.get("cnpj")
+                    else:
+                        logger.warning(
+                            f"❌ Nenhuma empresa encontrada para: '{nome_empresa}'")
+                else:
+                    logger.error("❌ mongodb_manager.database é None")
+                return None
             except Exception as e:
                 logger.warning(
                     f"⚠️ Erro ao buscar CNPJ por empresa no MongoDB: {str(e)}")
+                import traceback
+                logger.error(f"   Traceback: {traceback.format_exc()}")
                 return None
+        else:
+            logger.warning("❌ MongoDB não disponível para busca")
         # Fallback: não há JSON para empresas_sicredi
         return None
 
