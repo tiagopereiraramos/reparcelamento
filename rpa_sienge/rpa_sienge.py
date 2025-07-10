@@ -569,6 +569,14 @@ class RPASienge(BaseRPA):
                             "saldo_total": dados_validacao.get("saldo_total", 0.0),
                             "parcelas_pendentes": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
                             "pode_reparcelar": dados_validacao.get("pode_reparcelar", False),
+                            "valor_parcela_atual": dados_validacao.get("valor_parcela_atual", 0.0),
+                            "dia_vencimento_identificado": dados_validacao.get("dia_vencimento", 10),
+                            "primeiro_vencimento_carne": dados_validacao.get("primeiro_vencimento_carne", ""),
+                            "status_cliente": dados_validacao.get("status_cliente", "adimplente"),
+                            "cliente_inadimplente": dados_validacao.get("cliente_inadimplente", False),
+                            "pendencias_sienge": dados_validacao.get("pendencias_sienge", ""),
+                            "pendencias_sienge_inad": dados_validacao.get("pendencias_sienge_inad", ""),
+                            "pendencias_pmfi": dados_validacao.get("pendencias_pmfi", ""),
                             "timestamp_extracao": datetime.now().isoformat()
                         }
                     )
@@ -1755,13 +1763,47 @@ class RPASienge(BaseRPA):
             await self._atualizar_indices_planilha(planilha, indices_economicos)
 
             # 4. PROCESSAR NOVOS CONTRATOS (Passo 8.1 do PDD)
-            await self._processar_novos_contratos(planilha)
+            # --- REMOVIDO: processamento de novos contratos/planilha de apoio ---
+            # await self._processar_novos_contratos(planilha)
+            # --- FIM REMOÇÃO ---
 
             # 5. ATUALIZAR CONSULTA IPTU (Passo 8.2 do PDD)
             await self._atualizar_consulta_iptu(planilha)
 
             # 6. PREENCHER DADOS DO RELATÓRIO SIENGE (Passo 9.1.2 do PDD)
-            await self._preencher_dados_relatorio_sienge(planilha, dados_financeiros)
+            # --- AJUSTE: buscar dados da collection fila_contratos e montar dicionário ---
+            from core.mongodb_manager import mongodb_manager
+            if not mongodb_manager.conectado:
+                await mongodb_manager.conectar()
+            numero_titulo = dados_financeiros.get("numero_titulo", "")
+            doc_fila = None
+            if numero_titulo:
+                doc_fila = await self._buscar_dados_extraidos_mongodb(numero_titulo)
+            if not doc_fila:
+                self.log_progresso(
+                    f"❌ Documento da fila não encontrado para retroalimentação: {numero_titulo}")
+                return {"sucesso": False, "erro": "Documento da fila não encontrado para retroalimentação"}
+            # Montar dicionário de dados_validacao a partir dos campos soltos
+            dados_validacao = {
+                "qtd_parcelas_ct_a_vencer": doc_fila.get("parcelas_pendentes", 0),
+                "valor_parcela_atual": doc_fila.get("valor_parcela_atual", 0.0),
+                "saldo_total": doc_fila.get("saldo_total", 0.0),
+                "dia_vencimento": doc_fila.get("dia_vencimento_identificado", 10),
+                "primeiro_vencimento_carne": doc_fila.get("primeiro_vencimento_carne", ""),
+                "status_cliente": doc_fila.get("status_cliente", "adimplente"),
+                "cliente_inadimplente": doc_fila.get("cliente_inadimplente", False),
+                "pendencias_sienge": doc_fila.get("pendencias_sienge", ""),
+                "pendencias_sienge_inad": doc_fila.get("pendencias_sienge_inad", ""),
+                "pendencias_pmfi": doc_fila.get("pendencias_pmfi", "")
+            }
+            self.log_progresso(
+                f"🔍 DEBUG: dados_validacao para retroalimentação: {dados_validacao}")
+            dados_para_planilha = {
+                "cliente": doc_fila.get("cliente", ""),
+                "numero_titulo": numero_titulo,
+                "dados_validacao": dados_validacao
+            }
+            await self._preencher_dados_relatorio_sienge(planilha, dados_para_planilha)
 
             # 7. IDENTIFICAR CONTRATOS PARA REPARCELAMENTO (Passo 9.1.2 continuação)
             contratos_reparcelamento = await self._identificar_contratos_reparcelamento(planilha)
@@ -1952,6 +1994,7 @@ class RPASienge(BaseRPA):
         Conforme PDD Passo 8.1
         """
         try:
+            import gspread
             self.log_progresso("📄 Processando novos contratos...")
 
             # Abre planilha Base de apoio
@@ -2006,7 +2049,17 @@ class RPASienge(BaseRPA):
                     linha_dados.append(str(valor) if valor else '')
 
                 if linha_dados:
-                    range_update = f'A{proxima_linha}:{chr(65 + len(linha_dados) - 1)}{proxima_linha}'
+                    # --- AJUSTE: adicionar linhas se necessário ---
+                    valores_existentes = aba_base_calculo.get_all_values()
+                    proxima_linha = len(valores_existentes) + 1
+                    if proxima_linha > aba_base_calculo.row_count:
+                        aba_base_calculo.add_rows(
+                            proxima_linha - aba_base_calculo.row_count)
+                    # --- FIM AJUSTE ---
+                    col_final = len(cabecalhos)
+                    col_final_letra = gspread.utils.rowcol_to_a1(
+                        1, col_final).replace('1', '')
+                    range_update = f'A{proxima_linha}:{col_final_letra}{proxima_linha}'
                     aba_base_calculo.update(range_update, [linha_dados])
 
                     self.log_progresso(
@@ -2906,34 +2959,61 @@ class RPASienge(BaseRPA):
                     resultado_extracao = await self._consultar_relatorios_financeiros(contrato)
 
                     if resultado_extracao.get("sucesso"):
-                        # Atualizar status para EXTRAIDO com dados específicos do PDD
-                        dados_extraidos_pdd = resultado_extracao.get(
-                            "dados_extraidos", {})
-                        await self._atualizar_status_contrato(numero_titulo, "EXTRAIDO", {
+                        # Retroalimentar planilha imediatamente
+                        import os
+                        planilha_id = os.getenv("PLANILHA_CALCULO_ID")
+                        credenciais_google = os.getenv(
+                            "GOOGLE_CREDENTIALS_PATH")
+                        from core.data_manager import data_manager
+                        indices_economicos = {
+                            "ipca": {"valor": 4.62},
+                            "igpm": {"valor": 3.89}
+                        }
+                        try:
+                            await data_manager.inicializar()
+                            ipca = await data_manager.obter_indice_mais_recente("ipca")
+                            igpm = await data_manager.obter_indice_mais_recente("igpm")
+                            if ipca is not None:
+                                indices_economicos["ipca"]["valor"] = ipca
+                            if igpm is not None:
+                                indices_economicos["igpm"]["valor"] = igpm
+                        except Exception as e:
+                            self.log_progresso(
+                                f"⚠️ Não foi possível obter índices econômicos atualizados: {e}")
+                        self.log_progresso(
+                            f"🔄 Retroalimentando planilha para contrato {numero_titulo}...")
+                        try:
+                            resultado_planilha = await self.preencher_planilha_calculo_reparcelamento(
+                                planilha_id=planilha_id,
+                                dados_financeiros=resultado_extracao,
+                                indices_economicos=indices_economicos,
+                                credenciais_google=credenciais_google
+                            )
+                            if not resultado_planilha.get("sucesso"):
+                                raise Exception(resultado_planilha.get(
+                                    "erro", "Falha ao retroalimentar planilha"))
+                            self.log_progresso(
+                                f"✅ Planilha retroalimentada para contrato {numero_titulo}")
+                        except Exception as e:
+                            self.log_erro(
+                                f"Erro ao retroalimentar planilha para contrato {numero_titulo}: {e}", e)
+                            await self._atualizar_status_contrato(numero_titulo, "ERRO", {
+                                "erro_retroalimentacao": str(e),
+                                "timestamp_erro": datetime.now().isoformat(),
+                                "fase_erro": "RETROALIMENTACAO_PLANILHA"
+                            })
+                            contratos_erro += 1
+                            continue
+
+                        # Atualizar status para AGUARDANDO_APROVACAO
+                        await self._atualizar_status_contrato(numero_titulo, "AGUARDANDO_APROVACAO", {
                             "dados_extraidos": True,
-
-                            # ✅ DADOS ESPECÍFICOS DO PDD 9.1.1 - PERSISTIR
-                            "saldo_total": resultado_extracao.get("saldo_total", 0.0),
-                            "parcelas_pendentes": dados_extraidos_pdd.get("qtd_parcelas_ct_a_vencer", 0),
-                            "parcelas_vencidas": dados_extraidos_pdd.get("qtd_ct_vencidas", 0),
-                            "valor_parcela_atual": dados_extraidos_pdd.get("valor_parcela_atual", 0.0),
-                            # ✅ CORRIGIDO: Fallback para 10 ao invés de 0
-                            "dia_vencimento_identificado": dados_extraidos_pdd.get("dia_vencimento_identificado", dados_extraidos_pdd.get("dia_vencimento", 10)),
-                            "primeiro_vencimento_carne": dados_extraidos_pdd.get("primeiro_vencimento_carne", ""),
-                            "pendencias_sienge_inad": dados_extraidos_pdd.get("pendencias_sienge_inad", ""),
-                            "pendencias_sienge": dados_extraidos_pdd.get("pendencias_sienge", ""),
-                            "cliente_inadimplente": dados_extraidos_pdd.get("cliente_inadimplente", False),
-                            "status_cliente": dados_extraidos_pdd.get("status_cliente", "adimplente"),
-                            "pode_reparcelar": dados_extraidos_pdd.get("pode_reparcelar", False),
-
-                            # Metadados da extração
-                            "timestamp_extracao_concluida": datetime.now().isoformat(),
+                            "timestamp_aguardando_aprovacao": datetime.now().isoformat(),
                             "fonte_dados": resultado_extracao.get("fonte_dados", "webscraping")
                         })
-
                         contratos_sucesso += 1
                         self.log_progresso(
-                            f"✅ Extração concluída: {numero_titulo}")
+                            f"✅ Extração e retroalimentação concluídas: {numero_titulo}")
 
                     else:
                         # Atualizar status para ERRO

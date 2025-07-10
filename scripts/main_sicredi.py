@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 # Garante execução headless em produção
-os.environ["HEADLESS"] = "1"  # Força modo headless para Selenium/Browser
+# os.environ["HEADLESS"] = "1"  # Força modo headless para Selenium/Browser - COMENTADO PARA GRAVAÇÃO DE VÍDEO
 
 # Garante que o diretório raiz está no sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -185,7 +185,8 @@ async def processar_empresa_sicredi(
         )
 
         # Inicializar RPA
-        headless = os.getenv("HEADLESS", "true").lower() == "true"
+        headless = os.getenv("HEADLESS", "false").lower(
+        ) == "true"  # Modo visual para gravação
         rpa = RPASicredi()
         await rpa.inicializar()
 

@@ -973,19 +973,15 @@ class DataManagerUnificado:
         logger.info(f"🔍 Buscando CNPJ para empresa: '{nome_empresa}'")
 
         # Verificar conexão diretamente no mongodb_manager
-        logger.info(
-            f"📊 Status conexão: MONGODB_DISPONIVEL={MONGODB_DISPONIVEL}, mongodb_manager.conectado={mongodb_manager.conectado if mongodb_manager else 'None'}")
+        # (Removido log detalhado de status de conexão)
 
         if MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
             try:
                 if mongodb_manager.database is not None:
                     collection = mongodb_manager.database.empresas_sicredi
-                    logger.info(f"📋 Collection: {collection.name}")
+                    # (Removido log detalhado de collection)
 
-                    # Teste: contar documentos
-                    total_docs = collection.count_documents({})
-                    logger.info(
-                        f"📊 Total de documentos na collection: {total_docs}")
+                    # (Removido log detalhado de total de documentos)
 
                     # Busca por regex case-insensitive (contains) em múltiplos campos
                     query = {
@@ -995,15 +991,12 @@ class DataManagerUnificado:
                             {"nome_abreviado": {"$regex": nome_empresa, "$options": "i"}}
                         ]
                     }
-                    logger.info(f"🔎 Query MongoDB: {query}")
+                    # (Removido log detalhado de query)
 
-                    # Teste: buscar primeiro documento para verificar se a collection funciona
-                    primeiro_doc = collection.find_one()
-                    logger.info(
-                        f"🔎 Primeiro documento da collection: {primeiro_doc}")
+                    # (Removido log detalhado de primeiro documento)
 
                     doc = collection.find_one(query)
-                    logger.info(f"🔎 Documento retornado pela query: {doc}")
+                    # (Removido log detalhado de documento retornado pela query)
 
                     if doc:
                         logger.info(
@@ -1026,6 +1019,232 @@ class DataManagerUnificado:
         # Fallback: não há JSON para empresas_sicredi
         return None
 
+
+# === NOVAS FUNÇÕES PARA APROVAÇÃO POR E-MAIL - FASE 1 ===
+
+async def buscar_contratos_por_status(status: str) -> List[Dict[str, Any]]:
+    """
+    Busca contratos por status específico
+    Útil para o sistema de aprovação por e-mail
+    """
+    from core.status_contratos import validar_status
+
+    if not validar_status(status):
+        logger.warning(f"⚠️ Status inválido: {status}")
+        return []
+
+    contratos = []
+
+    # MongoDB principal
+    if data_manager.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+        try:
+            if mongodb_manager.database is not None:
+                collection = mongodb_manager.database.fila_contratos
+                filtro = {"status": status}
+
+                def _buscar():
+                    return list(collection.find(filtro).sort("data_criacao", -1))
+
+                contratos = await asyncio.get_event_loop().run_in_executor(None, _buscar)
+
+                # Converter ObjectId para string
+                for contrato in contratos:
+                    if "_id" in contrato:
+                        contrato["_id"] = str(contrato["_id"])
+
+                logger.info(
+                    f"✅ MongoDB: {len(contratos)} contratos com status '{status}'")
+                return contratos
+
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao buscar contratos no MongoDB: {str(e)}")
+
+    # Fallback JSON
+    try:
+        fila_dados = data_manager._carregar_json_seguro(
+            data_manager.arquivo_fila_sienge, {})
+        contratos_json = fila_dados.get("contratos", [])
+        contratos = [c for c in contratos_json if c.get("status") == status]
+
+        logger.info(
+            f"📄 JSON: {len(contratos)} contratos com status '{status}'")
+        return contratos
+
+    except Exception as e:
+        logger.warning(f"⚠️ Erro ao buscar contratos no JSON: {str(e)}")
+        return []
+
+
+async def atualizar_status_lote(contratos_ids: List[str], novo_status: str, dados_extras: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Atualiza status de múltiplos contratos em lote
+    Usado para aprovação em massa
+    """
+    from core.status_contratos import validar_status
+
+    if not validar_status(novo_status):
+        return {"sucesso": False, "erro": f"Status inválido: {novo_status}"}
+
+    if not contratos_ids:
+        return {"sucesso": False, "erro": "Lista de contratos vazia"}
+
+    timestamp_atualizacao = datetime.now().isoformat()
+    dados_atualizacao = {
+        "status": novo_status,
+        "data_atualizacao_status": timestamp_atualizacao
+    }
+
+    # Adiciona dados extras se fornecidos
+    if dados_extras:
+        dados_atualizacao.update(dados_extras)
+
+    resultado = {"sucesso": False, "mongodb": "falhou",
+                 "json": "falhou", "contratos_atualizados": 0}
+
+    # MongoDB principal
+    if data_manager.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+        try:
+            if mongodb_manager.database is not None:
+                collection = mongodb_manager.database.fila_contratos
+
+                # Buscar contratos pelos IDs
+                filtro = {"numero_titulo": {"$in": contratos_ids}}
+                update = {"$set": dados_atualizacao}
+
+                def _atualizar():
+                    return collection.update_many(filtro, update)
+
+                result = await asyncio.get_event_loop().run_in_executor(None, _atualizar)
+                resultado["mongodb"] = "sucesso"
+                resultado["contratos_atualizados"] = result.modified_count
+
+                logger.info(
+                    f"✅ MongoDB: {result.modified_count} contratos atualizados para '{novo_status}'")
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao atualizar lote no MongoDB: {str(e)}")
+
+    # JSON fallback
+    try:
+        fila_dados = data_manager._carregar_json_seguro(
+            data_manager.arquivo_fila_sienge, {})
+        contratos_json = fila_dados.get("contratos", [])
+
+        atualizados_json = 0
+        for contrato in contratos_json:
+            if contrato.get("numero_titulo") in contratos_ids:
+                contrato.update(dados_atualizacao)
+                atualizados_json += 1
+
+        fila_dados["contratos"] = contratos_json
+        fila_dados["timestamp_ultima_atualizacao"] = timestamp_atualizacao
+
+        data_manager._salvar_json_seguro(
+            data_manager.arquivo_fila_sienge, fila_dados)
+        resultado["json"] = "sucesso"
+
+        # Se MongoDB falhou, use contagem do JSON
+        if resultado["contratos_atualizados"] == 0:
+            resultado["contratos_atualizados"] = atualizados_json
+
+        logger.info(
+            f"📄 JSON: {atualizados_json} contratos atualizados para '{novo_status}'")
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar lote no JSON: {str(e)}")
+
+    # Resultado final
+    resultado["sucesso"] = resultado["mongodb"] == "sucesso" or resultado["json"] == "sucesso"
+
+    return resultado
+
+
+async def contar_contratos_por_status() -> Dict[str, int]:
+    """
+    Conta contratos agrupados por status
+    Útil para dashboards e monitoramento
+    """
+    contagem = {}
+
+    # MongoDB principal
+    if data_manager.mongodb_ativo and MONGODB_DISPONIVEL and mongodb_manager and mongodb_manager.conectado:
+        try:
+            if mongodb_manager.database is not None:
+                collection = mongodb_manager.database.fila_contratos
+
+                def _contar():
+                    pipeline = [
+                        {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+                        {"$sort": {"_id": 1}}
+                    ]
+                    return list(collection.aggregate(pipeline))
+
+                resultado = await asyncio.get_event_loop().run_in_executor(None, _contar)
+
+                for item in resultado:
+                    status = item.get("_id", "DESCONHECIDO")
+                    count = item.get("count", 0)
+                    contagem[status] = count
+
+                logger.info(f"✅ MongoDB: Contagem por status obtida")
+                return contagem
+
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao contar no MongoDB: {str(e)}")
+
+    # Fallback JSON
+    try:
+        fila_dados = data_manager._carregar_json_seguro(
+            data_manager.arquivo_fila_sienge, {})
+        contratos_json = fila_dados.get("contratos", [])
+
+        for contrato in contratos_json:
+            status = contrato.get("status", "DESCONHECIDO")
+            contagem[status] = contagem.get(status, 0) + 1
+
+        logger.info(f"📄 JSON: Contagem por status obtida")
+        return contagem
+
+    except Exception as e:
+        logger.warning(f"⚠️ Erro ao contar no JSON: {str(e)}")
+        return {}
+
+
+async def obter_estatisticas_aprovacao() -> Dict[str, Any]:
+    """
+    Obtém estatísticas específicas do sistema de aprovação
+    """
+    from core.status_contratos import StatusFiltros
+
+    try:
+        contagem_geral = await contar_contratos_por_status()
+
+        # Filtrar status relacionados à aprovação
+        status_aprovacao = StatusFiltros.contratos_aguardando_aprovacao()
+
+        estatisticas = {
+            "total_aguardando_aprovacao": sum(
+                contagem_geral.get(status, 0) for status in status_aprovacao
+            ),
+            "aguardando_aprovacao": contagem_geral.get("AGUARDANDO_APROVACAO", 0),
+            "aprovacao_realizada": contagem_geral.get("APROVACAO_REALIZADA", 0),
+            "aprovacao_rejeitada": contagem_geral.get("APROVACAO_REJEITADA", 0),
+            "aprovacao_expirada": contagem_geral.get("APROVACAO_EXPIRADA", 0),
+            "timestamp_consulta": datetime.now().isoformat(),
+            "detalhamento_completo": contagem_geral
+        }
+
+        return estatisticas
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter estatísticas de aprovação: {str(e)}")
+        return {
+            "erro": str(e),
+            "timestamp_consulta": datetime.now().isoformat()
+        }
+
+
+# === FIM DAS NOVAS FUNÇÕES PARA APROVAÇÃO ===
 
 # Instância global unificada
 data_manager = DataManagerUnificado()

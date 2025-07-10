@@ -227,39 +227,52 @@ class GeradorTemplates:
     def template_rpa_concluido(nome_rpa: str, tempo_execucao: str, resultados: Dict[str, Any]) -> str:
         """Template para RPA concluído com sucesso"""
         conteudo = f"""
-        <h2 style="color: #28a745; margin-bottom: 20px;">🎉 Execução Concluída com Sucesso!</h2>
+        <h2 style=\"color: #28a745; margin-bottom: 20px;\">🎉 Execução Concluída com Sucesso!</h2>
 
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #495057;">📋 Resumo da Execução</h3>
-            <table width="100%" style="margin: 15px 0;">
-                <tr style="border-bottom: 1px solid #dee2e6;">
-                    <td style="padding: 10px 0; font-weight: bold; width: 30%;">RPA Executado:</td>
-                    <td style="padding: 10px 0;">{nome_rpa}</td>
+        <div style=\"background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;\">
+            <h3 style=\"margin-top: 0; color: #495057;\">📋 Resumo da Execução</h3>
+            <table width=\"100%\" style=\"margin: 15px 0;\">
+                <tr style=\"border-bottom: 1px solid #dee2e6;\">
+                    <td style=\"padding: 10px 0; font-weight: bold; width: 30%;\">RPA Executado:</td>
+                    <td style=\"padding: 10px 0;\">{nome_rpa}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #dee2e6;">
-                    <td style="padding: 10px 0; font-weight: bold;">Tempo de Execução:</td>
-                    <td style="padding: 10px 0;">{tempo_execucao}</td>
+                <tr style=\"border-bottom: 1px solid #dee2e6;\">
+                    <td style=\"padding: 10px 0; font-weight: bold;\">Tempo de Execução:</td>
+                    <td style=\"padding: 10px 0;\">{tempo_execucao}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #dee2e6;">
-                    <td style="padding: 10px 0; font-weight: bold;">Status:</td>
-                    <td style="padding: 10px 0; color: #28a745; font-weight: bold;">✅ Sucesso</td>
+                <tr style=\"border-bottom: 1px solid #dee2e6;\">
+                    <td style=\"padding: 10px 0; font-weight: bold;\">Status:</td>
+                    <td style=\"padding: 10px 0; color: #28a745; font-weight: bold;\">✅ Sucesso</td>
                 </tr>
             </table>
         </div>
 
-        <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
-            <h4 style="margin-top: 0; color: #0056b3;">📊 Resultados Principais</h4>
-            <ul style="margin: 10px 0; padding-left: 20px;">
+        <div style=\"background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;\">
+            <h4 style=\"margin-top: 0; color: #0056b3;\">📊 Resultados Principais</h4>
+            <ul style=\"margin: 10px 0; padding-left: 20px;\">
         """
 
         for chave, valor in resultados.items():
+            if chave == "relatorio":
+                continue
             conteudo += f"<li><strong>{chave.replace('_', ' ').title()}:</strong> {valor}</li>"
 
         conteudo += """
             </ul>
         </div>
+        """
+        # Adiciona o relatório detalhado, se existir
+        relatorio = resultados.get("relatorio")
+        if relatorio:
+            conteudo += """
+            <div style=\"background-color: #fffbe6; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 20px;\">
+                <h4 style=\"margin-top: 0; color: #856404;\">📝 Relatório Detalhado de Aprovação e Rejeição</h4>
+                <pre style=\"background: #f8f9fa; color: #333; font-size: 15px; padding: 15px; border-radius: 6px; overflow-x: auto;\">{}</pre>
+            </div>
+            """.format(relatorio.strip())
 
-        <p style="margin-top: 25px; color: #6c757d; font-style: italic;">
+        conteudo += """
+        <p style=\"margin-top: 25px; color: #6c757d; font-style: italic;\">
             O sistema continuará monitorando as próximas execuções automaticamente.
         </p>
         """
@@ -274,30 +287,40 @@ class GeradorTemplates:
     def template_erro_rpa(nome_rpa: str, erro: str, detalhes: str) -> str:
         """Template para erro no RPA"""
         conteudo = f"""
-        <h2 style="color: #dc3545; margin-bottom: 20px;">⚠️ Erro Detectado no Sistema</h2>
+        <h2 style=\"color: #dc3545; margin-bottom: 20px;\">⚠️ Erro Detectado no Sistema</h2>
 
-        <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #721c24;">🚨 Detalhes do Erro</h3>
-            <table width="100%" style="margin: 15px 0;">
-                <tr style="border-bottom: 1px solid #f5c6cb;">
-                    <td style="padding: 10px 0; font-weight: bold; width: 30%;">RPA Afetado:</td>
-                    <td style="padding: 10px 0;">{nome_rpa}</td>
+        <div style=\"background-color: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545; margin: 20px 0;\">
+            <h3 style=\"margin-top: 0; color: #721c24;\">🚨 Detalhes do Erro</h3>
+            <table width=\"100%\" style=\"margin: 15px 0;\">
+                <tr style=\"border-bottom: 1px solid #f5c6cb;\">
+                    <td style=\"padding: 10px 0; font-weight: bold; width: 30%;\">RPA Afetado:</td>
+                    <td style=\"padding: 10px 0;\">{nome_rpa}</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #f5c6cb;">
-                    <td style="padding: 10px 0; font-weight: bold;">Tipo de Erro:</td>
-                    <td style="padding: 10px 0; color: #dc3545; font-weight: bold;">{erro}</td>
+                <tr style=\"border-bottom: 1px solid #f5c6cb;\">
+                    <td style=\"padding: 10px 0; font-weight: bold;\">Tipo de Erro:</td>
+                    <td style=\"padding: 10px 0; color: #dc3545; font-weight: bold;\">{erro}</td>
                 </tr>
             </table>
         </div>
 
-        <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
-            <h4 style="margin-top: 0; color: #856404;">📝 Detalhes Técnicos</h4>
-            <div style="background-color: #ffffff; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #495057; white-space: pre-wrap;">{detalhes}</div>
+        <div style=\"background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;\">
+            <h4 style=\"margin-top: 0; color: #856404;\">📝 Detalhes Técnicos</h4>
+            <div style=\"background-color: #ffffff; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #495057; white-space: pre-wrap;\">{detalhes}</div>
         </div>
+        """
+        # Se o campo detalhes for um relatório detalhado, destacar
+        if detalhes and ("RELATÓRIO DE CONTRATOS" in detalhes or "RELATÓRIO DE PENDÊNCIAS" in detalhes):
+            conteudo += f"""
+            <div style=\"background-color: #fffbe6; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 20px;\">
+                <h4 style=\"margin-top: 0; color: #856404;\">📝 Relatório Detalhado de Aprovação e Rejeição</h4>
+                <pre style=\"background: #f8f9fa; color: #333; font-size: 15px; padding: 15px; border-radius: 6px; overflow-x: auto;\">{detalhes.strip()}</pre>
+            </div>
+            """
 
-        <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin-top: 20px;">
-            <h4 style="margin-top: 0; color: #0c5460;">🔧 Próximos Passos</h4>
-            <ol style="margin: 10px 0; padding-left: 20px; color: #495057;">
+        conteudo += """
+        <div style=\"background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin-top: 20px;\">
+            <h4 style=\"margin-top: 0; color: #0c5460;\">🔧 Próximos Passos</h4>
+            <ol style=\"margin: 10px 0; padding-left: 20px; color: #495057;\">
                 <li>Verificar os logs detalhados no sistema</li>
                 <li>Analisar as condições que causaram o erro</li>
                 <li>Aplicar correções necessárias</li>
