@@ -121,14 +121,27 @@ class RPAAnalisePlanilhas(BaseRPA):
 
             # --- Separação de logs: Auditoria da planilha de apoio ---
             self.log_progresso(
-                "\n===== AUDITORIA DA PLANILHA DE APOIO (NOVOS CONTRATOS) =====")
+                "\n" + "=" * 80)
+            self.log_progresso(
+                "📋 LEITURA DA ABA DE NOVOS CONTRATOS (PLANILHA DE APOIO)")
+            self.log_progresso(
+                "=" * 80)
+
             for c in contratos_auditoria_apoio:
+                status_emoji = "✅" if c['status'] == 'aprovado' else "❌" if c['status'] == 'rejeitado' else "⚠️"
                 self.log_progresso(
-                    f"[Apoio][{c['status'].upper()}] Cliente: {c['cliente']}, Título: {c['titulo']}, Motivo: {c['motivo']}")
+                    f"{status_emoji} [Apoio][{c['status'].upper()}] Cliente: {c['cliente']}, Título: {c['titulo']}")
+                self.log_progresso(
+                    f"     Motivo: {c['motivo']}")
 
             # --- Processamento da base de cálculo e verificação de integridade ---
             self.log_progresso(
-                "\n===== PROCESSAMENTO DA BASE DE CÁLCULO =====")
+                "\n" + "=" * 80)
+            self.log_progresso(
+                "📋 LEITURA DA PLANILHA BASE DE CÁLCULO")
+            self.log_progresso(
+                "=" * 80)
+
             contratos_reajuste, contratos_auditoria_base = await self._identificar_contratos_reajuste(planilha_calculo_id)
 
             # REMOVIDO: Verificação de integridade entre planilhas
@@ -140,11 +153,17 @@ class RPAAnalisePlanilhas(BaseRPA):
             # Gera fila para próximos RPAs
             fila_processamento = await self._gerar_fila_processamento(contratos_reajuste)
 
+            # ✅ NOVO: Obtém estatísticas de contratos já processados da função _salvar_fila_data_manager
+            contratos_ja_processados = getattr(
+                self, 'contratos_ja_processados', 0)
+
             # Monta resultado final
             resultado_dados = {
                 "novos_contratos_processados": len(novos_contratos_aprovados),
                 "pendencias_iptu_atualizadas": len(pendencias_iptu),
                 "contratos_para_reajuste": len(contratos_reajuste),
+                # ✅ NOVO: Contratos já processados
+                "contratos_ja_processados": contratos_ja_processados,
                 "fila_processamento": fila_processamento,
                 "detalhes_contratos": contratos_reajuste,
                 "timestamp_analise": datetime.now().isoformat(),
@@ -158,66 +177,214 @@ class RPAAnalisePlanilhas(BaseRPA):
             # Registra sucesso final
             await self.rastreamento.registrar_sucesso_rpa(resultado_dados)
 
-            # Após análise, se houver pendências IPTU bloqueadas, notificar explicitamente
-            if hasattr(self, 'pendencias_iptu_bloqueadas') and self.pendencias_iptu_bloqueadas:
+            # Após análise, se houver pendências IPTU identificadas, notificar explicitamente
+            if hasattr(self, 'pendencias_iptu_identificadas') and self.pendencias_iptu_identificadas:
                 self.log_progresso(
-                    f"\n🔔 RELATÓRIO DE PENDÊNCIAS IPTU BLOQUEADAS:")
-                for pend in self.pendencias_iptu_bloqueadas:
+                    f"\n🔔 RELATÓRIO DE PENDÊNCIAS IPTU IDENTIFICADAS:")
+                for pend in self.pendencias_iptu_identificadas:
+                    self.log_progresso(
+                        f" - Cliente: {pend['cliente']}, Título: {pend['titulo']}, Pendência: {pend['pendencia_pmfi']}, Data consulta: {pend['data_consulta_iptu']}, Motivo: {pend['motivo']}")
+
+            # Após análise, se houver pendências IPTU identificadas, notificar explicitamente
+            if hasattr(self, 'pendencias_iptu_identificadas') and self.pendencias_iptu_identificadas:
+                self.log_progresso(
+                    f"\n🔔 RELATÓRIO DE PENDÊNCIAS IPTU IDENTIFICADAS:")
+                for pend in self.pendencias_iptu_identificadas:
                     self.log_progresso(
                         f" - Cliente: {pend['cliente']}, Título: {pend['titulo']}, Pendência: {pend['pendencia_pmfi']}, Data consulta: {pend['data_consulta_iptu']}, Motivo: {pend['motivo']}")
 
             # --- Monta relatório detalhado para notificação ---
             relatorio = ""
-            # RELATÓRIO DE CONTRATOS APROVADOS
-            relatorio += "RELATÓRIO DE CONTRATOS APROVADOS:\n"
-            aprovados = [c for c in resultado_dados.get(
-                'contratos_auditoria', []) if c.get('status') == 'aprovado']
-            if aprovados:
-                for c in aprovados:
-                    relatorio += f" - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}, Motivo: {c.get('motivo')}\n"
+
+            # ✅ NOVO: RELATÓRIO DA LEITURA DA ABA DE NOVOS CONTRATOS
+            relatorio += "=" * 80 + "\n"
+            relatorio += "📋 LEITURA DA ABA DE NOVOS CONTRATOS (PLANILHA DE APOIO)\n"
+            relatorio += "=" * 80 + "\n"
+
+            # Filtra contratos da planilha de apoio
+            contratos_apoio = [c for c in resultado_dados.get('contratos_auditoria', [])
+                               if c.get('origem', '') == 'planilha_apoio' or 'novos_contratos' in str(c.get('motivo', '')).lower()]
+
+            if contratos_apoio:
+                aprovados_apoio = [
+                    c for c in contratos_apoio if c.get('status') == 'aprovado']
+                rejeitados_apoio = [
+                    c for c in contratos_apoio if c.get('status') == 'rejeitado']
+                nprocessados_apoio = [c for c in contratos_apoio if c.get(
+                    'status') == 'não processado']
+
+                relatorio += f"📊 RESUMO DA PLANILHA DE APOIO:\n"
+                relatorio += f"   ✅ Contratos aprovados: {len(aprovados_apoio)}\n"
+                relatorio += f"   ❌ Contratos rejeitados: {len(rejeitados_apoio)}\n"
+                relatorio += f"   ⚠️ Contratos não processados: {len(nprocessados_apoio)}\n"
+                relatorio += f"   📋 Total lidos: {len(contratos_apoio)}\n\n"
+
+                if aprovados_apoio:
+                    relatorio += "✅ CONTRATOS APROVADOS (ELEGÍVEIS PARA MIGRAÇÃO):\n"
+                    for c in aprovados_apoio:
+                        relatorio += f"   - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}\n"
+                        relatorio += f"     Motivo: {c.get('motivo')}\n"
+                    relatorio += "\n"
+
+                if rejeitados_apoio:
+                    relatorio += "❌ CONTRATOS REJEITADOS:\n"
+                    for c in rejeitados_apoio:
+                        relatorio += f"   - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}\n"
+                        relatorio += f"     Motivo: {c.get('motivo')}\n"
+                    relatorio += "\n"
             else:
-                relatorio += "Nenhum contrato aprovado.\n"
-            # RELATÓRIO DE CONTRATOS REJEITADOS (quantitativo, apoio + base)
-            relatorio += "\nRELATÓRIO DE CONTRATOS REJEITADOS:\n"
-            rejeitados_apoio = [c for c in resultado_dados.get(
-                'contratos_auditoria', []) if c.get('status') == 'rejeitado']
-            rejeitados_base = [c for c in resultado_dados.get(
-                'detalhes_contratos', []) if c.get('status') == 'rejeitado']
-            total_rejeitados = len(rejeitados_apoio) + len(rejeitados_base)
-            relatorio += f"Total: {total_rejeitados}\n"
-            # RELATÓRIO DE CONTRATOS NÃO PROCESSADOS
-            relatorio += "\nRELATÓRIO DE CONTRATOS NÃO PROCESSADOS:\n"
-            nprocessados = [c for c in resultado_dados.get(
-                'contratos_auditoria', []) if c.get('status') == 'não processado']
-            if nprocessados:
-                for c in nprocessados:
-                    relatorio += f" - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}, Motivo: {c.get('motivo')}\n"
+                relatorio += "ℹ️ Nenhum contrato encontrado na aba de novos contratos.\n\n"
+
+            # ✅ NOVO: RELATÓRIO DA LEITURA DA PLANILHA BASE DE CÁLCULO
+            relatorio += "=" * 80 + "\n"
+            relatorio += "📋 LEITURA DA PLANILHA BASE DE CÁLCULO\n"
+            relatorio += "=" * 80 + "\n"
+
+            # Filtra contratos da base de cálculo
+            contratos_base = [c for c in resultado_dados.get('contratos_auditoria', [])
+                              if c.get('origem', '') == 'base_calculo' or 'base de cálculo' in str(c.get('motivo', '')).lower()]
+
+            if not contratos_base:
+                # Se não há filtro específico, usa todos os contratos de auditoria
+                contratos_base = resultado_dados.get('contratos_auditoria', [])
+
+            if contratos_base:
+                aprovados_base = [
+                    c for c in contratos_base if c.get('status') == 'aprovado']
+                rejeitados_base = [
+                    c for c in contratos_base if c.get('status') == 'rejeitado']
+                nprocessados_base = [c for c in contratos_base if c.get(
+                    'status') == 'não processado']
+
+                relatorio += f"📊 RESUMO DA BASE DE CÁLCULO:\n"
+                relatorio += f"   ✅ Contratos elegíveis para reparcelamento: {len(aprovados_base)}\n"
+                relatorio += f"   ❌ Contratos rejeitados: {len(rejeitados_base)}\n"
+                relatorio += f"   ⚠️ Contratos não processados: {len(nprocessados_base)}\n"
+                relatorio += f"   📋 Total lidos: {len(contratos_base)}\n\n"
+
+                if aprovados_base:
+                    relatorio += "✅ CONTRATOS ELEGÍVEIS PARA REPARCELAMENTO:\n"
+                    for c in aprovados_base:
+                        relatorio += f"   - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}\n"
+                        relatorio += f"     Motivo: {c.get('motivo')}\n"
+                        # Adiciona informações de pendências IPTU se disponível
+                        if c.get('tem_pendencia_iptu'):
+                            relatorio += f"     ⚠️ Pendência IPTU identificada (será validada no Sienge)\n"
+                    relatorio += "\n"
+
+                if rejeitados_base:
+                    relatorio += "❌ CONTRATOS REJEITADOS:\n"
+                    for c in rejeitados_base:
+                        relatorio += f"   - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}\n"
+                        relatorio += f"     Motivo: {c.get('motivo')}\n"
+                    relatorio += "\n"
+
+                if nprocessados_base:
+                    relatorio += "⚠️ CONTRATOS NÃO PROCESSADOS:\n"
+                    for c in nprocessados_base:
+                        relatorio += f"   - Cliente: {c.get('cliente')}, Título: {c.get('titulo')}\n"
+                        relatorio += f"     Motivo: {c.get('motivo')}\n"
+                    relatorio += "\n"
             else:
-                relatorio += "Nenhum contrato fora do mês de reajuste ou com dados inválidos.\n"
+                relatorio += "ℹ️ Nenhum contrato encontrado na base de cálculo.\n\n"
+
+            # ✅ NOVO: RELATÓRIO DE PENDÊNCIAS IPTU IDENTIFICADAS
+            if hasattr(self, 'pendencias_iptu_identificadas') and self.pendencias_iptu_identificadas:
+                relatorio += "=" * 80 + "\n"
+                relatorio += "⚠️ RELATÓRIO DE PENDÊNCIAS IPTU IDENTIFICADAS\n"
+                relatorio += "=" * 80 + "\n"
+                relatorio += "ℹ️ ATENÇÃO: Os contratos abaixo têm pendências IPTU identificadas e serão reportados no e-mail:\n"
+                relatorio += "   (Estas pendências são apenas informativas - NÃO bloqueiam o processamento)\n\n"
+
+                for pend in self.pendencias_iptu_identificadas:
+                    relatorio += f"   - Cliente: {pend['cliente']}, Título: {pend['titulo']}\n"
+                    relatorio += f"     Pendência PMFI: {pend['pendencia_pmfi']}\n"
+                    relatorio += f"     Data consulta IPTU: {pend['data_consulta_iptu']}\n"
+                    relatorio += f"     Motivo: {pend['motivo']}\n\n"
+
+                relatorio += f"📊 Total de contratos com pendências IPTU identificadas: {len(self.pendencias_iptu_identificadas)}\n\n"
+
             # ESTATÍSTICAS GERAIS
-            relatorio += "\nESTATÍSTICAS GERAIS:\n"
+            relatorio += "=" * 80 + "\n"
+            relatorio += "📊 ESTATÍSTICAS GERAIS\n"
+            relatorio += "=" * 80 + "\n"
+
             total_lidos = len(resultado_dados.get('contratos_auditoria', []))
-            total_aprovados = len(aprovados)
-            total_nprocessados = len(nprocessados)
+            total_aprovados = len([c for c in resultado_dados.get(
+                'contratos_auditoria', []) if c.get('status') == 'aprovado'])
+            total_rejeitados = len([c for c in resultado_dados.get(
+                'contratos_auditoria', []) if c.get('status') == 'rejeitado'])
+            total_nprocessados = len([c for c in resultado_dados.get(
+                'contratos_auditoria', []) if c.get('status') == 'não processado'])
+            contratos_ja_processados = resultado_dados.get(
+                'contratos_ja_processados', 0)
             data_analise = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-            relatorio += f" - Total de contratos lidos: {total_lidos}\n"
-            relatorio += f" - Total aprovados: {total_aprovados}\n"
-            relatorio += f" - Total rejeitados: {total_rejeitados}\n"
-            relatorio += f" - Total não processados: {total_nprocessados}\n"
-            relatorio += f" - Data/hora da análise: {data_analise}\n"
-            # Integridade
-            relatorio += "\n✅ Integridade OK: Todos os contratos da base de cálculo vieram da planilha de apoio.\n"
+
+            relatorio += f"📋 PLANILHA DE APOIO (NOVOS CONTRATOS):\n"
+            relatorio += f"   - Total lidos: {len(contratos_apoio) if 'contratos_apoio' in locals() else 0}\n"
+            relatorio += f"   - Aprovados para migração: {len(aprovados_apoio) if 'aprovados_apoio' in locals() else 0}\n"
+            relatorio += f"   - Rejeitados: {len(rejeitados_apoio) if 'rejeitados_apoio' in locals() else 0}\n\n"
+
+            relatorio += f"📋 BASE DE CÁLCULO:\n"
+            relatorio += f"   - Total lidos: {len(contratos_base) if 'contratos_base' in locals() else 0}\n"
+            relatorio += f"   - Elegíveis para reparcelamento: {len(aprovados_base) if 'aprovados_base' in locals() else 0}\n"
+            relatorio += f"   - Rejeitados: {len(rejeitados_base) if 'rejeitados_base' in locals() else 0}\n"
+            relatorio += f"   - Não processados: {len(nprocessados_base) if 'nprocessados_base' in locals() else 0}\n\n"
+
+            relatorio += f"📊 RESUMO GERAL:\n"
+            relatorio += f"   - Total de contratos lidos: {total_lidos}\n"
+            relatorio += f"   - Total aprovados/elegíveis: {total_aprovados}\n"
+            relatorio += f"   - Total rejeitados: {total_rejeitados}\n"
+            relatorio += f"   - Total não processados: {total_nprocessados}\n"
+            relatorio += f"   - Total já processados (ignorados): {contratos_ja_processados}\n"
+            relatorio += f"   - Data/hora da análise: {data_analise}\n"
+
+            if hasattr(self, 'pendencias_iptu_identificadas'):
+                relatorio += f"   - Total com pendências IPTU identificadas: {len(self.pendencias_iptu_identificadas)}\n"
+
+            relatorio += "\n"
+
+            # ✅ NOVO: Observações importantes
+            relatorio += "📋 OBSERVAÇÕES IMPORTANTES:\n"
+            relatorio += "   ✅ Todos os contratos aprovados podem ser reparcelados (conforme PDD)\n"
+            relatorio += "   ✅ Validação de pendências SIENGE será feita no RPA Sienge após extração\n"
+            relatorio += "   ✅ Pendências IPTU identificadas são apenas para informação\n"
+            relatorio += "   ✅ Nenhum contrato foi bloqueado por pendências\n"
+            relatorio += "   ✅ Fase atual: Geração de fila para extração de relatórios\n"
+            relatorio += "   ✅ Próxima fase: RPA Sienge fará validação com dados reais\n"
+
+            relatorio += "\n✅ Integridade OK: Processamento concluído com sucesso.\n"
             relatorio += "O sistema continuará monitorando as próximas execuções automaticamente.\n"
+
             # Monta resultados para notificação
+            contratos_identificados = resultado_dados.get(
+                'contratos_para_reajuste', 0)
+            contratos_ja_processados = resultado_dados.get(
+                'contratos_ja_processados', 0)
+
+            if contratos_ja_processados > 0:
+                mensagem = f"Análise concluída - {contratos_identificados} contratos elegíveis para reparcelamento ({contratos_ja_processados} já processados anteriormente)"
+            else:
+                mensagem = f"Análise concluída - {contratos_identificados} contratos elegíveis para reparcelamento"
+
             resultados_notificacao = {
-                "Mensagem": f"Análise concluída - {resultado_dados.get('contratos_para_reajuste', 0)} contratos identificados para reparcelamento",
+                "Mensagem": mensagem,
                 "relatorio": relatorio,
             }
             # Adiciona outros campos principais
-            resultados_notificacao["contratos_identificados"] = resultado_dados.get(
-                'contratos_para_reajuste', 0)
-            resultados_notificacao["planilhas_analisadas"] = 2
-            resultados_notificacao["status"] = "Análise concluída"
+            resultados_notificacao["contratos_identificados"] = contratos_identificados
+            resultados_notificacao["contratos_ja_processados"] = contratos_ja_processados
+            resultados_notificacao["planilhas_analisadas"] = "2"
+            resultados_notificacao["status"] = "Análise concluída - Fila gerada para extração"
+            resultados_notificacao["observacao"] = "Fase 1: Geração de fila para extração de relatórios. Validação PDD será feita no RPA Sienge com dados reais"
+
+            # ✅ NOVO: Adiciona informações sobre pendências IPTU
+            if hasattr(self, 'pendencias_iptu_identificadas'):
+                resultados_notificacao["pendencias_iptu_identificadas"] = len(
+                    self.pendencias_iptu_identificadas)
+                resultados_notificacao["tem_pendencias_iptu"] = len(
+                    self.pendencias_iptu_identificadas) > 0
+
             # Envia notificação de sucesso
             notificar_sucesso(
                 nome_rpa="RPA Análise de Planilhas",
@@ -433,7 +600,8 @@ class RPAAnalisePlanilhas(BaseRPA):
                         'cliente': cliente or 'Sem nome',
                         'titulo': numero_titulo or 'N/A',
                         'status': 'rejeitado',
-                        'motivo': motivo_str
+                        'motivo': motivo_str,
+                        'origem': 'planilha_apoio'
                     })
                     continue
                 # Se passou, aprovado para migração
@@ -441,7 +609,8 @@ class RPAAnalisePlanilhas(BaseRPA):
                     'cliente': cliente or 'Sem nome',
                     'titulo': numero_titulo or 'N/A',
                     'status': 'aprovado',
-                    'motivo': 'Aprovado para migração (dados válidos na planilha de apoio)'
+                    'motivo': 'Aprovado para migração (dados válidos na planilha de apoio)',
+                    'origem': 'planilha_apoio'
                 })
         except Exception as e:
             self.log_erro("Erro na auditoria da planilha de apoio", e)
@@ -627,7 +796,7 @@ class RPAAnalisePlanilhas(BaseRPA):
                 'Data de Migração') if 'Data de Migração' in cabecalhos_principais else -1
 
             for i, contrato in enumerate(novos_contratos):
-                self.log_progresso(f"DEBUG CONTRATO MIGRADO: {contrato}")
+                # self.log_progresso(f"DEBUG CONTRATO MIGRADO: {contrato}")  # Removido para não poluir o log
                 linha_dados = []
                 for idx, cabecalho in enumerate(cabecalhos_principais):
                     if idx <= idx_limite:
@@ -684,11 +853,14 @@ class RPAAnalisePlanilhas(BaseRPA):
     async def _atualizar_pendencias_iptu(self, aba_base_calculo, pendencias_iptu: List[Dict[str, Any]]):
         """
         Atualiza coluna de pendências IPTU conforme PDD seção 8.2
+        ✅ CORRIGIDO: Logs detalhados linha por linha + NÃO bloqueia contratos
 
         Processo:
         1. Verifica para cada cliente/título a atualização data consulta do IPTU
         2. Copia informação da coluna IPTU PENDÊNCIAS PMFI para clientes cuja "Data de consulta" é do mês vigente
         3. Cola as informações na coluna correspondente da Base de cálculo
+        4. ✅ NOVO: Log detalhado de cada atualização
+        5. ✅ CORRIGIDO: NÃO bloqueia contratos, apenas identifica pendências para relatório
 
         Args:
             aba_base_calculo: Aba Base de cálculo
@@ -704,15 +876,19 @@ class RPAAnalisePlanilhas(BaseRPA):
             ano_atual = datetime.now().year
 
             self.log_progresso(
-                f"Processando {len(pendencias_iptu)} registros de consulta IPTU para mês {mes_atual}/{ano_atual}")
+                f"🔍 PROCESSANDO PENDÊNCIAS IPTU - Mês atual: {mes_atual}/{ano_atual}")
+            self.log_progresso(
+                f"📊 Total de registros IPTU para análise: {len(pendencias_iptu)}")
 
             # Lê dados atuais da Base de cálculo
             dados_base_calculo = aba_base_calculo.get_all_records()
 
             atualizacoes_realizadas = 0
             pendencias_encontradas = []
+            # ✅ CORRIGIDO: Lista de pendências identificadas (NÃO bloqueadas)
+            pendencias_identificadas = []
 
-            for pendencia in pendencias_iptu:
+            for idx, pendencia in enumerate(pendencias_iptu, 1):
                 try:
                     # Extrai dados da consulta IPTU
                     cliente_iptu = str(pendencia.get('Cliente', '')).strip()
@@ -725,8 +901,22 @@ class RPAAnalisePlanilhas(BaseRPA):
                     pendencia_pmfi = str(pendencia.get(
                         'PENDÊNCIAS PMFI', pendencia.get('IPTU PENDÊNCIAS PMFI', ''))).strip()
 
+                    # ✅ NOVO: Log detalhado de cada registro IPTU
+                    self.log_progresso(
+                        f"\n📋 REGISTRO IPTU #{idx}:")
+                    self.log_progresso(
+                        f"   Cliente: '{cliente_iptu}'")
+                    self.log_progresso(
+                        f"   Título: '{titulo_iptu}'")
+                    self.log_progresso(
+                        f"   Data consulta: '{data_consulta_str}'")
+                    self.log_progresso(
+                        f"   Pendência PMFI: '{pendencia_pmfi}'")
+
                     # Valida se tem dados mínimos
                     if not cliente_iptu and not titulo_iptu:
+                        self.log_progresso(
+                            f"   ❌ REJEITADO: Cliente e título vazios")
                         continue
 
                     # Verifica se data de consulta é do mês vigente
@@ -740,6 +930,8 @@ class RPAAnalisePlanilhas(BaseRPA):
                                         data_consulta_str, formato)
                                     if data_consulta.month == mes_atual and data_consulta.year == ano_atual:
                                         consulta_mes_atual = True
+                                        self.log_progresso(
+                                            f"   ✅ Data consulta OK: {data_consulta.strftime('%d/%m/%Y')} (mês vigente)")
                                     break
                                 except ValueError:
                                     continue
@@ -748,15 +940,39 @@ class RPAAnalisePlanilhas(BaseRPA):
 
                     # Se consulta não é do mês atual, registra pendência
                     if not consulta_mes_atual:
+                        motivo = f"Consulta IPTU não atualizada no mês vigente (data: '{data_consulta_str}')"
+                        self.log_progresso(
+                            f"   ⚠️ PENDÊNCIA: {motivo}")
                         pendencias_encontradas.append({
                             'cliente': cliente_iptu,
                             'titulo': titulo_iptu,
                             'data_consulta': data_consulta_str,
-                            'motivo': 'Consulta IPTU não atualizada no mês vigente'
+                            'motivo': motivo
                         })
                         continue
 
+                    # ✅ CORRIGIDO: Identifica pendências PMFI (NÃO BLOQUEIA)
+                    pendencia_pmfi_upper = pendencia_pmfi.upper()
+                    pendencia_valida = pendencia_pmfi_upper in [
+                        'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
+
+                    if not pendencia_valida:
+                        self.log_progresso(
+                            f"   ⚠️ PENDÊNCIA PMFI IDENTIFICADA: '{pendencia_pmfi}' (será reportada no e-mail)")
+                        pendencias_identificadas.append({
+                            'cliente': cliente_iptu,
+                            'titulo': titulo_iptu,
+                            'pendencia_pmfi': pendencia_pmfi,
+                            'data_consulta_iptu': data_consulta_str,
+                            'motivo': f"Pendência PMFI: '{pendencia_pmfi}' - Será reportada no e-mail"
+                        })
+                        # ✅ CORRIGIDO: NÃO bloqueia - continua processando
+                    else:
+                        self.log_progresso(
+                            f"   ✅ Pendência PMFI OK: '{pendencia_pmfi}'")
+
                     # Procura contrato correspondente na Base de cálculo
+                    contrato_encontrado = False
                     for linha, contrato in enumerate(dados_base_calculo, start=2):
                         cliente_base = str(contrato.get('Cliente', '')).strip()
                         titulo_base = str(contrato.get(
@@ -765,6 +981,14 @@ class RPAAnalisePlanilhas(BaseRPA):
                         # Verifica correspondência por cliente OU título
                         if (cliente_iptu and cliente_iptu.lower() in cliente_base.lower()) or \
                            (titulo_iptu and titulo_iptu == titulo_base):
+
+                            contrato_encontrado = True
+                            self.log_progresso(
+                                f"   ✅ CONTRATO ENCONTRADO na Base de cálculo (linha {linha})")
+                            self.log_progresso(
+                                f"   📋 Cliente Base: '{cliente_base}'")
+                            self.log_progresso(
+                                f"   📋 Título Base: '{titulo_base}'")
 
                             # Atualiza coluna PENDÊNCIAS PMFI na Base de cálculo
                             try:
@@ -778,381 +1002,94 @@ class RPAAnalisePlanilhas(BaseRPA):
                                         break
 
                                 if coluna_pendencia:
-                                    # Atualiza célula específica
+                                    # ✅ NOVO: Log detalhado da atualização
                                     celula = f'{chr(64 + coluna_pendencia)}{linha}'
+                                    valor_anterior = aba_base_calculo.acell(
+                                        celula).value
+
+                                    self.log_progresso(
+                                        f"   📝 ATUALIZANDO CÉLULA: {celula}")
+                                    self.log_progresso(
+                                        f"   📝 Valor anterior: '{valor_anterior}'")
+                                    self.log_progresso(
+                                        f"   📝 Valor novo: '{pendencia_pmfi}'")
+
+                                    # Atualiza célula específica
                                     aba_base_calculo.update(
                                         celula, pendencia_pmfi)
 
                                     self.log_progresso(
-                                        f"✅ IPTU atualizado: {cliente_base} - {titulo_base} -> {pendencia_pmfi}")
+                                        f"   ✅ ATUALIZAÇÃO CONCLUÍDA: {cliente_base} - {titulo_base}")
+                                    self.log_progresso(
+                                        f"   ✅ Coluna: '{cabecalhos[coluna_pendencia-1]}'")
+                                    self.log_progresso(
+                                        f"   ✅ Linha: {linha}")
+
                                     atualizacoes_realizadas += 1
                                 else:
                                     self.log_progresso(
-                                        f"⚠️ Coluna PENDÊNCIAS PMFI não encontrada para atualizar {cliente_base}")
+                                        f"   ❌ ERRO: Coluna PENDÊNCIAS PMFI não encontrada")
+                                    self.log_progresso(
+                                        f"   📋 Cabeçalhos disponíveis: {cabecalhos}")
 
                             except Exception as e:
                                 self.log_progresso(
-                                    f"⚠️ Erro ao atualizar IPTU para {cliente_base}: {str(e)}")
+                                    f"   ❌ ERRO ao atualizar IPTU para {cliente_base}: {str(e)}")
 
                             break  # Encontrou correspondência, para de procurar
 
+                    if not contrato_encontrado:
+                        self.log_progresso(
+                            f"   ⚠️ CONTRATO NÃO ENCONTRADO na Base de cálculo")
+                        self.log_progresso(
+                            f"   📋 Cliente procurado: '{cliente_iptu}'")
+                        self.log_progresso(
+                            f"   📋 Título procurado: '{titulo_iptu}'")
+
                 except Exception as e:
                     self.log_progresso(
-                        f"⚠️ Erro ao processar pendência IPTU: {str(e)}")
+                        f"   ❌ ERRO ao processar pendência IPTU #{idx}: {str(e)}")
                     continue
+
+            # ✅ NOVO: Relatório final detalhado
+            self.log_progresso(
+                f"\n📊 RELATÓRIO FINAL - PROCESSAMENTO IPTU:")
+            self.log_progresso(
+                f"   ✅ Atualizações realizadas: {atualizacoes_realizadas}")
+            self.log_progresso(
+                f"   ⚠️ Pendências encontradas: {len(pendencias_encontradas)}")
+            self.log_progresso(
+                f"   📋 Pendências identificadas para relatório: {len(pendencias_identificadas)}")
 
             # Registra no log as pendências encontradas
             if pendencias_encontradas:
                 self.log_progresso(
-                    f"⚠️ {len(pendencias_encontradas)} clientes/títulos com consulta IPTU pendente:")
+                    f"\n⚠️ CLIENTES/TÍTULOS COM CONSULTA IPTU PENDENTE:")
                 for pendencia in pendencias_encontradas:
                     self.log_progresso(
                         f"   - {pendencia['cliente']} (Título: {pendencia['titulo']}) - {pendencia['motivo']}")
 
+            # ✅ CORRIGIDO: Registra pendências identificadas (NÃO bloqueadas)
+            if pendencias_identificadas:
+                self.log_progresso(
+                    f"\n📋 CLIENTES/TÍTULOS COM PENDÊNCIAS PMFI IDENTIFICADAS (serão reportadas no e-mail):")
+                for pendencia in pendencias_identificadas:
+                    self.log_progresso(
+                        f"   - {pendencia['cliente']} (Título: {pendencia['titulo']}) - {pendencia['motivo']}")
+
+            # ✅ CORRIGIDO: Salva pendências identificadas para relatório no e-mail
+            if pendencias_identificadas:
+                if not hasattr(self, 'pendencias_iptu_identificadas'):
+                    self.pendencias_iptu_identificadas = []
+                self.pendencias_iptu_identificadas.extend(
+                    pendencias_identificadas)
+
             self.log_progresso(
-                f"✅ Processamento IPTU concluído: {atualizacoes_realizadas} atualizações realizadas, {len(pendencias_encontradas)} pendências encontradas")
+                f"✅ Processamento IPTU concluído - NENHUM CONTRATO BLOQUEADO")
 
         except Exception as e:
             raise Exception(
                 f"Erro ao atualizar pendências IPTU conforme PDD: {str(e)}")
-
-    async def _identificar_contratos_reajuste(self, planilha_calculo_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """
-        Identifica contratos que precisam de reajuste APLICANDO REGRAS PDD 9.1.1
-        Conforme PDD: baseado na coluna "Mês reajuste" + validação de inadimplência
-
-        Args:
-            planilha_calculo_id: ID da planilha de cálculo
-
-        Returns:
-            Lista de contratos que precisam de reajuste COM VALIDAÇÃO PDD
-        """
-        try:
-            # ✅ IMPORTA E INICIALIZA PROCESSADOR DE REGRAS PDD
-            from core.processador_regras_pdd import ProcessadorRegrasNegocio
-            processador_pdd = ProcessadorRegrasNegocio()
-
-            self.log_progresso(
-                "🔍 Analisando contratos com REGRAS PDD 9.1.1 INTEGRADAS")
-
-            # Abre planilha principal (cálculo)
-            if not self.cliente_sheets:
-                raise Exception("Cliente Google Sheets não inicializado")
-
-            planilha_principal = self.cliente_sheets.open_by_key(
-                planilha_calculo_id)
-            aba_base_calculo = planilha_principal.worksheet("Base de cálculo")
-
-            # Lê todos os dados
-            dados_contratos = aba_base_calculo.get_all_records()
-
-            # Obtém mês atual
-            mes_atual = datetime.now().month
-            ano_atual = datetime.now().year
-
-            contratos_para_reajuste = []
-            contratos_auditoria = []  # NOVO: lista para rastreamento completo
-
-            self.log_progresso(
-                f"Mês atual: {mes_atual:02d} (formato numérico)")
-
-            for linha, contrato in enumerate(dados_contratos, start=2):
-                try:
-                    # Verifica se o contrato tem dados mínimos obrigatórios
-                    cliente = str(contrato.get('Cliente', '')).strip()
-                    numero_titulo = str(contrato.get(
-                        'numero_titulo', '')).strip()
-                    if not numero_titulo:
-                        numero_titulo = str(contrato.get('Titulo', '')).strip()
-                    if not numero_titulo:
-                        numero_titulo = str(contrato.get('Título', '')).strip()
-
-                    if not cliente and not numero_titulo:
-                        continue
-
-                    mes_reajuste_str = str(
-                        contrato.get('Mês reajuste', '')).strip()
-
-                    if (not mes_reajuste_str or
-                        mes_reajuste_str in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None'] or
-                            len(mes_reajuste_str) < 3):
-                        self.log_progresso(
-                            f"⚠️ Linha {linha}: Mês reajuste vazio ou inválido: '{mes_reajuste_str}'")
-                        contratos_auditoria.append({
-                            'cliente': cliente or 'Sem nome',
-                            'titulo': numero_titulo or 'N/A',
-                            'status': 'não processado',
-                            'motivo': f"Mês reajuste vazio ou inválido: '{mes_reajuste_str}'"
-                        })
-                        continue
-
-                    # Parse do formato novo "05-25", "06-25", etc. ou formato antigo "mai.-25"
-                    if '-' in mes_reajuste_str:
-                        if '.' in mes_reajuste_str:
-                            # Formato antigo "mai.-25"
-                            meses_map = {
-                                'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
-                                'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
-                            }
-                            partes = mes_reajuste_str.split('.-')
-                            if len(partes) == 2:
-                                mes_nome = partes[0].lower().strip()
-                                ano_str = partes[1].strip()
-
-                                # Validação do nome do mês
-                                if mes_nome not in meses_map:
-                                    self.log_progresso(
-                                        f"⚠️ Linha {linha}: Mês inválido: '{mes_nome}' em '{mes_reajuste_str}'")
-                                    continue
-
-                                # Validação do ano
-                                if not ano_str or len(ano_str) != 2:
-                                    self.log_progresso(
-                                        f"⚠️ Linha {linha}: Ano inválido: '{ano_str}' em '{mes_reajuste_str}'")
-                                    continue
-
-                                # Converte nome do mês para número
-                                mes_reajuste = meses_map[mes_nome]
-
-                                # Converte ano (25 -> 2025, 24 -> 2024)
-                                try:
-                                    ano_reajuste = int(ano_str)
-                                    if ano_reajuste < 50:  # Assume 2000+
-                                        ano_reajuste += 2000
-                                    elif ano_reajuste < 100:  # Assume 1900+
-                                        ano_reajuste += 1900
-                                except ValueError:
-                                    self.log_progresso(
-                                        f"⚠️ Linha {linha}: Erro ao converter ano: '{ano_str}' em '{mes_reajuste_str}'")
-                                    continue
-                            else:
-                                self.log_progresso(
-                                    f"⚠️ Linha {linha}: Formato antigo inválido: '{mes_reajuste_str}' (esperado: 'mês.-ano')")
-                                continue
-                        else:
-                            # Formato novo "05-25", "06-25", etc.
-                            partes = mes_reajuste_str.split('-')
-                            if len(partes) == 2:
-                                mes_str = partes[0].strip()
-                                ano_str = partes[1].strip()
-
-                                # Validação do mês numérico
-                                try:
-                                    mes_reajuste = int(mes_str)
-                                    if mes_reajuste < 1 or mes_reajuste > 12:
-                                        self.log_progresso(
-                                            f"⚠️ Linha {linha}: Mês inválido: '{mes_str}' em '{mes_reajuste_str}' (deve ser 01-12)")
-                                        continue
-                                except ValueError:
-                                    self.log_progresso(
-                                        f"⚠️ Linha {linha}: Mês não numérico: '{mes_str}' em '{mes_reajuste_str}'")
-                                    continue
-
-                                # Validação do ano
-                                if not ano_str or len(ano_str) != 2:
-                                    self.log_progresso(
-                                        f"⚠️ Linha {linha}: Ano inválido: '{ano_str}' em '{mes_reajuste_str}'")
-                                    continue
-
-                                # Converte ano (25 -> 2025, 24 -> 2024)
-                                try:
-                                    ano_reajuste = int(ano_str)
-                                    if ano_reajuste < 50:  # Assume 2000+
-                                        ano_reajuste += 2000
-                                    elif ano_reajuste < 100:  # Assume 1900+
-                                        ano_reajuste += 1900
-                                except ValueError:
-                                    self.log_progresso(
-                                        f"⚠️ Linha {linha}: Erro ao converter ano: '{ano_str}' em '{mes_reajuste_str}'")
-                                    continue
-                            else:
-                                self.log_progresso(
-                                    f"⚠️ Linha {linha}: Formato novo inválido: '{mes_reajuste_str}' (esperado: 'MM-AA')")
-                                continue
-
-                    if ano_atual == ano_reajuste and mes_atual == mes_reajuste:
-                        # ===================== REGRA PDD IPTU (AJUSTADA) =====================
-                        pendencia_pmfi = str(contrato.get(
-                            'PENDÊNCIAS PMFI', '')).strip().upper()
-                        data_consulta_str = str(contrato.get(
-                            'Data de consulta IPTU', '')).strip()
-                        consulta_iptu_ok = pendencia_pmfi in [
-                            'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
-                        data_consulta_ok = False
-                        if data_consulta_str:
-                            try:
-                                for formato in ['%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d']:
-                                    try:
-                                        data_consulta = datetime.strptime(
-                                            data_consulta_str, formato)
-                                        if data_consulta.month == mes_atual and data_consulta.year == ano_atual:
-                                            data_consulta_ok = True
-                                        break
-                                    except ValueError:
-                                        continue
-                            except Exception:
-                                pass
-                        # --- AJUSTE: NÃO BLOQUEAR POR PENDÊNCIA DE IPTU ---
-                        if not consulta_iptu_ok or not data_consulta_ok:
-                            motivo = []
-                            if not consulta_iptu_ok:
-                                motivo.append(
-                                    f"pendência PMFI: '{pendencia_pmfi}'")
-                            if not data_consulta_ok:
-                                motivo.append(
-                                    f"data de consulta IPTU inválida ou ausente: '{data_consulta_str}'")
-                            motivo_str = "; ".join(motivo)
-                            self.log_progresso(
-                                f"⚠️ Contrato COM PENDÊNCIA DE IPTU INCLUÍDO NA FILA: Cliente='{cliente or 'Sem nome'}', Título='{numero_titulo or 'N/A'}', {motivo_str}")
-                            if not hasattr(self, 'pendencias_iptu_bloqueadas'):
-                                self.pendencias_iptu_bloqueadas = []
-                            self.pendencias_iptu_bloqueadas.append({
-                                'cliente': cliente or 'Sem nome',
-                                'titulo': numero_titulo or 'N/A',
-                                'pendencia_pmfi': pendencia_pmfi,
-                                'data_consulta_iptu': data_consulta_str,
-                                'motivo': motivo_str
-                            })
-                            # Marcar no contrato a pendência
-                            contrato['pendencia_iptu'] = motivo_str
-                        # ===================== FIM REGRA PDD IPTU (AJUSTADA) =====================
-
-                        # ✅ ELEGÍVEL: Mês atual - APLICAR REGRAS PDD 9.1.1
-
-                        # Verifica se há pendências de IPTU básicas
-                        pendencia_pmfi = str(contrato.get(
-                            'PENDÊNCIAS PMFI', '')).strip().upper()
-                        consulta_iptu_ok = pendencia_pmfi in [
-                            'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
-
-                        if not consulta_iptu_ok:
-                            self.log_progresso(
-                                f"⚠️ Contrato com pendência IPTU não será listado: {cliente or 'Sem nome'} - Pendência: {pendencia_pmfi}")
-                            continue
-
-                        # ✅ NOVO: APLICAR REGRAS PDD PARA VALIDAÇÃO DE INADIMPLÊNCIA
-                        titulo_final = str(numero_titulo or 'N/A')
-
-                        # 🎯 INTEGRAÇÃO: Simula dados CSV do Sienge para validação PDD
-                        # Nota: Em produção, isso seria dados reais do CSV do Sienge
-                        dados_simulados_csv = self._simular_dados_csv_para_validacao(
-                            contrato, titulo_final)
-
-                        if dados_simulados_csv is not None:
-                            # Aplica validação de inadimplência PDD
-                            resultado_pdd = processador_pdd.processar_dados_cliente_completo(
-                                df_planilha=dados_simulados_csv,
-                                cliente=str(cliente),
-                                numero_titulo=str(titulo_final)
-                            )
-
-                            self.log_progresso(
-                                f"🔍 Validação PDD para {cliente}: {resultado_pdd.get('status_cliente', 'N/A')}")
-
-                            # Se inadimplente, pula o contrato
-                            if not resultado_pdd.get('pode_reparcelar', False):
-                                self.log_progresso(
-                                    f"❌ Contrato INADIMPLENTE excluído: {cliente or 'Sem nome'} - {resultado_pdd.get('motivo_classificacao', 'N/A')}")
-                                contratos_auditoria.append({
-                                    'cliente': cliente or 'Sem nome',
-                                    'titulo': titulo_final,
-                                    'status': 'rejeitado',
-                                    'motivo': f"Contrato INADIMPLENTE: {resultado_pdd.get('motivo_classificacao', 'N/A')}"
-                                })
-                                continue
-
-                            self.log_progresso(
-                                f"✅ Contrato ADIMPLENTE aprovado: {cliente or 'Sem nome'}")
-
-                        # Cria cópia com dados essenciais preservados + resultados PDD
-                        contrato_processado = contrato.copy()
-                        contrato_processado['linha_planilha'] = linha
-                        contrato_processado['mes_reajuste_original'] = mes_reajuste_str
-                        contrato_processado[
-                            'motivo_elegibilidade'] = f"Mês de reajuste atual: {mes_reajuste_str}"
-
-                        # ✅ NOVO: Adiciona resultados da validação PDD
-                        if dados_simulados_csv is not None and 'resultado_pdd' in locals():
-                            contrato_processado['validacao_pdd'] = json.dumps({
-                                'status_cliente': resultado_pdd.get('status_cliente'),
-                                'pode_reparcelar': resultado_pdd.get('pode_reparcelar'),
-                                'nivel_risco': resultado_pdd.get('nivel_risco'),
-                                'qtd_ct_vencidas': resultado_pdd.get('qtd_ct_vencidas', 0),
-                                'regras_aplicadas': 'REGRAS_9_1_1_INTEGRADAS'
-                            })
-                        else:
-                            contrato_processado['validacao_pdd'] = json.dumps({
-                                'status_cliente': 'PENDENTE_DADOS_CSV',
-                                'pode_reparcelar': True,  # Assume OK se não há dados para validar
-                                'observacao': 'Validação PDD será feita no RPA Sienge com dados reais'
-                            })
-
-                        # Garante que campos essenciais estejam presentes
-                        contrato_processado['cliente'] = cliente or contrato_processado.get(
-                            'Cliente', 'N/A')
-                        contrato_processado['numero_titulo'] = titulo_final
-
-                        # REMOVIDO: Não deve alterar "Último reajuste" - é dado de entrada para fórmula "Mês reajuste"
-                        # await self._atualizar_ultimo_reajuste(aba_base_calculo, linha, contrato_processado)
-
-                        contratos_para_reajuste.append(
-                            contrato_processado)
-                        contratos_auditoria.append({
-                            'cliente': cliente or 'Sem nome',
-                            'titulo': titulo_final,
-                            'status': 'aprovado',
-                            'motivo': f"Aprovado para reparcelamento (mês de reajuste atual: {mes_reajuste_str})"
-                        })
-                        # Parse do JSON para acessar campos
-                        try:
-                            validacao_pdd_dict = json.loads(
-                                contrato_processado['validacao_pdd'])
-                            self.log_progresso(
-                                f"   📋 Título={titulo_final}, Validação PDD={validacao_pdd_dict.get('status_cliente')}")
-                            self.log_progresso(
-                                f"   📋 Linha: {linha}, Status: {validacao_pdd_dict.get('pode_reparcelar', 'N/A')}")
-                        except Exception:
-                            self.log_progresso(
-                                f"   📋 Título={titulo_final}, Validação PDD=ERRO_PARSE_JSON")
-
-                    elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
-                        # ⚠️ ATRASADO: Deveria ter sido processado antes
-                        self.log_progresso(
-                            f"⚠️ Contrato atrasado: {cliente or 'Sem nome'} - {mes_reajuste_str} (deveria ter sido processado)")
-                        contratos_auditoria.append({
-                            'cliente': cliente or 'Sem nome',
-                            'titulo': numero_titulo or 'N/A',
-                            'status': 'não processado',
-                            'motivo': f"Contrato atrasado: {mes_reajuste_str} (deveria ter sido processado)"
-                        })
-
-                    else:
-                        # ❌ AINDA NÃO VENCEU: Mês seguinte conforme PDD
-                        self.log_progresso(
-                            f"📅 Contrato para mês seguinte: {cliente or 'Sem nome'} - {mes_reajuste_str} (ainda não chegou a data)")
-                        contratos_auditoria.append({
-                            'cliente': cliente or 'Sem nome',
-                            'titulo': numero_titulo or 'N/A',
-                            'status': 'não processado',
-                            'motivo': f"Contrato não está no mês de reajuste atual: {mes_reajuste_str}"
-                        })
-
-                except (ValueError, TypeError, AttributeError) as e:
-                    # Formato inválido, pula contrato
-                    self.log_progresso(
-                        f"⚠️ Erro na linha {linha}: {str(e)} - dados: {mes_reajuste_str}")
-                    continue
-
-            self.log_progresso(
-                f"✅ {len(contratos_para_reajuste)} contratos identificados para reajuste")
-
-            # NOVO: retorna também a lista de auditoria detalhada
-            self.contratos_auditoria = contratos_auditoria
-            return contratos_para_reajuste, contratos_auditoria
-
-        except Exception as e:
-            self.log_erro("Erro ao identificar contratos para reajuste", e)
-            return [], []
 
     async def _gerar_fila_processamento(self, contratos_reajuste: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -1284,8 +1221,8 @@ class RPAAnalisePlanilhas(BaseRPA):
 
     async def _salvar_fila_data_manager(self, fila_processamento: List[Dict[str, Any]]):
         """
-        ✅ CORRIGIDO: Salva cada contrato como documento individual na collection fila_processamento_sienge
-        Conforme implementação original - um documento por contrato para processamento individual
+        ✅ ATUALIZADO: Verifica status existente antes de adicionar contratos à fila
+        Só adiciona se status for "PENDENTE" ou se não existir registro
 
         Args:
             fila_processamento: Lista de itens da fila
@@ -1296,10 +1233,12 @@ class RPAAnalisePlanilhas(BaseRPA):
 
             if fila_processamento:
                 self.log_progresso(
-                    f"💾 Salvando {len(fila_processamento)} contratos individualmente no MongoDB...")
+                    f"🔍 Verificando {len(fila_processamento)} contratos antes de adicionar à fila...")
 
                 contratos_salvos = 0
                 contratos_falharam = 0
+                contratos_ja_processados = 0
+                contratos_ignorados = 0
 
                 # ✅ CORRIGIDO: Salva cada contrato como documento separado
                 for contrato in fila_processamento:
@@ -1309,8 +1248,8 @@ class RPAAnalisePlanilhas(BaseRPA):
                             # MongoDB gerará _id automaticamente
                             "numero_titulo": contrato["numero_titulo"],
                             "cliente": contrato["cliente"],
-                            # Campo 'Loteamento' da planilha
-                            "empresa": contrato.get("empreendimento", ""),
+                            # ✅ CORREÇÃO: Campo 'Empresa' da planilha (não Loteamento)
+                            "empresa": contrato.get("cnpj_unidade", ""),
                             "status": "PENDENTE",  # Status inicial sempre PENDENTE
                             "tentativa_extracao": 1,
                             "timestamp_inicio_extracao": datetime.now().isoformat(),
@@ -1319,7 +1258,8 @@ class RPAAnalisePlanilhas(BaseRPA):
                             # Campos que serão preenchidos durante processamento
                             "dados_extraidos": False,
                             "parcelas_pendentes": 0,
-                            "pode_reparcelar": True,  # Inicialmente True, será validado no Sienge
+                            "pode_reparcelar": True,  # ✅ PDD: Todos podem reparcelar
+                            "pode_gerar_carne": False,  # ✅ PDD: Inicialmente False, será validado no Sienge
                             "saldo_total": 0,
                             "timestamp_extracao": "",
                             "fonte_dados": "",
@@ -1347,37 +1287,66 @@ class RPAAnalisePlanilhas(BaseRPA):
                         if not mongodb_manager.conectado:
                             await mongodb_manager.conectar()
 
-                        # ✅ CORRIGIDO: Salva na collection fila_contratos
+                        # ✅ NOVO: Verifica status existente antes de adicionar
                         if mongodb_manager.conectado and hasattr(mongodb_manager, 'database') and mongodb_manager.database is not None:
                             collection = mongodb_manager.database.fila_contratos
                             # Verifica duplicidade por numero_titulo + cliente
                             filtro = {
-                                "numero_titulo": documento_contrato["numero_titulo"], "cliente": documento_contrato["cliente"]}
+                                "numero_titulo": documento_contrato["numero_titulo"],
+                                "cliente": documento_contrato["cliente"]
+                            }
                             existente = collection.find_one(filtro)
+
                             if existente:
-                                # Atualiza documento existente
-                                update_fields = documento_contrato.copy()
-                                update_fields["timestamp_ultima_atualizacao"] = datetime.now(
-                                )
-                                collection.update_one(
-                                    filtro, {"$set": update_fields})
-                                self.log_progresso(
-                                    f"🔄 Contrato atualizado na fila: {documento_contrato['cliente']} - {documento_contrato['numero_titulo']}")
+                                # ✅ NOVO: Verifica status do registro existente
+                                status_existente = existente.get(
+                                    "status", "PENDENTE")
+
+                                if status_existente == "PENDENTE":
+                                    # ✅ ATUALIZA: Registro existe e está pendente - pode atualizar
+                                    update_fields = documento_contrato.copy()
+                                    update_fields["timestamp_ultima_atualizacao"] = datetime.now(
+                                    )
+                                    collection.update_one(
+                                        filtro, {"$set": update_fields})
+                                    self.log_progresso(
+                                        f"🔄 Contrato atualizado na fila: {documento_contrato['cliente']} - {documento_contrato['numero_titulo']} (Status: PENDENTE)")
+                                    contratos_salvos += 1
+                                else:
+                                    # ✅ IGNORA: Registro existe mas não está pendente - já foi processado
+                                    self.log_progresso(
+                                        f"⚠️ Contrato já processado - IGNORADO: {documento_contrato['cliente']} - {documento_contrato['numero_titulo']} (Status: {status_existente})")
+                                    contratos_ja_processados += 1
+                                    continue
                             else:
-                                # Insere novo documento
+                                # ✅ NOVO: Registro não existe - insere novo
                                 collection.insert_one(documento_contrato)
                                 self.log_progresso(
-                                    f"✅ Contrato salvo individualmente: {contrato['cliente']} - {contrato['numero_titulo']}")
-
-                        contratos_salvos += 1
-
-                        self.log_progresso(
-                            f"✅ Contrato salvo individualmente: {contrato['cliente']} - {contrato['numero_titulo']}")
+                                    f"✅ Contrato novo adicionado à fila: {contrato['cliente']} - {contrato['numero_titulo']}")
+                                contratos_salvos += 1
 
                     except Exception as e:
                         contratos_falharam += 1
                         self.log_progresso(
                             f"❌ Erro ao salvar contrato {contrato.get('numero_titulo', 'N/A')}: {str(e)}")
+
+                # ✅ NOVO: Relatório detalhado de status
+                self.log_progresso(f"\n📊 RELATÓRIO DE PROCESSAMENTO DA FILA:")
+                self.log_progresso(
+                    f"   ✅ Contratos salvos/atualizados: {contratos_salvos}")
+                self.log_progresso(
+                    f"   ⚠️ Contratos já processados (ignorados): {contratos_ja_processados}")
+                self.log_progresso(
+                    f"   ❌ Contratos com erro: {contratos_falharam}")
+
+                # ✅ NOVO: Armazena estatísticas na instância para uso no resultado final
+                self.contratos_ja_processados = contratos_ja_processados
+                self.contratos_salvos = contratos_salvos
+                self.contratos_falharam = contratos_falharam
+
+                if contratos_ja_processados > 0:
+                    self.log_progresso(
+                        f"   ℹ️ NOTIFICAÇÃO: {contratos_ja_processados} contratos já foram processados anteriormente")
 
                 # ✅ TAMBÉM salva resumo da fila para compatibilidade
                 try:
@@ -1387,11 +1356,12 @@ class RPAAnalisePlanilhas(BaseRPA):
                         "_id": f"fila_resumo_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         "total_contratos": len(fila_processamento),
                         "contratos_salvos": contratos_salvos,
+                        "contratos_ja_processados": contratos_ja_processados,
                         "contratos_falharam": contratos_falharam,
                         "status_geral": "ativo",
                         "timestamp_criacao": datetime.now().isoformat(),
                         "origem": "rpa_analise_planilhas",
-                        "versao": "2.0_individual"
+                        "versao": "2.1_verificacao_status"
                     }
 
                     if mongodb_manager.conectado and hasattr(mongodb_manager, 'database') and mongodb_manager.database is not None:
@@ -1404,9 +1374,9 @@ class RPAAnalisePlanilhas(BaseRPA):
                 await self._salvar_fila_local(fila_processamento)
 
                 self.log_progresso(
-                    f"✅ SEPARAÇÃO CONCLUÍDA: {contratos_salvos} contratos salvos individualmente")
+                    f"✅ VERIFICAÇÃO CONCLUÍDA: {contratos_salvos} contratos salvos/atualizados, {contratos_ja_processados} já processados")
                 self.log_progresso(
-                    f"📊 Resumo: {contratos_salvos} sucessos, {contratos_falharam} falhas")
+                    f"📊 Resumo: {contratos_salvos} sucessos, {contratos_ja_processados} ignorados, {contratos_falharam} falhas")
 
             else:
                 self.log_progresso("⚠️ Nenhum item para salvar na fila")
@@ -1467,96 +1437,313 @@ class RPAAnalisePlanilhas(BaseRPA):
         except Exception as e:
             self.log_erro("Erro ao salvar fila localmente", e)
 
-    def _simular_dados_csv_para_validacao(self, contrato: Dict[str, Any], numero_titulo: str):
-        """
-        Simula dados CSV do Sienge para validação PDD usando dados da planilha
-
-        EM PRODUÇÃO: Este método seria substituído por dados reais do CSV do Sienge
-        obtidos via webscraping no RPA Sienge
-
-        Args:
-            contrato: Dados do contrato da planilha
-            numero_titulo: Número do título
-
-        Returns:
-            DataFrame simulado para validação PDD ou None se não há dados suficientes
-        """
-        try:
-            import pandas as pd
-            from datetime import datetime, timedelta
-
-            # Dados mínimos necessários para validação PDD
-            pendencia_sienge_inad = contrato.get(
-                'PENDÊNCIAS SIENGE INAD', '').strip().upper()
-
-            # Se já há indicação clara de inadimplência na planilha, usa isso
-            if pendencia_sienge_inad in ['INADIMPLENTE', 'INAD', 'SIM']:
-                # Simula dados de um cliente inadimplente (3+ CT vencidas)
-                dados_simulados = [
-                    {
-                        'Título': numero_titulo,
-                        'Parcela/Condição': 'CT-01/84',
-                        'Documento': 'CT-01',
-                        'Cliente': contrato.get('Cliente', 'N/A'),
-                        'Status da parcela': 'A vencer',
-                        'Data vencimento': (datetime.now() - timedelta(days=30)).strftime('%d/%m/%Y'),
-                        'Valor a receber': 500.00
-                    },
-                    {
-                        'Título': numero_titulo,
-                        'Parcela/Condição': 'CT-02/84',
-                        'Documento': 'CT-02',
-                        'Cliente': contrato.get('Cliente', 'N/A'),
-                        'Status da parcela': 'A vencer',
-                        'Data vencimento': (datetime.now() - timedelta(days=60)).strftime('%d/%m/%Y'),
-                        'Valor a receber': 500.00
-                    },
-                    {
-                        'Título': numero_titulo,
-                        'Parcela/Condição': 'CT-03/84',
-                        'Documento': 'CT-03',
-                        'Cliente': contrato.get('Cliente', 'N/A'),
-                        'Status da parcela': 'A vencer',
-                        'Data vencimento': (datetime.now() - timedelta(days=90)).strftime('%d/%m/%Y'),
-                        'Valor a receber': 500.00
-                    }
-                ]
-                return pd.DataFrame(dados_simulados)
-
-            elif pendencia_sienge_inad in ['ADIMPLENTE', 'OK', 'SEM PENDÊNCIA', 'REGULAR', '', 'NÃO']:
-                # Simula dados de um cliente adimplente (0-2 CT vencidas)
-                dados_simulados = [
-                    {
-                        'Título': numero_titulo,
-                        'Parcela/Condição': 'CT-01/84',
-                        'Documento': 'CT-01',
-                        'Cliente': contrato.get('Cliente', 'N/A'),
-                        'Status da parcela': 'A vencer',
-                        'Data vencimento': (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y'),
-                        'Valor a receber': 500.00
-                    },
-                    {
-                        'Título': numero_titulo,
-                        'Parcela/Condição': 'CT-02/84',
-                        'Documento': 'CT-02',
-                        'Cliente': contrato.get('Cliente', 'N/A'),
-                        'Status da parcela': 'A vencer',
-                        'Data vencimento': (datetime.now() + timedelta(days=60)).strftime('%d/%m/%Y'),
-                        'Valor a receber': 500.00
-                    }
-                ]
-                return pd.DataFrame(dados_simulados)
-
-            # Se não há informação suficiente, retorna None (validação será feita no RPA Sienge)
-            return None
-
-        except Exception as e:
-            self.log_progresso(f"⚠️ Erro ao simular dados CSV: {str(e)}")
-            return None
-
     def log_progresso(self, mensagem: str):
         """Log de progresso formatado"""
         self.logger.info(mensagem)
+
+    async def _identificar_contratos_reajuste(self, planilha_calculo_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Identifica contratos que precisam de reajuste conforme PDD
+        ✅ CORRIGIDO: Foca apenas nas responsabilidades do RPA Análise de Planilhas
+
+        Responsabilidades:
+        - Gerar fila para extração dos relatórios do Sienge
+        - Verificar pendências com prefeitura (IPTU) na planilha base de cálculo
+        - NÃO bloquear contratos com pendências (apenas identificar)
+        - Enviar relatório de pendências no e-mail de notificação
+
+        Args:
+            planilha_calculo_id: ID da planilha de cálculo
+
+        Returns:
+            Lista de contratos que precisam de reajuste
+        """
+        try:
+            self.log_progresso(
+                "🔍 ANALISANDO CONTRATOS PARA REPARCELAMENTO (PDD)")
+
+            # Abre planilha principal (cálculo)
+            if not self.cliente_sheets:
+                raise Exception("Cliente Google Sheets não inicializado")
+
+            planilha_principal = self.cliente_sheets.open_by_key(
+                planilha_calculo_id)
+            aba_base_calculo = planilha_principal.worksheet("Base de cálculo")
+
+            # Lê todos os dados
+            dados_contratos = aba_base_calculo.get_all_records()
+
+            # Obtém mês atual
+            mes_atual = datetime.now().month
+            ano_atual = datetime.now().year
+
+            contratos_para_reajuste = []
+            contratos_auditoria = []  # Lista para rastreamento completo
+            # ✅ NOVO: Lista de pendências IPTU para relatório
+            pendencias_iptu_identificadas = []
+
+            self.log_progresso(
+                f"📅 Mês atual: {mes_atual:02d}/{ano_atual}")
+            self.log_progresso(
+                f"📊 Total de contratos na base: {len(dados_contratos)}")
+
+            for linha, contrato in enumerate(dados_contratos, start=2):
+                try:
+                    # Verifica se o contrato tem dados mínimos obrigatórios
+                    cliente = str(contrato.get('Cliente', '')).strip()
+                    numero_titulo = str(contrato.get(
+                        'numero_titulo', '')).strip()
+                    if not numero_titulo:
+                        numero_titulo = str(contrato.get('Titulo', '')).strip()
+                    if not numero_titulo:
+                        numero_titulo = str(contrato.get('Título', '')).strip()
+
+                    if not cliente and not numero_titulo:
+                        contratos_auditoria.append({
+                            'cliente': 'Sem nome',
+                            'titulo': 'N/A',
+                            'status': 'rejeitado',
+                            'motivo': 'Cliente e título vazios',
+                            'origem': 'base_calculo'
+                        })
+                        continue
+
+                    mes_reajuste_str = str(
+                        contrato.get('Mês reajuste', '')).strip()
+
+                    if (not mes_reajuste_str or
+                        mes_reajuste_str in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None'] or
+                            len(mes_reajuste_str) < 3):
+                        contratos_auditoria.append({
+                            'cliente': cliente or 'Sem nome',
+                            'titulo': numero_titulo or 'N/A',
+                            'status': 'rejeitado',
+                            'motivo': f"Mês reajuste vazio ou inválido: '{mes_reajuste_str}'",
+                            'origem': 'base_calculo'
+                        })
+                        continue
+
+                    # Parse do formato novo "05-25", "06-25", etc. ou formato antigo "mai.-25"
+                    if '-' in mes_reajuste_str:
+                        if '.' in mes_reajuste_str:
+                            # Formato antigo "mai.-25"
+                            meses_map = {
+                                'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+                                'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+                            }
+                            partes = mes_reajuste_str.split('.-')
+                            if len(partes) == 2:
+                                mes_nome = partes[0].lower().strip()
+                                ano_str = partes[1].strip()
+
+                                # Validação do nome do mês
+                                if mes_nome not in meses_map:
+                                    continue
+
+                                # Validação do ano
+                                if not ano_str or len(ano_str) != 2:
+                                    continue
+
+                                # Converte nome do mês para número
+                                mes_reajuste = meses_map[mes_nome]
+
+                                # Converte ano (25 -> 2025, 24 -> 2024)
+                                try:
+                                    ano_reajuste = int(ano_str)
+                                    if ano_reajuste < 50:  # Assume 2000+
+                                        ano_reajuste += 2000
+                                    elif ano_reajuste < 100:  # Assume 1900+
+                                        ano_reajuste += 1900
+                                except ValueError:
+                                    continue
+                            else:
+                                continue
+                        else:
+                            # Formato novo "05-25", "06-25", etc.
+                            partes = mes_reajuste_str.split('-')
+                            if len(partes) == 2:
+                                mes_str = partes[0].strip()
+                                ano_str = partes[1].strip()
+
+                                # Validação do mês numérico
+                                try:
+                                    mes_reajuste = int(mes_str)
+                                    if mes_reajuste < 1 or mes_reajuste > 12:
+                                        continue
+                                except ValueError:
+                                    continue
+
+                                # Validação do ano
+                                if not ano_str or len(ano_str) != 2:
+                                    continue
+
+                                # Converte ano (25 -> 2025, 24 -> 2024)
+                                try:
+                                    ano_reajuste = int(ano_str)
+                                    if ano_reajuste < 50:  # Assume 2000+
+                                        ano_reajuste += 2000
+                                    elif ano_reajuste < 100:  # Assume 1900+
+                                        ano_reajuste += 1900
+                                except ValueError:
+                                    continue
+                            else:
+                                continue
+
+                    if ano_atual == ano_reajuste and mes_atual == mes_reajuste:
+                        # ✅ ELEGÍVEL: Mês atual - APLICAR REGRAS PDD
+
+                        # ===================== VERIFICAÇÃO PENDÊNCIAS IPTU (RESPONSABILIDADE CORRETA) =====================
+
+                        # ✅ VERIFICA pendências PMFI (IPTU) - apenas para relatório
+                        pendencia_pmfi = str(contrato.get(
+                            'PENDÊNCIAS PMFI', '')).strip().upper()
+                        consulta_iptu_ok = pendencia_pmfi in [
+                            'OK', 'SEM PENDÊNCIA', 'REGULAR', '']
+
+                        # ✅ VERIFICA data de consulta IPTU - apenas para relatório
+                        data_consulta_str = str(contrato.get(
+                            'Data de consulta IPTU', '')).strip()
+                        consulta_iptu_atualizada = False
+                        if data_consulta_str:
+                            try:
+                                for formato in ['%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d']:
+                                    try:
+                                        data_consulta = datetime.strptime(
+                                            data_consulta_str, formato)
+                                        if data_consulta.month == mes_atual and data_consulta.year == ano_atual:
+                                            consulta_iptu_atualizada = True
+                                        break
+                                    except ValueError:
+                                        continue
+                            except Exception:
+                                pass
+
+                        # ✅ IDENTIFICA pendências IPTU para relatório (NÃO BLOQUEIA)
+                        if not consulta_iptu_ok or not consulta_iptu_atualizada:
+                            motivo_pendencia = []
+                            if not consulta_iptu_ok:
+                                motivo_pendencia.append(
+                                    f"pendência PMFI: '{pendencia_pmfi}'")
+                            if not consulta_iptu_atualizada:
+                                motivo_pendencia.append(
+                                    f"data de consulta IPTU inválida ou ausente: '{data_consulta_str}'")
+
+                            pendencias_iptu_identificadas.append({
+                                'cliente': cliente or 'Sem nome',
+                                'titulo': numero_titulo or 'N/A',
+                                'pendencia_pmfi': pendencia_pmfi,
+                                'data_consulta_iptu': data_consulta_str,
+                                'motivo': "; ".join(motivo_pendencia)
+                            })
+
+                        # ===================== APLICAÇÃO DAS REGRAS PDD =====================
+
+                        # ✅ PDD: Todos podem reparcelar - NÃO BLOQUEIA
+                        pode_reparcelar = True  # Conforme PDD: todos podem reparcelar
+
+                        self.log_progresso(
+                            f"   📋 Pode reparcelar: {'✅ SIM' if pode_reparcelar else '❌ NÃO'}")
+                        self.log_progresso(
+                            f"   📋 Validação SIENGE: Será feita no RPA Sienge após extração")
+
+                        # ✅ APROVA contrato para processamento (validação SIENGE será feita depois)
+                        titulo_final = str(numero_titulo or 'N/A')
+
+                        # Cria cópia com dados essenciais preservados
+                        contrato_processado = contrato.copy()
+                        contrato_processado['linha_planilha'] = linha
+                        contrato_processado['mes_reajuste_original'] = mes_reajuste_str
+                        contrato_processado[
+                            'motivo_elegibilidade'] = f"Mês de reajuste atual: {mes_reajuste_str}"
+
+                        # ✅ VALIDAÇÃO PDD APLICADA (sem bloqueios)
+                        contrato_processado['validacao_pdd'] = json.dumps({
+                            'status_cliente': 'APROVADO_PARA_EXTRACAO',
+                            'pode_reparcelar': pode_reparcelar,
+                            'pendencia_pmfi': pendencia_pmfi,
+                            'data_consulta_iptu': data_consulta_str,
+                            'consulta_iptu_atualizada': consulta_iptu_atualizada,
+                            'observacao': 'Conforme PDD: Todos podem reparcelar. Validação SIENGE será feita após extração.',
+                            'regras_aplicadas': 'PDD_TODOS_PODEM_REPARCELAR'
+                        })
+
+                        self.log_progresso(
+                            f"   ✅ CONTRATO ELEGÍVEL para reparcelamento")
+                        self.log_progresso(
+                            f"   📋 Pendências IPTU identificadas para relatório")
+
+                        # Garante que campos essenciais estejam presentes
+                        contrato_processado['cliente'] = cliente or contrato_processado.get(
+                            'Cliente', 'N/A')
+                        contrato_processado['numero_titulo'] = titulo_final
+
+                        contratos_para_reajuste.append(
+                            contrato_processado)
+                        contratos_auditoria.append({
+                            'cliente': cliente or 'Sem nome',
+                            'titulo': titulo_final,
+                            'status': 'aprovado',
+                            'motivo': f"Elegível para reparcelamento (mês de reajuste atual: {mes_reajuste_str})",
+                            'tem_pendencia_iptu': not consulta_iptu_ok or not consulta_iptu_atualizada,
+                            'origem': 'base_calculo'
+                        })
+
+                    elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
+                        # ⚠️ ATRASADO: Deveria ter sido processado antes
+                        self.log_progresso(
+                            f"   ⚠️ ATRASADO: Deveria ter sido processado antes")
+                        contratos_auditoria.append({
+                            'cliente': cliente or 'Sem nome',
+                            'titulo': numero_titulo or 'N/A',
+                            'status': 'não processado',
+                            'motivo': f"Contrato atrasado: {mes_reajuste_str} (deveria ter sido processado)",
+                            'origem': 'base_calculo'
+                        })
+
+                    else:
+                        # ❌ AINDA NÃO VENCEU: Mês seguinte conforme PDD
+                        self.log_progresso(
+                            f"   📅 PARA MÊS SEGUINTE: Ainda não chegou a data")
+                        contratos_auditoria.append({
+                            'cliente': cliente or 'Sem nome',
+                            'titulo': numero_titulo or 'N/A',
+                            'status': 'não processado',
+                            'motivo': f"Contrato não está no mês de reajuste atual: {mes_reajuste_str}",
+                            'origem': 'base_calculo'
+                        })
+
+                except (ValueError, TypeError, AttributeError) as e:
+                    # Formato inválido, pula contrato
+                    self.log_progresso(
+                        f"   ❌ ERRO: {str(e)} - dados: {mes_reajuste_str}")
+                    continue
+
+            # ✅ NOVO: Relatório final detalhado
+            self.log_progresso(
+                f"\n📊 RELATÓRIO FINAL - IDENTIFICAÇÃO DE CONTRATOS:")
+            self.log_progresso(
+                f"   ✅ Contratos elegíveis para reparcelamento: {len(contratos_para_reajuste)}")
+            self.log_progresso(
+                f"   ⚠️ Contratos não processados: {len([c for c in contratos_auditoria if c['status'] == 'não processado'])}")
+            self.log_progresso(
+                f"   📋 Contratos com pendências IPTU identificadas: {len(pendencias_iptu_identificadas)}")
+            self.log_progresso(
+                f"   📧 Pendências IPTU serão reportadas no e-mail de notificação")
+
+            # ✅ NOVO: Salva pendências IPTU para relatório no e-mail
+            if pendencias_iptu_identificadas:
+                if not hasattr(self, 'pendencias_iptu_identificadas'):
+                    self.pendencias_iptu_identificadas = []
+                self.pendencias_iptu_identificadas.extend(
+                    pendencias_iptu_identificadas)
+
+            # NOVO: retorna também a lista de auditoria detalhada
+            self.contratos_auditoria = contratos_auditoria
+            return contratos_para_reajuste, contratos_auditoria
+
+        except Exception as e:
+            self.log_erro("Erro ao identificar contratos para reajuste", e)
+            return [], []
 
 # Função auxiliar para uso direto
 

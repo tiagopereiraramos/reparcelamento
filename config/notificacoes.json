@@ -8,7 +8,7 @@
         "rpa_concluido": true,
         "rpa_erro": true,
         "workflow_concluido": true,
-        "indices_atualizados": false,
+        "indices_atualizados": true,
         "contratos_identificados": true
     }
 }

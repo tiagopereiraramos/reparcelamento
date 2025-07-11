@@ -4,6 +4,7 @@ credentials/*.json
 .env.exemplo
 dados_extraidos/*.xlsx
 dados_processados/*.json
+dados_diagnostico/*.json
 rpa_sienge/planilhas_exemplos/*.xlsx
 # Ignora arquivos de log
 logs/*.log

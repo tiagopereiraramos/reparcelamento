@@ -570,7 +570,7 @@ class RPASienge(BaseRPA):
                             "parcelas_pendentes": dados_validacao.get("qtd_parcelas_ct_a_vencer", 0),
                             "pode_reparcelar": dados_validacao.get("pode_reparcelar", False),
                             "valor_parcela_atual": dados_validacao.get("valor_parcela_atual", 0.0),
-                            "dia_vencimento_identificado": dados_validacao.get("dia_vencimento", 10),
+                            "dia_vencimento_identificado": dados_validacao.get("dia_vencimento"),
                             "primeiro_vencimento_carne": dados_validacao.get("primeiro_vencimento_carne", ""),
                             "status_cliente": dados_validacao.get("status_cliente", "adimplente"),
                             "cliente_inadimplente": dados_validacao.get("cliente_inadimplente", False),
@@ -862,26 +862,30 @@ class RPASienge(BaseRPA):
                 })
 
             if not pode_reparcelar and not autorizar_reparcelamento:
-                motivo = dados_validacao.get("motivo_classificacao",
-                                             "Cliente não pode reparcelar")
-
-                await self._registrar_passo_execucao(
-                    "REPARCELAMENTO_NAO_AUTORIZADO", {
-                        "motivo": motivo,
-                        "pode_reparcelar": pode_reparcelar,
-                        "autorizar_reparcelamento": autorizar_reparcelamento,
-                        "timestamp": datetime.now().isoformat()
-                    })
-
-                return ResultadoRPA(
-                    sucesso=False,
-                    mensagem=f"Reparcelamento não autorizado: {motivo}",
-                    dados={
-                        "contrato": contrato,
-                        "validacao_pdd": dados_validacao,
-                        "autorizado": False,
-                        "motivo_recusa": motivo
-                    })
+                # ⚠️ NUNCA bloquear reparcelamento por inadimplência, apenas carnê
+                motivo = dados_validacao.get(
+                    "motivo_classificacao", "Cliente não pode reparcelar")
+                if dados_validacao.get("status_cliente", "").upper() == "INADIMPLENTE":
+                    self.log_progresso(
+                        "⚠️ Cliente inadimplente: reparcelamento AUTORIZADO conforme PDD - carnê não será gerado")
+                    # Prosseguir normalmente, não retornar erro
+                else:
+                    await self._registrar_passo_execucao(
+                        "REPARCELAMENTO_NAO_AUTORIZADO", {
+                            "motivo": motivo,
+                            "pode_reparcelar": pode_reparcelar,
+                            "autorizar_reparcelamento": autorizar_reparcelamento,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    return ResultadoRPA(
+                        sucesso=False,
+                        mensagem=f"Reparcelamento não autorizado: {motivo}",
+                        dados={
+                            "contrato": contrato,
+                            "validacao_pdd": dados_validacao,
+                            "autorizado": False,
+                            "motivo_recusa": motivo
+                        })
 
             # Se chegou aqui, pode prosseguir com o reparcelamento
             await self._registrar_passo_execucao(
@@ -994,7 +998,7 @@ class RPASienge(BaseRPA):
                 "qtd_ct_vencidas": dados_validacao.get("qtd_ct_vencidas", 0),
                 "valor_parcela_original": dados_validacao.get("valor_parcela_atual", 1000.0),
                 "qtd_parcelas_ct_total": dados_validacao.get("qtd_parcelas_ct_a_vencer", 12),
-                "dia_vencimento_identificado": dados_validacao.get("dia_vencimento_identificado", 10),
+                "dia_vencimento_identificado": dados_validacao.get("dia_vencimento_identificado"),
                 "timestamp_carregamento": datetime.now().isoformat()
             }
 
@@ -1277,7 +1281,7 @@ class RPASienge(BaseRPA):
                             "qtd_parcelas_ct_a_vencer": dados_mongodb.get("parcelas_pendentes", 0),
                             "valor_parcela_atual": dados_mongodb.get("valor_parcela_atual", 0.0),
                             "saldo_total": dados_mongodb.get("saldo_total", 0.0),
-                            "dia_vencimento": dados_mongodb.get("dia_vencimento_identificado", 10),
+                            "dia_vencimento": dados_mongodb.get("dia_vencimento_identificado"),
                             "status_cliente": dados_mongodb.get("status_cliente", "adimplente"),
                             "cliente_inadimplente": dados_mongodb.get("cliente_inadimplente", False),
                             "parcelas_rec_fat": []
@@ -1287,22 +1291,23 @@ class RPASienge(BaseRPA):
                         }
                     })
 
-                    # VERIFICAR SE PROCESSAMENTO DEVE SER INTERROMPIDO (CONFORME PDD 9.1.2)
+                    # ✅ CORREÇÃO PDD: Inadimplentes devem ser processados (reparcelamento realizado, carnê não gerado)
                     if resultado_planilha and resultado_planilha.get("deve_interromper_processamento", False):
                         self.log_progresso(
-                            "🚫 PROCESSAMENTO INTERROMPIDO - CLIENTE INADIMPLENTE")
+                            "⚠️ CLIENTE INADIMPLENTE DETECTADO - Reparcelamento será realizado, carnê não será gerado")
                         self.log_progresso(
-                            "📋 Conforme PDD Seção 9.1.2: Planilha marcada como inadimplente, reparcelamento NÃO autorizado")
+                            "📋 Conforme PDD: Reparcelamento deve ser realizado para todos os clientes")
                         self.log_progresso(
-                            "✅ Processo encerrado conforme regras de negócio")
+                            "📋 Conforme PDD: Apenas a geração de carnê será bloqueada para inadimplentes")
 
                         return {
                             "sucesso": True,
-                            "motivo_interrupcao": "Cliente inadimplente",
+                            "motivo_interrupcao": "Cliente inadimplente - reparcelamento OK, carnê não será gerado",
                             "cliente_inadimplente": True,
                             "planilha_atualizada": True,
-                            "reparcelamento_autorizado": False,
-                            "conforme_pdd": "Seção 9.1.2 - Inadimplência detectada",
+                            # ✅ CORREÇÃO PDD: Reparcelamento deve ser realizado
+                            "reparcelamento_autorizado": True,
+                            "conforme_pdd": "Seção 10.2 - Inadimplência detectada, reparcelamento autorizado",
                             "timestamp": datetime.now().isoformat()
                         }
 
@@ -1324,7 +1329,7 @@ class RPASienge(BaseRPA):
                     self.log_progresso(
                         f"   💰 Saldo devedor Base: R$ {dados_mongodb.get('saldo_total', 0.0):,.2f}")
                     self.log_progresso(
-                        f"   📅 Dia de vencimento: {dados_mongodb.get('dia_vencimento_identificado', 10)} (do MongoDB)")
+                        f"   📅 Dia de vencimento: {dados_mongodb.get('dia_vencimento_identificado', 'N/A')} (do MongoDB)")
                     self.log_progresso(
                         f"   📅 1º vencimento carnê: {dados_mongodb.get('primeiro_vencimento_carne', (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y'))}")
                     self.log_progresso(f"   📊 Indexador: IGPM")
@@ -1664,7 +1669,7 @@ class RPASienge(BaseRPA):
                 # ADICIONADO: total de parcelas CT do contrato
                 "qtd_parcelas_ct_total": dados_validacao.get("qtd_parcelas_ct_a_vencer", 12),
                 # CORRIGIDO: dia de vencimento do relatório extraído
-                "dia_vencimento_identificado": dados_validacao.get("dia_vencimento_identificado", dados_validacao.get("dia_vencimento", 10)),
+                "dia_vencimento_identificado": dados_validacao.get("dia_vencimento_identificado", dados_validacao.get("dia_vencimento")),
                 "timestamp_carregamento": datetime.now().isoformat()
             }
             self.log_progresso(
@@ -1788,7 +1793,7 @@ class RPASienge(BaseRPA):
                 "qtd_parcelas_ct_a_vencer": doc_fila.get("parcelas_pendentes", 0),
                 "valor_parcela_atual": doc_fila.get("valor_parcela_atual", 0.0),
                 "saldo_total": doc_fila.get("saldo_total", 0.0),
-                "dia_vencimento": doc_fila.get("dia_vencimento_identificado", 10),
+                "dia_vencimento": doc_fila.get("dia_vencimento_identificado"),
                 "primeiro_vencimento_carne": doc_fila.get("primeiro_vencimento_carne", ""),
                 "status_cliente": doc_fila.get("status_cliente", "adimplente"),
                 "cliente_inadimplente": doc_fila.get("cliente_inadimplente", False),
@@ -2211,20 +2216,29 @@ class RPASienge(BaseRPA):
             aba_base_calculo = planilha.worksheet("Base de cálculo")
 
             # ✅ PREPARAR DADOS PARA PREENCHIMENTO CONFORME PDD
-            # PRIORIDADE: dia_vencimento > dia_vencimento_identificado > fallback 10
-            dia_vencimento = dados_validacao.get("dia_vencimento") or dados_validacao.get(
-                "dia_vencimento_identificado") or 10
+            # ❌ ERRO: Dia de vencimento deve ser extraído exclusivamente do relatório
+            dia_vencimento = dados_validacao.get(
+                "dia_vencimento") or dados_validacao.get("dia_vencimento_identificado")
+
+            if not dia_vencimento:
+                self.log_progresso(
+                    f"❌ ERRO: Dia de vencimento não encontrado no relatório do Sienge")
+                return {"deve_interromper_processamento": True, "motivo": "Dia de vencimento não encontrado no relatório"}
 
             # Se for string, converter para int
             if isinstance(dia_vencimento, str):
                 try:
                     dia_vencimento = int(dia_vencimento)
                 except:
-                    dia_vencimento = 10
+                    self.log_progresso(
+                        f"❌ ERRO: Dia de vencimento inválido extraído do relatório: {dia_vencimento}")
+                    return {"deve_interromper_processamento": True, "motivo": f"Dia de vencimento inválido: {dia_vencimento}"}
 
             # Garantir que está entre 1 e 31 (dias válidos)
             if not isinstance(dia_vencimento, int) or dia_vencimento < 1 or dia_vencimento > 31:
-                dia_vencimento = 10
+                self.log_progresso(
+                    f"❌ ERRO: Dia de vencimento fora do intervalo válido: {dia_vencimento}")
+                return {"deve_interromper_processamento": True, "motivo": f"Dia de vencimento inválido: {dia_vencimento}"}
 
             self.log_progresso(
                 f"📅 Dia de vencimento extraído/calculado: {dia_vencimento}")
@@ -2264,8 +2278,8 @@ class RPASienge(BaseRPA):
                 "Índice": "IGPM",  # Conforme PDD - sempre IGPM no sistema
                 "Juros": "8%",
                 "Tipo reajuste": "anual",
-                "Original ou corrigido": "original",
-                "Último reajuste": datetime.now().strftime("%d/%m/%Y")
+                "Original ou corrigido": "original"
+                # ✅ REMOVIDO: "Último reajuste" não deve ser atualizado pelo RPA
             }
 
             # Buscar linha do contrato na planilha
@@ -2346,12 +2360,12 @@ class RPASienge(BaseRPA):
             # Log do resultado
             if cliente_inadimplente:
                 self.log_progresso(
-                    f"✅ Cliente inadimplente identificado: {cliente}")
+                    f"⚠️ Cliente inadimplente identificado: {cliente}")
                 self.log_progresso(
                     f"📋 PENDÊNCIAS SIENGE INAD: Inadimplência (preenchida na planilha)")
                 self.log_progresso(
-                    f"🚫 Reparcelamento: NÃO AUTORIZADO conforme PDD Seção 9.1.2")
-                return {"deve_interromper_processamento": True, "motivo": "Cliente inadimplente"}
+                    f"✅ Reparcelamento: AUTORIZADO conforme PDD - carnê não será gerado (deve_interromper_processamento=False)")
+                return {"deve_interromper_processamento": False, "motivo": "Cliente inadimplente - reparcelamento OK, carnê não será gerado"}
             else:
                 self.log_progresso(
                     f"✅ Dados do relatório preenchidos: {campos_preenchidos} campos")
@@ -2418,21 +2432,23 @@ class RPASienge(BaseRPA):
                                 'PENDÊNCIAS SIENGE', '').strip()
 
                             # Regras de validação conforme PDD
-                            pode_reparcelar = True
+                            pode_reparcelar = True  # ✅ PDD: Todos podem reparcelar
+                            pode_gerar_carne = False  # ✅ PDD: Inicialmente False, será validado
                             motivo_recusa = ""
 
-                            if pendencia_pmfi and pendencia_pmfi.upper() not in ['', 'OK', 'NÃO']:
-                                pode_reparcelar = False
-                                motivo_recusa = f"Pendência PMFI: {pendencia_pmfi}"
+                            # ✅ CORREÇÃO PDD: Validação apenas para geração de carnê, não para reparcelamento
+                            # Se não há pendências, cliente é adimplente e pode gerar carnê
+                            if (not pendencia_pmfi or pendencia_pmfi.upper() in ['', 'OK', 'NÃO']) and \
+                               (not pendencia_sienge_inad or pendencia_sienge_inad.upper() not in ['INADIMPLENTE', 'INAD', 'SIM']) and \
+                               (not pendencia_sienge or pendencia_sienge.upper() in ['', 'OK', 'NÃO']):
+                                pode_gerar_carne = True  # ✅ PDD: Cliente adimplente pode gerar carnê
+                                motivo_recusa = ""
+                            else:
+                                # Cliente tem pendências, não pode gerar carnê
+                                pode_gerar_carne = False
+                                motivo_recusa = f"Pendências identificadas - Carnê não será gerado"
 
-                            if pendencia_sienge_inad and pendencia_sienge_inad.upper() in ['INADIMPLENTE', 'INAD', 'SIM']:
-                                pode_reparcelar = False
-                                motivo_recusa = f"Inadimplência: {pendencia_sienge_inad}"
-
-                            if pendencia_sienge and pendencia_sienge.upper() not in ['', 'OK', 'NÃO']:
-                                pode_reparcelar = False
-                                motivo_recusa = f"Pendência Sienge: {pendencia_sienge}"
-
+                            # ✅ PDD: Todos os clientes podem reparcelar, independente de pendências
                             if pode_reparcelar:
                                 contratos_para_reparcelamento.append({
                                     "linha_planilha": linha,
@@ -2441,18 +2457,23 @@ class RPASienge(BaseRPA):
                                     "mes_reajuste": mes_reajuste_str,
                                     "pendencia_pmfi": pendencia_pmfi,
                                     "pendencia_sienge_inad": pendencia_sienge_inad,
-                                    "pendencia_sienge": pendencia_sienge
+                                    "pendencia_sienge": pendencia_sienge,
+                                    "pode_gerar_carne": pode_gerar_carne,  # ✅ NOVO: Campo para controle de carnê
+                                    "motivo_restricao_carne": motivo_recusa if not pode_gerar_carne else ""
                                 })
 
-                                self.log_progresso(
-                                    f"   ✅ {cliente} - {numero_titulo} (linha {linha})")
+                                if pode_gerar_carne:
+                                    self.log_progresso(
+                                        f"   ✅ {cliente} - {numero_titulo} (linha {linha}) - Reparcelamento + Carnê")
+                                else:
+                                    self.log_progresso(
+                                        f"   ✅ {cliente} - {numero_titulo} (linha {linha}) - Reparcelamento OK, Carnê bloqueado: {motivo_recusa}")
                             else:
                                 self.log_progresso(
                                     f"   ❌ {cliente} - {numero_titulo}: {motivo_recusa}")
 
                     except ValueError:
-                        self.log_warning(
-                            f"   ⚠️ Data inválida na linha {linha}: {mes_reajuste_str}")
+                        # Suprime warning para dados de formatação específica (ex: "dez.-00", "abr.-25")
                         continue
 
                 except Exception as e:

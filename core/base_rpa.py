@@ -302,9 +302,7 @@ class BaseRPA(ABC):
                 self.log_info(
                     f"✅ {self.nome_rpa} executado com sucesso em {tempo_execucao:.2f}s")
                 self.log_info(f"📊 Resultado: {resultado.mensagem}")
-                if resultado.dados:
-                    self.log_info(
-                        f"📈 Dados retornados: {json.dumps(resultado.dados, indent=2, ensure_ascii=False, default=str)}")
+                # Removido: log dos dados retornados para evitar poluição
             else:
                 self.log_erro(f"❌ {self.nome_rpa} falhou após {tempo_execucao:.2f}s", Exception(
                     f"{self.nome_rpa} falhou"))

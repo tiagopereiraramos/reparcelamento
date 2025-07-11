@@ -121,14 +121,15 @@ async def main():
 
     if resultado.sucesso:
         log(f"SUCESSO: {resultado.mensagem}")
-        notificar_sucesso(
-            nome_rpa="RPA Análise de Planilhas",
-            tempo_execucao=tempo_execucao,
-            resultados={
-                "mensagem": resultado.mensagem,
-                "relatorio": corpo_relatorio
-            }
-        )
+        # ✅ REMOVIDO: Notificação duplicada - já enviada dentro da classe RPAAnalisePlanilhas.executar()
+        # notificar_sucesso(
+        #     nome_rpa="RPA Análise de Planilhas",
+        #     tempo_execucao=tempo_execucao,
+        #     resultados={
+        #         "mensagem": resultado.mensagem,
+        #         "relatorio": corpo_relatorio
+        #     }
+        # )
         sys.exit(0)
     else:
         log(f"FALHA: {resultado.mensagem}")

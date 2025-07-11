@@ -219,7 +219,7 @@ async def executar_fase_extracao(credenciais: Dict[str, str], total_pendentes: i
         )
 
         # Inicializar RPA com headless em produção
-        headless = os.getenv("HEADLESS", "true").lower() == "true"
+        headless = os.getenv("HEADLESS", "1") == "1"
         rpa = RPASienge(headless=headless)
         await rpa.inicializar()
 
@@ -300,7 +300,7 @@ async def executar_fase_reparcelamento(credenciais: Dict[str, str], indices: Dic
         )
 
         # Inicializar RPA com nova sessão
-        headless = os.getenv("HEADLESS", "true").lower() == "true"
+        headless = os.getenv("HEADLESS", "1") == "1"
         rpa = RPASienge(headless=headless)
         await rpa.inicializar()
 
@@ -382,7 +382,7 @@ async def executar_fase_geracao_carnes(credenciais: Dict[str, str], total_reparc
         )
 
         # Inicializar RPA com nova sessão
-        headless = os.getenv("HEADLESS", "true").lower() == "true"
+        headless = os.getenv("HEADLESS", "1") == "1"
         rpa = RPASienge(headless=headless)
         await rpa.inicializar()
 
