@@ -1,7 +1,7 @@
 #Ignora arquivos de credenciais
 credentials/*.json
 .env
-.replit
+.env.exemplo
 dados_extraidos/*.xlsx
 dados_processados/*.json
 rpa_sienge/planilhas_exemplos/*.xlsx
@@ -25,3 +25,15 @@ outputs
 __pycache__/
 attached_files/
 attached_assets/Captura de Tela*
+fixar_chrome_120.sh
+restaurar_atualizacoes_chrome.sh
+verificar_status_chrome.sh
+substituir_chrome_120.sh
+verificar_status_chrome.sh
+
+# Ignora arquivos de sistema
+.DS_Store
+Thumbs.db
+dados_extraidos
+dados_processamento
+outputs
