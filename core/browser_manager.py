@@ -140,6 +140,47 @@ class RPABrowser:
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
 
+            # ✅ CORREÇÃO: Configurar diretório de downloads para Chrome UC
+            from platformdirs import user_downloads_dir
+
+            rpa_downloads_folder = os.getenv(
+                'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+
+            # Tratar barra inicial se houver (como no rpa_sienge.py)
+            if rpa_downloads_folder and rpa_downloads_folder.startswith('/'):
+                rpa_downloads_folder = rpa_downloads_folder[1:]
+
+            # Usar platformdirs para cross-platform automático
+            downloads_dir = os.path.join(
+                user_downloads_dir(), rpa_downloads_folder)
+
+            os.makedirs(downloads_dir, exist_ok=True)
+
+            # ✅ CONFIGURAÇÃO DE DOWNLOADS PARA CHROME UC
+            chrome_options.add_experimental_option(
+                "prefs", {
+                    "download.default_directory": downloads_dir,
+                    "download.prompt_for_download": False,
+                    "download.directory_upgrade": True,
+                    "safebrowsing.enabled": True,
+                    "safebrowsing.disable_download_protection": True,
+                    "profile.default_content_setting_values.automatic_downloads": 1,
+                    "profile.default_content_settings.popups": 0,
+                    "profile.content_settings.exceptions.automatic_downloads.*.http://*": {
+                        "setting": 1
+                    },
+                    "profile.content_settings.exceptions.automatic_downloads.*.https://*": {
+                        "setting": 1
+                    }
+                }
+            )
+
+            # ✅ CONFIGURAR TIPOS DE ARQUIVO PARA DOWNLOAD AUTOMÁTICO
+            # Removidas opções incompatíveis com undetected-chromedriver
+
+            self.logger.info(
+                f"📁 Diretório de downloads configurado: {downloads_dir}")
+
             # Adicionar perfil do Chrome se fornecido
             if self._chrome_profile_path:
                 self.logger.info(
@@ -147,18 +188,27 @@ class RPABrowser:
                 chrome_options.add_argument(
                     f'--user-data-dir={self._chrome_profile_path}')
 
-            # Inicializar Chrome UC sem fixar versão
+            # Inicializar Chrome UC com versão compatível
             self._driver = uc.Chrome(
                 options=chrome_options,
                 use_subprocess=True,
-                suppress_welcome=True
+                suppress_welcome=True,
+                version_main=140  # Versão compatível com Chrome atual
             )
 
+            # ✅ CONFIGURAÇÃO ADICIONAL APÓS INICIALIZAÇÃO
             # Configurar para evitar detecção
             self._driver.execute_script(
                 "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
+            # ✅ CONFIGURAR DOWNLOADS APÓS INICIALIZAÇÃO (reforço)
+            self._driver.execute_cdp_cmd('Page.setDownloadBehavior', {
+                'behavior': 'allow',
+                'downloadPath': downloads_dir
+            })
+
             self.logger.info("✅ Chrome UC inicializado com sucesso")
+            self.logger.info(f"📁 Downloads serão salvos em: {downloads_dir}")
 
         except Exception as e:
             self.logger.error(f"❌ Erro ao inicializar Chrome UC: {e}")
@@ -180,6 +230,13 @@ class RPABrowser:
 
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--no-sandbox")
+        # Configurações adicionais para evitar "No buffer space available"
+        self.options.add_argument("--disable-background-timer-throttling")
+        self.options.add_argument("--disable-backgrounding-occluded-windows")
+        self.options.add_argument("--disable-renderer-backgrounding")
+        self.options.add_argument("--disable-features=TranslateUI")
+        self.options.add_argument("--disable-ipc-flooding-protection")
+        self.options.add_argument("--max_old_space_size=4096")
 
         # Configurações de download - usar platformdirs para cross-platform
         from platformdirs import user_downloads_dir
@@ -219,8 +276,11 @@ class RPABrowser:
             self.logger.info(
                 f"✅ Usando perfil Firefox: {self._firefox_profile_path}")
 
-        self._driver = webdriver.Firefox(service=Service(gecko_driver_path),
-                                         options=self.options)
+        # Configurar service com timeout maior para evitar problemas de buffer
+        service = Service(gecko_driver_path)
+        service.start_error_message = "Erro ao iniciar GeckoDriver"
+
+        self._driver = webdriver.Firefox(service=service, options=self.options)
 
         self._driver.delete_all_cookies()
         self.logger.info("✅ Browser Firefox inicializado")
@@ -265,7 +325,7 @@ class RPABrowser:
 
     def find_element(self,
                      xpath: str,
-                     condition: str = "presence") -> WebElement:
+                     condition: str = "presence"):
         """Aguarda e retorna elemento único"""
         if not self._driver or not self._driver_wait:
             raise NoSuchElementException("Browser não inicializado")
@@ -279,7 +339,7 @@ class RPABrowser:
 
     def find_elements(self,
                       xpath: str,
-                      condition: str = "located_all") -> List[WebElement]:
+                      condition: str = "located_all") -> List:
         """Aguarda e retorna lista de elementos"""
         if not self._driver or not self._driver_wait:
             return []
@@ -782,6 +842,63 @@ class RPABrowser:
                 "sucesso": False,
                 "total_marcados": 0,
                 "erro": error_msg
+            }
+
+    def verificar_diretorio_downloads(self) -> Dict[str, Any]:
+        """
+        Verifica se o diretório de downloads está configurado corretamente
+
+        Returns:
+            Dict com informações sobre o diretório de downloads
+        """
+        try:
+            from platformdirs import user_downloads_dir
+
+            rpa_downloads_folder = os.getenv(
+                'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+
+            # Tratar barra inicial se houver
+            if rpa_downloads_folder and rpa_downloads_folder.startswith('/'):
+                rpa_downloads_folder = rpa_downloads_folder[1:]
+
+            downloads_dir = os.path.join(
+                user_downloads_dir(), rpa_downloads_folder)
+
+            # Verificar se diretório existe
+            diretorio_existe = os.path.exists(downloads_dir)
+
+            # Verificar se é gravável
+            gravavel = os.access(
+                downloads_dir, os.W_OK) if diretorio_existe else False
+
+            # Listar arquivos existentes
+            arquivos_existentes = []
+            if diretorio_existe:
+                try:
+                    arquivos_existentes = [f.name for f in os.scandir(
+                        downloads_dir) if f.is_file()]
+                except Exception as e:
+                    self.logger.error(f"Erro ao listar arquivos: {e}")
+
+            return {
+                "sucesso": True,
+                "diretorio": downloads_dir,
+                "existe": diretorio_existe,
+                "gravavel": gravavel,
+                "arquivos_existentes": arquivos_existentes,
+                "total_arquivos": len(arquivos_existentes)
+            }
+
+        except Exception as e:
+            self.logger.error(f"Erro ao verificar diretório de downloads: {e}")
+            return {
+                "sucesso": False,
+                "erro": str(e),
+                "diretorio": "N/A",
+                "existe": False,
+                "gravavel": False,
+                "arquivos_existentes": [],
+                "total_arquivos": 0
             }
 
     def __del__(self):

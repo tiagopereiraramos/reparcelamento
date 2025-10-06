@@ -29,13 +29,26 @@ class ProcessadorRegrasNegocio:
         self.limite_inadimplencia = 3  # REGRA CRÍTICA PDD
 
     def processar_dados_cliente_completo(self, df_planilha: pd.DataFrame, cliente: str,
-                                         numero_titulo: str, dados_validacao_base: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                         numero_titulo: str, dados_validacao_base: Optional[Dict[str, Any]] = None,
+                                         data_limite_inadimplencia: Optional[datetime] = None) -> Dict[str, Any]:
         """
         Processa todos os dados do cliente aplicando TODAS as regras PDD 9.1.1
         (Aderente ao input.md: extração e retroalimentação)
         """
         try:
             import unicodedata
+
+            self.logger.info(f"🔍 [PDD] INÍCIO DO PROCESSAMENTO")
+            self.logger.info(f"   - Cliente: {cliente}")
+            self.logger.info(f"   - Título: {numero_titulo}")
+            self.logger.info(
+                f"   - Dados validação base: {list(dados_validacao_base.keys()) if dados_validacao_base else 'None'}")
+
+            # Forçar output para aparecer nos logs
+            import sys
+            print(
+                f"🔍 [PDD] INÍCIO DO PROCESSAMENTO - Cliente: {cliente}", flush=True)
+            sys.stdout.flush()
 
             def norm(x):
                 if pd.isna(x):
@@ -52,24 +65,241 @@ class ProcessadorRegrasNegocio:
 
             def col(nome):
                 return col_map.get(norm(nome), nome)
-            # Checar colunas obrigatórias
-            obrigatorias = ["TÍTULO", "STATUS DA PARCELA", "DOCUMENTO",
-                            "DATA VENCIMENTO", "VALOR ORIGINAL", "CLIENTE"]
-            for ob in obrigatorias:
-                if col(ob) not in df_planilha.columns:
+            # ✅ CORREÇÃO: Mapear colunas reais do relatório Sienge
+            # Nomes reais das colunas do relatório Sienge:
+            # Título, Parcela/Sequencial, Parcela/Condição, Cód. empresa, Empresa, Cód. centro de custo,
+            # Centro de custo, Documento, Nº documento, Cód. cliente, Cliente, Status da parcela,
+            # Tipo condição, Data vencimento, Valor original, Indexador, Correção monetária,
+            # Juros contratuais, Valor atualizado, Taxa administrativa, Seguro, Valor corrigido,
+            # Data base de juros, Juros %, Tipo de juros, Data base correção, Data correção,
+            # Dias para desconto VP, Juros VP %, Valor presente, Valor desconto comercial,
+            # Dias de atraso, Multa %, Juros de mora, Valor de acréscimo, Valor a receber,
+            # Data da baixa, Valor da baixa, Recebimento líquido
+
+            # Mapeamento das colunas reais para os nomes esperados pelo código
+            mapeamento_colunas = {
+                "TÍTULO": ["Título", "TITULO"],
+                "STATUS DA PARCELA": ["Status da parcela", "STATUS DA PARCELA"],
+                "DOCUMENTO": ["Documento", "DOCUMENTO"],
+                "DATA VENCIMENTO": ["Data vencimento", "DATA VENCIMENTO"],
+                "VALOR ORIGINAL": ["Valor original", "VALOR ORIGINAL"],
+                "CLIENTE": ["Cliente", "CLIENTE"],
+                "TIPO CONDIÇÃO": ["Tipo condição", "TIPO CONDIÇÃO"],
+                "CÓD. CLIENTE": ["Cód. cliente", "COD. CLIENTE", "Código cliente"]
+            }
+            # ✅ CORREÇÃO: Tratamento robusto para coluna 'Valor original'
+
+            def obter_coluna_valor_original(df):
+                """Obtém a coluna de valor original com fallbacks"""
+                possiveis_nomes = [
+                    'Valor original', 'VALOR ORIGINAL', 'Valor Original',
+                    'valor original', 'Valor a receber', 'VALOR A RECEBER'
+                ]
+
+                for nome in possiveis_nomes:
+                    if nome in df.columns:
+                        return nome
+
+                # Se não encontrar, procurar por colunas similares
+                colunas_similares = [col for col in df.columns
+                                     if 'valor' in col.lower() and 'original' in col.lower()]
+                if colunas_similares:
+                    return colunas_similares[0]
+
+                # Último recurso: procurar por qualquer coluna com 'valor'
+                colunas_valor = [
+                    col for col in df.columns if 'valor' in col.lower()]
+                if colunas_valor:
+                    return colunas_valor[0]
+
+                return None
+
+            # Usar função de obtenção da coluna
+            coluna_valor_original = obter_coluna_valor_original(df_planilha)
+            print(
+                f"🔍 [PDD] Coluna valor original encontrada: {coluna_valor_original}", flush=True)
+            if not coluna_valor_original:
+                print(
+                    f"❌ [PDD] RETORNANDO ERRO - Coluna de valor não encontrada", flush=True)
+                return self._retorno_erro("Coluna de valor não encontrada", cliente, numero_titulo)
+
+            # Atualizar mapeamento de colunas
+            mapeamento_colunas["VALOR ORIGINAL"] = [coluna_valor_original]
+            print(f"🔍 [PDD] Mapeamento de colunas atualizado", flush=True)
+
+            # Verificar se as colunas existem com os nomes reais
+            print(f"🔍 [PDD] Verificando colunas obrigatórias...", flush=True)
+            colunas_encontradas = {}
+            for nome_esperado, possiveis_nomes in mapeamento_colunas.items():
+                encontrada = False
+                for nome_real in possiveis_nomes:
+                    if nome_real in df_planilha.columns:
+                        colunas_encontradas[nome_esperado] = nome_real
+                        encontrada = True
+                        break
+
+                if not encontrada:
                     self.logger.error(
-                        f"❌ [PDD] Coluna obrigatória ausente: {ob}")
-                    return self._retorno_erro(f"Coluna obrigatória ausente: {ob}", cliente, numero_titulo)
+                        f"❌ [PDD] Coluna obrigatória ausente: {nome_esperado}")
+                    self.logger.error(
+                        f"   Colunas disponíveis: {list(df_planilha.columns)}")
+                    print(
+                        f"❌ [PDD] RETORNANDO ERRO - Coluna obrigatória ausente: {nome_esperado}", flush=True)
+                    return self._retorno_erro(f"Coluna obrigatória ausente: {nome_esperado}", cliente, numero_titulo)
+
+            # Atualizar função col() para usar o mapeamento real
+            def col(nome):
+                return colunas_encontradas.get(nome, nome)
+
+            print(
+                f"🔍 [PDD] Colunas encontradas: {list(colunas_encontradas.keys())}", flush=True)
+
+            # ✅ CORREÇÃO PDD: Obter mês base dos dados de validação base (planilha) - MOVIDO PARA O INÍCIO
+            print(f"🔍 [PDD] Processando dados de validação base...", flush=True)
+            mes_base = None
+            ano_base = None
+            tipo_reajuste = "ANUAL"  # Valor padrão
+            data_assinatura = datetime.now()  # Valor padrão
+
+            if dados_validacao_base:
+                # Obter mês base da planilha
+                mes_reajuste_str = str(
+                    dados_validacao_base.get('Mês reajuste', '')).strip()
+                if mes_reajuste_str and mes_reajuste_str not in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
+                    try:
+                        # ✅ CORREÇÃO: Tentar formatos incluindo "ago.-25"
+                        formatos = ["%d/%m/%Y", "%Y-%m-%d",
+                                    "%d-%m-%Y", "%m/%d/%Y"]
+                        mes_base = None
+                        ano_base = None
+
+                        # Primeiro tentar formato especial "ago.-25"
+                        if '.' in mes_reajuste_str and '-' in mes_reajuste_str:
+                            try:
+                                mes_str = mes_reajuste_str.split('.')[0]
+                                ano_str = mes_reajuste_str.split('-')[1]
+                                meses = {
+                                    'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
+                                    'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
+                                }
+                                mes_base = meses.get(mes_str.lower())
+                                ano_base = 2000 + int(ano_str)
+                                self.logger.info(
+                                    f"✅ Mês base processado (formato especial): {mes_base:02d}/{ano_base}")
+                            except (ValueError, IndexError, KeyError):
+                                pass
+
+                        # Se não conseguiu, tentar formatos padrão
+                        if not mes_base or not ano_base:
+                            for formato in formatos:
+                                try:
+                                    data_base = datetime.strptime(
+                                        mes_reajuste_str, formato)
+                                    mes_base = data_base.month
+                                    ano_base = data_base.year
+                                    self.logger.info(
+                                        f"✅ Mês base processado (formato padrão): {mes_base:02d}/{ano_base}")
+                                    break
+                                except ValueError:
+                                    continue
+
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Não foi possível interpretar o mês base do reparcelamento: {e}")
+
+                # Obter tipo de reajuste da planilha
+                tipo_reajuste_original = str(dados_validacao_base.get(
+                    'Tipo reajuste', '')).strip()
+
+                # ✅ CORREÇÃO: Se tipo_reajuste estiver vazio, usar o valor fornecido nos dados_validacao_base
+                if not tipo_reajuste_original or tipo_reajuste_original == '':
+                    tipo_reajuste_original = str(
+                        dados_validacao_base.get('tipo_reajuste', '')).strip()
+
+                # ✅ CORREÇÃO: Se ainda estiver vazio, tentar extrair do relatório
+                if not tipo_reajuste_original or tipo_reajuste_original == '':
+                    # Tentar extrair da coluna 'Tipo condição' do relatório
+                    if 'Tipo condição' in df_planilha.columns:
+                        tipos_unicos = df_planilha['Tipo condição'].unique()
+                        for tipo in tipos_unicos:
+                            if pd.notna(tipo) and str(tipo).strip() != '':
+                                tipo_str = str(tipo).lower()
+                                if 'anivers' in tipo_str:
+                                    tipo_reajuste_original = 'ANIVERSÁRIO'
+                                    break
+                                elif 'anual' in tipo_str:
+                                    tipo_reajuste_original = 'ANUAL'
+                                    break
+
+                tipo_reajuste = tipo_reajuste_original.lower()
+                print(
+                    f"🔍 [PDD] Tipo reajuste extraído: '{tipo_reajuste_original}' -> '{tipo_reajuste}'", flush=True)
+
+                # ✅ NOVO: Log visual do tipo de reajuste
+                if 'anivers' in tipo_reajuste:
+                    print(
+                        f"🎂 [PDD] TIPO REAJUSTE: ANIVERSÁRIO | Regra: Vencimento pode ser jogado para mês seguinte", flush=True)
+                    self.logger.info(
+                        f"🎂 [PDD] TIPO REAJUSTE: ANIVERSÁRIO | Regra: Vencimento pode ser jogado para mês seguinte")
+                else:
+                    print(
+                        f"📅 [PDD] TIPO REAJUSTE: ANUAL | Regra: Vencimento sempre no mês de reparcelamento", flush=True)
+                    self.logger.info(
+                        f"📅 [PDD] TIPO REAJUSTE: ANUAL | Regra: Vencimento sempre no mês de reparcelamento")
+
+                # Obter data de assinatura da planilha
+                assinatura_str = str(dados_validacao_base.get(
+                    'Assinatura ultimo Contrato', '')).strip()
+                if assinatura_str and assinatura_str not in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
+                    formatos = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y"]
+                    for formato in formatos:
+                        try:
+                            data_assinatura = datetime.strptime(
+                                assinatura_str, formato)
+                            break
+                        except ValueError:
+                            continue
+
+            # ✅ CORREÇÃO: Definir valores padrão se não encontrados
+            print(f"🔍 [PDD] Verificando valores padrão...", flush=True)
+            if not mes_base or not ano_base:
+                hoje = datetime.now()
+                mes_base = hoje.month
+                ano_base = hoje.year
+                self.logger.warning(
+                    f"⚠️ [PDD] Mês base não encontrado - usando mês atual: {mes_base:02d}/{ano_base}")
+                print(
+                    f"⚠️ [PDD] Usando mês atual: {mes_base:02d}/{ano_base}", flush=True)
+
+            # Log das informações obtidas
+            print(f"🔍 [PDD] Log das informações obtidas...", flush=True)
+            self.logger.info(
+                f"🔍 [PDD] Mês base: {mes_base:02d}/{ano_base}")
+            self.logger.info(f"🔍 [PDD] Tipo reajuste: '{tipo_reajuste}'")
+            self.logger.info(
+                f"🔍 [PDD] Tipo reajuste (lower): '{tipo_reajuste.lower()}'")
+            self.logger.info(
+                f"🔍 [PDD] Contém 'anivers': {'anivers' in tipo_reajuste.lower()}")
+            self.logger.info(
+                f"🔍 [PDD] Data assinatura: {data_assinatura.strftime('%d/%m/%Y')}")
+            print(f"🔍 [PDD] Mês base: {mes_base:02d}/{ano_base}", flush=True)
+            print(f"🔍 [PDD] Tipo reajuste: '{tipo_reajuste}'", flush=True)
+            print(
+                f"🔍 [PDD] Contém 'anivers': {'anivers' in tipo_reajuste.lower()}", flush=True)
 
             # Normalizar colunas de filtro
+            print(f"🔍 [PDD] Normalizando colunas de filtro...", flush=True)
             df = df_planilha.copy()
             df["_TITULO"] = df[col("TÍTULO")].apply(norm)
             df["_STATUS"] = df[col("STATUS DA PARCELA")].apply(norm)
             df["_DOCUMENTO"] = df[col("DOCUMENTO")].apply(norm)
             df["_CLIENTE"] = df[col("CLIENTE")].apply(norm)
+            print(f"🔍 [PDD] Colunas normalizadas criadas", flush=True)
 
             # Filtrar linhas do título (CORRIGIDO: lidar com float vs string)
+            print(f"🔍 [PDD] Filtrando por título: {numero_titulo}", flush=True)
             titulo_norm = norm(numero_titulo)
+            print(f"🔍 [PDD] Título normalizado: '{titulo_norm}'", flush=True)
 
             # Criar múltiplas máscaras para diferentes formatos
             mask_titulo = df["_TITULO"] == titulo_norm  # Formato exato
@@ -91,24 +321,27 @@ class ProcessadorRegrasNegocio:
                 pass
 
             df_titulo = df[mask_titulo].copy()
+            print(
+                f"🔍 [PDD] Linhas após filtro por título: {len(df_titulo)}", flush=True)
             self.logger.info(
                 f"🔍 [PDD] Linhas após filtro por título: {len(df_titulo)}")
             if df_titulo.empty:
+                print(
+                    f"❌ [PDD] RETORNANDO ERRO - Nenhuma linha encontrada para o título {numero_titulo}", flush=True)
                 self.logger.error(
                     f"❌ [PDD] Nenhuma linha encontrada para o título {numero_titulo}")
                 return self._retorno_erro(f"Título {numero_titulo} não encontrado", cliente, numero_titulo)
 
             # --- EXTRAÇÃO FIEL AO PDD ---
-            # 1. Parcelas CT a vencer
-            mask_vencer = df_titulo["_STATUS"].str.contains(
-                "A VENCER", na=False)
+            print(f"🔍 [PDD] Iniciando extração fiel ao PDD...", flush=True)
+            # 1. TODAS as parcelas CT (sem filtro inicial - será filtrado depois)
             mask_ct = df_titulo["_DOCUMENTO"].str.contains("CT")
-            parcelas_ct_a_vencer = df_titulo[mask_vencer & mask_ct].copy()
-            self.logger.info(
-                f"🔍 [PDD] Parcelas CT a vencer: {len(parcelas_ct_a_vencer)}")
+            parcelas_ct_todas = df_titulo[mask_ct].copy()
+            print(
+                f"🔍 [PDD] TODAS as parcelas CT encontradas: {len(parcelas_ct_todas)}", flush=True)
 
-            # Se não houver parcelas a vencer, ERRO explícito
-            if parcelas_ct_a_vencer.empty:
+            # Se não houver parcelas CT, ERRO explícito
+            if parcelas_ct_todas.empty:
                 self.logger.error(
                     f"❌ [PDD] Nenhuma parcela CT a vencer encontrada para o título {numero_titulo}")
                 return {
@@ -124,8 +357,10 @@ class ProcessadorRegrasNegocio:
                     "erro": "Nenhuma parcela CT a vencer encontrada no relatório do Sienge"
                 }
 
-            # 2. Dia de vencimento (moda dos dias das parcelas a vencer)
-            dias_venc = parcelas_ct_a_vencer[col("DATA VENCIMENTO")].dropna().apply(lambda x: pd.to_datetime(
+            print(f"🔍 [PDD] Iniciando regras PDD 9.1.1...", flush=True)
+
+            # 2. Dia de vencimento (moda dos dias das parcelas CT)
+            dias_venc = parcelas_ct_todas[col("DATA VENCIMENTO")].dropna().apply(lambda x: pd.to_datetime(
                 x, errors='coerce', dayfirst=True).day if pd.to_datetime(x, errors='coerce', dayfirst=True) is not pd.NaT else None)
             dias_venc = dias_venc.dropna().tolist()
             if not dias_venc:
@@ -135,7 +370,7 @@ class ProcessadorRegrasNegocio:
                     "status_cliente": "ERRO",
                     "sucesso": False,
                     "pode_reparcelar": True,
-                    "qtd_parcelas_ct_a_vencer": len(parcelas_ct_a_vencer),
+                    "qtd_parcelas_ct_a_vencer": len(parcelas_ct_todas),
                     "qtd_ct_vencidas": 0,
                     "dia_vencimento": None,
                     "valor_parcela_atual": None,
@@ -148,17 +383,41 @@ class ProcessadorRegrasNegocio:
             self.logger.info(
                 f"🔍 [PDD] Dia de vencimento extraído: {dia_vencimento}")
 
-            # 3. Valor da parcela atual (moda dos valores unitários das parcelas a vencer)
-            valores_unit = parcelas_ct_a_vencer[col("VALOR ORIGINAL")].dropna().apply(lambda x: float(str(x).replace(',', '.').replace(
-                'R$', '').strip()) if str(x).replace(',', '.').replace('R$', '').replace('.', '', 1).replace('-', '').isdigit() else 0)
-            valores_unit = [v for v in valores_unit if v > 0]
-            valor_parcela_atual = max(
-                set(valores_unit), key=valores_unit.count) if valores_unit else 0.0
-
-            # 4. Parcelas a vencer (contagem)
-            qtd_parcelas_ct_a_vencer = len(parcelas_ct_a_vencer)
+            # ✅ CORREÇÃO CRÍTICA: A contagem de parcelas será feita APÓS calcular o primeiro vencimento
+            # Por enquanto, manter todas as parcelas para processamento posterior
+            parcelas_ct_a_vencer_filtradas = parcelas_ct_todas
             self.logger.info(
-                f"🔍 [PDD] Quantidade de parcelas a vencer: {qtd_parcelas_ct_a_vencer}")
+                f"🔍 [PDD] Parcelas CT para filtro: {len(parcelas_ct_a_vencer_filtradas)} (filtro será aplicado após calcular primeiro vencimento)")
+
+            # 3. Valor da parcela atual (CONFORME PDD EXATO)
+            # ✅ CORREÇÃO: PDD não especifica moda - usar primeiro valor válido encontrado
+            coluna_valor = colunas_encontradas.get(
+                "VALOR ORIGINAL", "Valor original")
+            if coluna_valor not in parcelas_ct_a_vencer_filtradas.columns:
+                self.logger.error(
+                    f"❌ [PDD] Coluna '{coluna_valor}' não encontrada nas parcelas filtradas")
+                return self._retorno_erro(f"Coluna de valor não encontrada: {coluna_valor}", cliente, numero_titulo)
+
+            # ✅ CORREÇÃO PDD: Pega o primeiro valor válido encontrado (não moda)
+            valor_parcela_atual = 0.0
+            for _, row in parcelas_ct_a_vencer_filtradas.iterrows():
+                try:
+                    valor_str = str(row[coluna_valor]).replace(
+                        ',', '.').replace('R$', '').strip()
+                    if valor_str.replace('.', '', 1).replace('-', '').isdigit():
+                        valor_parcela_atual = float(valor_str)
+                        if valor_parcela_atual > 0:
+                            self.logger.info(
+                                f"🔍 [PDD] Valor parcela atual extraído: R$ {valor_parcela_atual:,.2f}")
+                            break  # ✅ Pega o primeiro valor válido
+                except (ValueError, TypeError):
+                    continue
+
+            # 4. Parcelas a vencer (contagem será feita APÓS calcular o primeiro vencimento)
+            # Por enquanto, usar todas as parcelas
+            qtd_parcelas_ct_a_vencer = len(parcelas_ct_a_vencer_filtradas)
+            self.logger.info(
+                f"🔍 [PDD] Parcelas CT a vencer (temporário): {qtd_parcelas_ct_a_vencer} (filtro será aplicado após calcular primeiro vencimento)")
 
             # 5. Parcelas vencidas (CT)
             mask_vencida = df_titulo["_STATUS"].str.contains(
@@ -179,14 +438,57 @@ class ProcessadorRegrasNegocio:
             inadimplente = False
             pendencias_sienge_inad = ""
             if not parcelas_ct_vencidas.empty and dia_vencimento:
-                data_primeiro_venc = pd.Timestamp.now().replace(day=dia_vencimento)
-                for _, row in parcelas_ct_vencidas.iterrows():
-                    data_venc = pd.to_datetime(
-                        row[col("DATA VENCIMENTO")], errors='coerce', dayfirst=True)
-                    if data_venc is not pd.NaT and (data_primeiro_venc - data_venc).days > 60:
-                        inadimplente = True
-                        pendencias_sienge_inad = "Inadimplência"
-                        break
+                # ✅ CORREÇÃO: Calcular primeiro vencimento do carnê usando as mesmas regras PDD
+                data_primeiro_venc = None
+
+                # ✅ CORREÇÃO CRÍTICA: O mês de reparcelamento É o mês de reajuste (não o próximo)
+                # O mês base JÁ É o mês de reajuste (ex: out.-25 = outubro/2025)
+                mes_reparcelamento = mes_base if mes_base else datetime.now().month
+                ano_reparcelamento = ano_base if ano_base else datetime.now().year
+
+                if tipo_reajuste and 'anivers' in tipo_reajuste and data_assinatura and mes_base and ano_base:
+                    # Regra aniversário
+                    dia_aniversario = data_assinatura.day
+                    if dia_vencimento < dia_aniversario:
+                        # Vencimento antes do aniversário: mês seguinte ao mês de reparcelamento
+                        mes_venc = mes_reparcelamento + 1
+                        ano_venc = ano_reparcelamento
+                        if mes_venc > 12:
+                            mes_venc = 1
+                            ano_venc += 1
+                        data_primeiro_venc = datetime(
+                            ano_venc, mes_venc, dia_vencimento)
+                    else:
+                        # Vencimento após ou igual ao aniversário: mês de reparcelamento
+                        data_primeiro_venc = datetime(
+                            ano_reparcelamento, mes_reparcelamento, dia_vencimento)
+                else:
+                    # Regra padrão (anual ou fallback)
+                    if mes_base and ano_base:
+                        data_primeiro_venc = datetime(
+                            ano_reparcelamento, mes_reparcelamento, dia_vencimento)
+                    else:
+                        # Fallback: próximo mês
+                        hoje = pd.Timestamp.now()
+                        proximo_mes = (hoje + pd.offsets.MonthBegin(1)
+                                       ).replace(day=dia_vencimento)
+                        data_primeiro_venc = proximo_mes
+
+                # Verificar inadimplência usando o primeiro vencimento calculado
+                if data_primeiro_venc:
+                    self.logger.info(
+                        f"🔍 [PDD] Primeiro vencimento para verificação de inadimplência: {data_primeiro_venc.strftime('%d/%m/%Y')}")
+
+                    for _, row in parcelas_ct_vencidas.iterrows():
+                        data_venc = pd.to_datetime(
+                            row[col("DATA VENCIMENTO")], errors='coerce', dayfirst=True)
+                        if data_venc is not pd.NaT and (data_primeiro_venc - data_venc).days > 60:
+                            inadimplente = True
+                            pendencias_sienge_inad = "OK"
+                            self.logger.info(
+                                f"🔍 [PDD] Cliente inadimplente detectado: parcela vencida em {data_venc.strftime('%d/%m/%Y')} ({data_primeiro_venc - data_venc} dias antes)")
+                            break
+
             self.logger.info(
                 f"🔍 [PDD] Pendências Sienge Inad: {pendencias_sienge_inad}")
 
@@ -201,18 +503,208 @@ class ProcessadorRegrasNegocio:
                     set(saldo_vals), key=saldo_vals.count) if saldo_vals else 0.0
             self.logger.info(f"🔍 [PDD] Saldo total extraído: {saldo_total}")
 
-            # 9. 1º vencimento carnê (regra anual, mês seguinte ao processamento, dia extraído do relatório)
-            hoje = pd.Timestamp.now()
-            proximo_mes = (hoje + pd.offsets.MonthBegin(1)
-                           ).replace(day=dia_vencimento)
-            primeiro_vencimento_carne = proximo_mes.strftime("%d/%m/%Y")
-            self.logger.info(
-                f"🔍 [PDD] 1º vencimento carnê: {primeiro_vencimento_carne} (dia {dia_vencimento} extraído do relatório)")
+            # 9. 1º vencimento carnê (aplicar regras PDD conforme tipo de reajuste)
+            print(
+                f"🔍 [PDD] CALCULANDO 1º VENCIMENTO CARNÊ - MÉTODO PRINCIPAL", flush=True)
+            print(f"   - mes_base: {mes_base}", flush=True)
+            print(f"   - ano_base: {ano_base}", flush=True)
+            print(f"   - dia_vencimento: {dia_vencimento}", flush=True)
+            print(f"   - tipo_reajuste: '{tipo_reajuste}'", flush=True)
+            print(
+                f"   - data_assinatura: {data_assinatura.strftime('%d/%m/%Y') if data_assinatura else 'N/A'}", flush=True)
 
-            # 10. Montar dict final
+            # ✅ CORREÇÃO CRÍTICA: O mês de reparcelamento É o mês de reajuste (não o próximo)
+            # O mês base JÁ É o mês de reajuste (ex: set.-25 = setembro/2025)
+            mes_reparcelamento = mes_base if mes_base else datetime.now().month
+            ano_reparcelamento = ano_base if ano_base else datetime.now().year
+
+            print(
+                f"🔍 [PDD] Mês de reajuste: {mes_reparcelamento:02d}/{ano_reparcelamento}", flush=True)
+            print(
+                f"🔍 [PDD] Mês de reparcelamento: {mes_reparcelamento:02d}/{ano_reparcelamento} (mesmo mês)", flush=True)
+
+            if tipo_reajuste and 'anivers' in tipo_reajuste and data_assinatura and mes_base and ano_base:
+                # ✅ REGRA ANIVERSÁRIO PDD
+                dia_aniversario = data_assinatura.day
+                print(f"🎂 [PDD] APLICANDO REGRA ANIVERSÁRIO:", flush=True)
+                print(f"   - Dia aniversário: {dia_aniversario}", flush=True)
+                print(f"   - Dia vencimento: {dia_vencimento}", flush=True)
+                print(
+                    f"   - Comparação: {dia_vencimento} < {dia_aniversario} = {dia_vencimento < dia_aniversario}", flush=True)
+
+                if dia_vencimento < dia_aniversario:
+                    # Vencimento antes do aniversário: mês seguinte ao mês de reparcelamento
+                    mes_venc = mes_reparcelamento + 1
+                    ano_venc = ano_reparcelamento
+                    if mes_venc > 12:
+                        mes_venc = 1
+                        ano_venc += 1
+                    primeiro_vencimento_data = datetime(
+                        ano_venc, mes_venc, dia_vencimento)
+                    primeiro_vencimento_carne = primeiro_vencimento_data.strftime(
+                        "%d/%m/%Y")
+                    print(
+                        f"✅ [PDD] Aniversário - vencimento antes do aniversário: {primeiro_vencimento_carne} (mês seguinte ao reparcelamento)", flush=True)
+                else:
+                    # Vencimento após ou igual ao aniversário: mês de reparcelamento
+                    primeiro_vencimento_data = datetime(
+                        ano_reparcelamento, mes_reparcelamento, dia_vencimento)
+                    primeiro_vencimento_carne = primeiro_vencimento_data.strftime(
+                        "%d/%m/%Y")
+                    print(
+                        f"✅ [PDD] Aniversário - após/igual: {primeiro_vencimento_carne} (mês de reparcelamento)", flush=True)
+            else:
+                # Regra padrão (anual ou fallback)
+                if mes_base and ano_base:
+                    primeiro_vencimento_data = datetime(
+                        ano_reparcelamento, mes_reparcelamento, dia_vencimento)
+                    primeiro_vencimento_carne = primeiro_vencimento_data.strftime(
+                        "%d/%m/%Y")
+                    print(
+                        f"📅 [PDD] APLICANDO REGRA ANUAL: {primeiro_vencimento_carne} (mês de reparcelamento)", flush=True)
+                else:
+                    # Fallback: próximo mês
+                    hoje = pd.Timestamp.now()
+                    proximo_mes = (hoje + pd.offsets.MonthBegin(1)
+                                   ).replace(day=dia_vencimento)
+                    primeiro_vencimento_carne = proximo_mes.strftime(
+                        "%d/%m/%Y")
+                    print(
+                        f"⚠️ [PDD] Fallback: {primeiro_vencimento_carne}", flush=True)
+
+            self.logger.info(
+                f"🔍 [PDD] 1º vencimento carnê FINAL: {primeiro_vencimento_carne} (dia {dia_vencimento} extraído do relatório)")
+
+            # ✅ NOVO: Log visual do resultado final
+            print(
+                f"🎯 [PDD] RESULTADO FINAL: {primeiro_vencimento_carne} | Dia: {dia_vencimento} | Tipo: {tipo_reajuste.upper()}", flush=True)
+
+            # ✅ CORREÇÃO CRÍTICA: Contagem de parcelas A PARTIR do primeiro vencimento do carnê
+            print(
+                f"🔍 [PDD] APLICANDO FILTRO DE PARCELAS A PARTIR DO PRIMEIRO VENCIMENTO", flush=True)
+
+            # Converter primeiro vencimento para datetime para comparação
+            try:
+                data_primeiro_vencimento = datetime.strptime(
+                    primeiro_vencimento_carne, "%d/%m/%Y")
+                print(
+                    f"   📅 Data do primeiro vencimento: {data_primeiro_vencimento.strftime('%d/%m/%Y')}", flush=True)
+
+                # Filtrar parcelas que vencem A PARTIR do primeiro vencimento do carnê
+                parcelas_filtradas_final = []
+                for _, parcela in parcelas_ct_todas.iterrows():
+                    try:
+                        # Processar data de vencimento da parcela
+                        data_venc_str = None
+                        for col_name in ["Data vencimento", "DATA VENCIMENTO", "data_vencimento"]:
+                            if col_name in parcela:
+                                data_venc_str = str(
+                                    parcela.get(col_name, "")).strip()
+                                break
+
+                        if not data_venc_str or data_venc_str in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
+                            continue
+
+                        # Tentar diferentes formatos de data
+                        data_vencimento_parcela = None
+                        formatos = ["%d/%m/%Y", "%Y-%m-%d",
+                                    "%d-%m-%Y", "%m/%d/%Y"]
+
+                        for formato in formatos:
+                            try:
+                                data_vencimento_parcela = datetime.strptime(
+                                    data_venc_str, formato)
+                                break
+                            except ValueError:
+                                continue
+
+                        if not data_vencimento_parcela:
+                            continue
+
+                        # ✅ CORREÇÃO: Incluir parcelas A PARTIR do primeiro vencimento do carnê
+                        # E também considerar a data limite de inadimplência se fornecida
+                        incluir_parcela = data_vencimento_parcela >= data_primeiro_vencimento
+
+                        if data_limite_inadimplencia:
+                            # Aplicar filtro de inadimplência: parcelas devem vencer >= data limite inadimplência
+                            incluir_parcela = incluir_parcela and data_vencimento_parcela >= data_limite_inadimplencia
+
+                        if incluir_parcela:
+                            parcelas_filtradas_final.append(parcela)
+                            motivo = f"(>= {data_primeiro_vencimento.strftime('%d/%m/%Y')}"
+                            if data_limite_inadimplencia:
+                                motivo += f" e >= {data_limite_inadimplencia.strftime('%d/%m/%Y')}"
+                            motivo += ")"
+                            print(
+                                f"   ✅ Incluindo parcela: {data_vencimento_parcela.strftime('%d/%m/%Y')} {motivo}", flush=True)
+                        else:
+                            motivo = f"(< {data_primeiro_vencimento.strftime('%d/%m/%Y')}"
+                            if data_limite_inadimplencia and data_vencimento_parcela < data_limite_inadimplencia:
+                                motivo = f"(< {data_limite_inadimplencia.strftime('%d/%m/%Y')} - inadimplência)"
+                            print(
+                                f"   ❌ Excluindo parcela: {data_vencimento_parcela.strftime('%d/%m/%Y')} {motivo}", flush=True)
+
+                    except Exception as e:
+                        print(
+                            f"   ⚠️ Erro ao processar parcela: {str(e)}", flush=True)
+                        continue
+
+                # Atualizar quantidade de parcelas com o filtro correto
+                qtd_parcelas_ct_a_vencer = len(parcelas_filtradas_final)
+                filtro_info = f"a partir de {data_primeiro_vencimento.strftime('%d/%m/%Y')}"
+                if data_limite_inadimplencia:
+                    filtro_info += f" e >= {data_limite_inadimplencia.strftime('%d/%m/%Y')} (inadimplência)"
+                print(
+                    f"🔍 [PDD] QUANTIDADE FINAL DE PARCELAS: {qtd_parcelas_ct_a_vencer} ({filtro_info})", flush=True)
+                print(
+                    f"🔍 [PDD] Total original: {len(parcelas_ct_todas)} | Filtradas: {qtd_parcelas_ct_a_vencer}", flush=True)
+
+            except Exception as e:
+                print(
+                    f"❌ Erro ao aplicar filtro de parcelas: {str(e)}", flush=True)
+                # Em caso de erro, manter a contagem original
+                qtd_parcelas_ct_a_vencer = len(parcelas_ct_a_vencer_filtradas)
+
+            # ✅ CORREÇÃO: Usar código cliente dos dados de validação base (planilha)
+            codigo_cliente = ""
+            if dados_validacao_base and dados_validacao_base.get('codigo_cliente'):
+                codigo_cliente = str(
+                    dados_validacao_base.get('codigo_cliente')).strip()
+                self.logger.info(
+                    f"🔍 [PDD] Código cliente obtido dos dados de validação base: '{codigo_cliente}'")
+            else:
+                # Fallback: tentar extrair do relatório
+                if 'Cód. cliente' in df_titulo.columns:
+                    codigos = df_titulo['Cód. cliente'].dropna().unique()
+                    if len(codigos) > 0:
+                        codigo_cliente = str(codigos[0]).strip()
+                        self.logger.info(
+                            f"🔍 [PDD] Código cliente extraído do relatório: '{codigo_cliente}'")
+
+                    # 10. Determinar se pode reparcelar (regra PDD)
+            # ✅ CORREÇÃO PDD: TODOS os contratos podem ser reparcelados
+            # Apenas a geração de carnê é restrita a adimplentes
+            pode_reparcelar = True  # Todos os contratos podem reparcelar
+            status_cliente = "adimplente"
+
+            # Verificar se há parcelas a vencer
+            if qtd_parcelas_ct_a_vencer == 0:
+                pode_reparcelar = False
+                status_cliente = "sem_parcelas_vencer"
+
+            # ✅ CORREÇÃO PDD: Pendências NÃO bloqueiam reparcelamento
+            # Apenas determinam se pode gerar carnê
+            if inadimplente:
+                status_cliente = "inadimplente"  # Pode reparcelar, mas não gerar carnê
+
+            if pendencias_sienge:
+                status_cliente = "com_pendencias"  # Pode reparcelar, mas não gerar carnê
+
+            # Montar dict final
             resultado = {
                 "cliente": cliente,
                 "numero_titulo": numero_titulo,
+                "codigo_cliente": codigo_cliente,  # ✅ NOVA COLUNA
                 "dia_vencimento": dia_vencimento,
                 "valor_parcela_atual": valor_parcela_atual,
                 "qtd_parcelas_ct_a_vencer": qtd_parcelas_ct_a_vencer,
@@ -222,6 +714,8 @@ class ProcessadorRegrasNegocio:
                 "cliente_inadimplente": inadimplente,
                 "saldo_total": saldo_total,
                 "primeiro_vencimento_carne": primeiro_vencimento_carne,
+                "pode_reparcelar": pode_reparcelar,  # ✅ CORREÇÃO: Adicionar campo
+                "status_cliente": status_cliente,  # ✅ CORREÇÃO: Adicionar campo
                 "sucesso": True,
                 "timestamp_processamento": pd.Timestamp.now().isoformat(),
             }
@@ -274,9 +768,9 @@ class ProcessadorRegrasNegocio:
         except Exception as e:
             return {"valida": False, "motivo": f"Erro na validação: {str(e)}"}
 
-    def _aplicar_regra_inadimplencia_csv(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _aplicar_regra_inadimplencia_csv(self, df: pd.DataFrame, mes_base: int = None, ano_base: int = None, tipo_reajuste: str = None, data_assinatura: datetime = None) -> Dict[str, Any]:
         """
-        REGRA PDD CRÍTICA: Identificação de Inadimplência
+        REGRA PDD CRÍTICA: Identificação de Cliente Inadimplente
 
         CONFORME PDD SEÇÃO 9.1.1:
         - Considerar TODAS as parcelas CT (independente do status)
@@ -287,7 +781,8 @@ class ProcessadorRegrasNegocio:
             hoje = date.today()
 
             # 1. IDENTIFICAR DIA DE VENCIMENTO REAL DO RELATÓRIO
-            resultado_regra_1 = self._regra_1_dia_vencimento_csv(df)
+            resultado_regra_1 = self._regra_1_dia_vencimento_csv(
+                df, dados_validacao_base)
             dia_vencimento_extraido = resultado_regra_1.get("dia_vencimento")
             if resultado_regra_1.get("sucesso", False) and dia_vencimento_extraido is not None:
                 dia_vencimento = int(dia_vencimento_extraido)
@@ -308,58 +803,51 @@ class ProcessadorRegrasNegocio:
                     "dia_vencimento": None
                 }
 
-            # 1.1. Tentar obter o mês base do reparcelamento (coluna 'Mês reajuste')
-            mes_base = None
-            ano_base = None
-            # Garantir que df é DataFrame
-            import pandas as pd
-            if not isinstance(df, pd.DataFrame):
-                df = pd.DataFrame(df)
-            if 'Mês reajuste' in df.columns:
-                mes_reajuste_str = str(df.iloc[0]['Mês reajuste']).strip()
-                if mes_reajuste_str and mes_reajuste_str not in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
-                    try:
-                        # Tentar formatos comuns
-                        formatos = ["%d/%m/%Y", "%Y-%m-%d",
-                                    "%d-%m-%Y", "%m/%d/%Y"]
-                        for formato in formatos:
-                            try:
-                                data_base = datetime.strptime(
-                                    mes_reajuste_str, formato)
-                                mes_base = data_base.month
-                                ano_base = data_base.year
-                                break
-                            except ValueError:
-                                continue
-                    except Exception as e:
-                        self.logger.warning(
-                            f"Não foi possível interpretar o mês base do reparcelamento: {e}")
-
-            # 1.2. Obter tipo de reajuste e data de assinatura do contrato
-            tipo_reajuste = None
-            data_assinatura = None
-            if 'Tipo reajuste' in df.columns:
-                tipo_reajuste = str(
-                    df.iloc[0]['Tipo reajuste']).strip().lower()
-            if 'Assinatura ultimo Contrato' in df.columns:
-                assinatura_str = str(
-                    df.iloc[0]['Assinatura ultimo Contrato']).strip()
-                if assinatura_str and assinatura_str not in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
-                    formatos = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y"]
-                    for formato in formatos:
-                        try:
-                            data_assinatura = datetime.strptime(
-                                assinatura_str, formato)
-                            break
-                        except ValueError:
-                            continue
-
             # 2. CALCULAR 1º VENCIMENTO DO NOVO CARNÊ CONFORME PDD
             primeiro_vencimento_novo_carne = None
+
+            # ✅ CORREÇÃO CRÍTICA: Verificar se as variáveis estão definidas
+            print(f"🔍 [PDD] INICIANDO CÁLCULO DO 1º VENCIMENTO CARNÊ", flush=True)
+            print(
+                f"   - mes_base: {mes_base} (tipo: {type(mes_base)})", flush=True)
+            print(
+                f"   - ano_base: {ano_base} (tipo: {type(ano_base)})", flush=True)
+            print(
+                f"   - dia_vencimento: {dia_vencimento} (tipo: {type(dia_vencimento)})", flush=True)
+            print(f"   - mes_base bool: {bool(mes_base)}", flush=True)
+            print(f"   - ano_base bool: {bool(ano_base)}", flush=True)
+            print(
+                f"   - dia_vencimento bool: {bool(dia_vencimento)}", flush=True)
+            print(
+                f"   - Condição if: {bool(mes_base) and bool(ano_base) and bool(dia_vencimento)}", flush=True)
+
+            # ✅ CORREÇÃO: Definir valores padrão se necessário
+            if not mes_base or not ano_base:
+                hoje = datetime.now()
+                mes_base = mes_base or hoje.month
+                ano_base = ano_base or hoje.year
+                print(
+                    f"⚠️ [PDD] Valores padrão definidos: mes_base={mes_base}, ano_base={ano_base}", flush=True)
+
             if mes_base and ano_base and dia_vencimento:
+                self.logger.info(f"🔍 [PDD] Calculando 1º vencimento carnê:")
+                self.logger.info(f"   - Mês base: {mes_base}")
+                self.logger.info(f"   - Ano base: {ano_base}")
+                self.logger.info(f"   - Dia vencimento: {dia_vencimento}")
+                self.logger.info(f"   - Tipo reajuste: '{tipo_reajuste}'")
+                self.logger.info(
+                    f"   - Contém 'anivers': {'anivers' in tipo_reajuste}")
+                self.logger.info(
+                    f"   - Data assinatura: {data_assinatura.strftime('%d/%m/%Y') if data_assinatura else 'N/A'}")
+
                 if tipo_reajuste and 'anivers' in tipo_reajuste and data_assinatura:
                     # Reajuste Aniversário
                     dia_aniversario = data_assinatura.day
+                    self.logger.info(
+                        f"   - Dia aniversário: {dia_aniversario}")
+                    self.logger.info(
+                        f"   - Comparação: {dia_vencimento} < {dia_aniversario} = {dia_vencimento < dia_aniversario}")
+
                     if dia_vencimento < dia_aniversario:
                         # Vencimento antes do aniversário: mês seguinte ao mês base
                         mes_venc = mes_base + 1
@@ -385,7 +873,7 @@ class ProcessadorRegrasNegocio:
                         f"📈 Reajuste Anual/padrão. 1º vencimento: {primeiro_vencimento_novo_carne.strftime('%d/%m/%Y')}")
             else:
                 # Fallback: próximo mês disponível
-                proximo_mes = hoje.replace(day=1) + timedelta(days=32)
+                proximo_mes = hoje.replace(day=1) + timedelta(days=31)
                 proximo_mes = proximo_mes.replace(day=1)
                 primeiro_vencimento_novo_carne = proximo_mes.replace(
                     day=dia_vencimento)
@@ -506,7 +994,9 @@ class ProcessadorRegrasNegocio:
                 "parcelas_problematicas": parcelas_problematicas,
                 "data_limite_inadimplencia": data_limite.strftime("%d/%m/%Y"),
                 "primeiro_vencimento_carne": primeiro_vencimento_novo_carne.strftime("%Y-%m-%d"),
-                "dia_vencimento": dia_vencimento
+                "dia_vencimento": dia_vencimento,
+                "tipo_reajuste": tipo_reajuste,
+                "data_assinatura": data_assinatura.strftime("%d/%m/%Y") if data_assinatura else None
             }
 
             # LOG FINAL RESUMIDO
@@ -515,6 +1005,11 @@ class ProcessadorRegrasNegocio:
             self.logger.info(
                 f"📈   🔢 Parcelas CT vencidas: {qtd_parcelas_inadimplentes}")
             self.logger.info(f"📈   ✔️ Pode reparcelar: {pode_reparcelar}")
+            self.logger.info(f"📈   🎂 Tipo reajuste: {tipo_reajuste}")
+            self.logger.info(
+                f"📈   📅 Data assinatura: {data_assinatura.strftime('%d/%m/%Y') if data_assinatura else 'N/A'}")
+            self.logger.info(
+                f"📈   📅 1º vencimento carnê: {primeiro_vencimento_novo_carne.strftime('%d/%m/%Y')}")
 
             return resultado
 
@@ -531,106 +1026,112 @@ class ProcessadorRegrasNegocio:
 
     # ============= REGRAS 9.1.1 COMPLETAS ADAPTADAS PARA CSV =============
 
-    def _regra_1_dia_vencimento_csv(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _regra_1_dia_vencimento_csv(self, df: pd.DataFrame, dados_validacao_base: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        REGRA 1 PDD: Identificação do Dia de Vencimento das Parcelas CT A VENCER
+        REGRA 1 PDD: Identificação do Dia de Vencimento
+        ✅ CORREÇÃO CRÍTICA: O dia DEVE vir da coluna "Data vencimento" do relatório Sienge
         """
         try:
-            print("🔍 DEBUG - Vou verificar os status das parcelas...")
-            self.logger.info(
-                "🔍 DEBUG - Vou verificar os status das parcelas...")
+            print("🔍 📋 Extraindo dia do primeiro vencimento...")
+            self.logger.info("🔍 📋 Extraindo dia do primeiro vencimento...")
 
-            # Verificar todos os status únicos
-            status_unicos = df["Status da parcela"].str.upper().unique()
-            print(f"🔍 DEBUG - Status únicos encontrados: {status_unicos}")
-            self.logger.info(
-                f"🔍 DEBUG - Status únicos encontrados: {status_unicos}")
-
-            # Verificar todos os documentos únicos
-            documentos_unicos = df["Documento"].str.upper().unique()
+            # ✅ CORREÇÃO CRÍTICA: O dia DEVE vir da coluna "Data vencimento" do relatório Sienge
             print(
-                f"🔍 DEBUG - Documentos únicos encontrados: {documentos_unicos}")
+                "🔍 📋 Extraindo dia do primeiro vencimento das parcelas futuras do Sienge...")
             self.logger.info(
-                f"🔍 DEBUG - Documentos únicos encontrados: {documentos_unicos}")
+                "🔍 📋 Extraindo dia do primeiro vencimento das parcelas futuras do Sienge...")
 
-            # Verificar todos os tipos de condição únicos
-            tipos_condicao_unicos = df["Tipo condição"].str.upper().unique()
-            print(
-                f"🔍 DEBUG - Tipos de condição únicos encontrados: {tipos_condicao_unicos}")
-            self.logger.info(
-                f"🔍 DEBUG - Tipos de condição únicos encontrados: {tipos_condicao_unicos}")
+            # Filtrar apenas parcelas que ainda não foram baixadas (futuras)
+            mask_nao_baixadas = df["Data da baixa"].isna()
+            parcelas_futuras = df[mask_nao_baixadas].copy()
 
-            # Filtrar apenas parcelas CT a vencer
-            mask_vencer = df["Status da parcela"].str.upper(
-            ).str.contains("VENCER", na=False)
-            mask_ct = df["Documento"].str.contains("CT", case=False, na=False)
-            parcelas_ct_a_vencer = df[mask_vencer & mask_ct].copy()
+            if len(parcelas_futuras) == 0:
+                print("🔍 ❌ Nenhuma parcela futura encontrada!")
+                self.logger.info("🔍 ❌ Nenhuma parcela futura encontrada!")
+                return {
+                    "sucesso": False,
+                    "motivo": "Nenhuma parcela futura encontrada no relatório",
+                    "dia_vencimento": None
+                }
 
-            print(
-                f"🔍 DEBUG - Parcelas CT a vencer encontradas: {len(parcelas_ct_a_vencer)}")
-            self.logger.info(
-                f"🔍 DEBUG - Parcelas CT a vencer encontradas: {len(parcelas_ct_a_vencer)}")
+            # Ordenar por data de vencimento para pegar o primeiro vencimento
+            parcelas_futuras = parcelas_futuras.sort_values("Data vencimento")
 
-            if len(parcelas_ct_a_vencer) == 0:
-                print("🔍 DEBUG - Nenhuma parcela CT a vencer encontrada!")
+            # Pegar a primeira parcela futura (primeiro vencimento)
+            primeira_parcela = parcelas_futuras.iloc[0]
+
+            try:
+                data_venc_str = str(primeira_parcela["Data vencimento"])
+                data_venc = pd.to_datetime(
+                    data_venc_str, errors='coerce', dayfirst=True)
+
+                if pd.isna(data_venc):
+                    print(f"🔍 ❌ Data de vencimento inválida: {data_venc_str}")
+                    self.logger.info(
+                        f"🔍 ❌ Data de vencimento inválida: {data_venc_str}")
+                    return {
+                        "sucesso": False,
+                        "motivo": f"Data de vencimento inválida: {data_venc_str}",
+                        "dia_vencimento": None
+                    }
+
+                dia_vencimento = data_venc.day
+
+                if not (1 <= dia_vencimento <= 31):
+                    print(f"🔍 ❌ Dia de vencimento inválido: {dia_vencimento}")
+                    self.logger.info(
+                        f"🔍 ❌ Dia de vencimento inválido: {dia_vencimento}")
+                    return {
+                        "sucesso": False,
+                        "motivo": f"Dia de vencimento inválido: {dia_vencimento}",
+                        "dia_vencimento": None
+                    }
+
+                print(
+                    f"🔍 ✅ Dia do primeiro vencimento extraído do Sienge: {dia_vencimento} (Data: {data_venc_str})")
                 self.logger.info(
-                    "🔍 DEBUG - Nenhuma parcela CT a vencer encontrada!")
+                    f"🔍 ✅ Dia do primeiro vencimento extraído do Sienge: {dia_vencimento} (Data: {data_venc_str})")
+
                 return {
-                    "sucesso": False,
-                    "motivo": "Nenhuma parcela CT a vencer encontrada",
-                    "dia_vencimento": None
+                    "sucesso": True,
+                    "dia_vencimento": dia_vencimento,
+                    "fonte": "relatorio_sienge",
+                    "data_primeiro_vencimento": data_venc_str,
+                    "observacao": f"Dia {dia_vencimento} extraído do primeiro vencimento futuro do Sienge ({data_venc_str})"
                 }
 
-            # Extrair dias de vencimento
-            dias_vencimento = []
-            for _, row in parcelas_ct_a_vencer.iterrows():
-                try:
-                    try:
-                        data_venc_str = str(row["Data vencimento"])
-                        data_venc = pd.to_datetime(
-                            data_venc_str, errors='coerce', dayfirst=True)
-                        if not pd.isna(data_venc):
-                            dias_vencimento.append(data_venc.day)
-                    except:
-                        continue
-                except:
-                    continue
-
-            if not dias_vencimento:
+            except Exception as e:
+                print(f"🔍 ❌ Erro ao processar data de vencimento: {e}")
+                self.logger.info(
+                    f"🔍 ❌ Erro ao processar data de vencimento: {e}")
                 return {
                     "sucesso": False,
-                    "motivo": "Datas de vencimento inválidas",
+                    "erro": str(e),
                     "dia_vencimento": None
                 }
-
-            # Determinar dia mais comum
-            dia_comum = max(set(dias_vencimento), key=dias_vencimento.count)
-
-            return {
-                "sucesso": True,
-                "dia_vencimento": dia_comum,
-                "total_parcelas_analisadas": len(dias_vencimento),
-                "distribuicao_dias": {dia: dias_vencimento.count(dia) for dia in set(dias_vencimento)},
-                "parcelas_ct_a_vencer": len(parcelas_ct_a_vencer)
-            }
 
         except Exception as e:
+            print(f"🔍 ❌ Erro geral na extração do dia de vencimento: {e}")
+            self.logger.info(
+                f"🔍 ❌ Erro geral na extração do dia de vencimento: {e}")
             return {
                 "sucesso": False,
                 "erro": str(e),
                 "dia_vencimento": None
             }
 
-    def _regra_2_primeiro_vencimento_csv(self, df: pd.DataFrame, tipo_reajuste: str = "ANUAL") -> Dict[str, Any]:
+    def _regra_2_primeiro_vencimento_csv(self, df: pd.DataFrame, tipo_reajuste: str = "ANUAL", mes_base: int = None, ano_base: int = None, data_assinatura: datetime = None, dados_validacao_base: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         REGRA 2 PDD: Cálculo do 1º Vencimento do Novo Carnê
+        ✅ CORREÇÃO: Agora aplica regras de aniversário conforme PDD
         """
         try:
             hoje = date.today()
 
-            # Obter dia de vencimento das parcelas
-            regra_1 = self._regra_1_dia_vencimento_csv(df)
-            # ❌ ERRO: Dia de vencimento deve ser extraído exclusivamente do relatório
+            # Obter dia de vencimento extraído do relatório do Sienge
+            regra_1 = self._regra_1_dia_vencimento_csv(
+                df, dados_validacao_base)
+            # ✅ CORREÇÃO: Agora extrai o dia diretamente do relatório, conforme PDD
             if not regra_1.get("sucesso", False) or not regra_1.get("dia_vencimento"):
                 return {
                     "sucesso": False,
@@ -648,14 +1149,52 @@ class ProcessadorRegrasNegocio:
                     "data_primeiro_vencimento": None
                 }
 
-            # Próximo mês disponível
-            proximo_mes = hoje.replace(day=1) + timedelta(days=32)
-            primeiro_vencimento = proximo_mes.replace(day=dia_vencimento)
+            # ✅ CORREÇÃO CRÍTICA: Aplicar regras PDD para primeiro vencimento
+            # Se mes_base e ano_base não foram fornecidos, usar valores padrão
+            if not mes_base or not ano_base:
+                hoje = datetime.now()
+                mes_base = mes_base or hoje.month
+                ano_base = ano_base or hoje.year
 
-            # Se a data já passou no mês atual, usar o mês seguinte
-            if primeiro_vencimento <= hoje:
+            primeiro_vencimento = None
+
+            # ✅ CORREÇÃO CRÍTICA: O mês de reparcelamento É o mês de reajuste (não o próximo)
+            # O mês base JÁ É o mês de reajuste (ex: out.-25 = outubro/2025)
+            mes_reparcelamento = mes_base if mes_base else datetime.now().month
+            ano_reparcelamento = ano_base if ano_base else datetime.now().year
+
+            if tipo_reajuste and 'anivers' in tipo_reajuste and data_assinatura and mes_base and ano_base:
+                # ✅ REGRA ANIVERSÁRIO PDD
+                dia_aniversario = data_assinatura.day
+
+                if dia_vencimento < dia_aniversario:
+                    # Vencimento antes do aniversário: mês seguinte ao mês de reparcelamento
+                    mes_venc = mes_reparcelamento + 1
+                    ano_venc = ano_reparcelamento
+                    if mes_venc > 12:
+                        mes_venc = 1
+                        ano_venc += 1
+                    primeiro_vencimento = datetime(
+                        ano_venc, mes_venc, dia_vencimento)
+                else:
+                    # Vencimento após ou igual ao aniversário: mês de reparcelamento
+                    primeiro_vencimento = datetime(
+                        ano_reparcelamento, mes_reparcelamento, dia_vencimento)
+            else:
+                # ✅ REGRA ANUAL PDD
+                if mes_base and ano_base:
+                    primeiro_vencimento = datetime(
+                        ano_reparcelamento, mes_reparcelamento, dia_vencimento)
+                else:
+                    # Fallback: próximo mês disponível
+                    proximo_mes = hoje.replace(day=1) + timedelta(days=31)
+                    primeiro_vencimento = proximo_mes.replace(
+                        day=dia_vencimento)
+
+            # Se a data já passou, usar o mês seguinte
+            if primeiro_vencimento.date() < hoje:
                 primeiro_vencimento = (primeiro_vencimento.replace(
-                    day=1) + timedelta(days=32)).replace(day=dia_vencimento)
+                    day=1) + timedelta(days=31)).replace(day=dia_vencimento)
 
             return {
                 "sucesso": True,
@@ -663,8 +1202,8 @@ class ProcessadorRegrasNegocio:
                 "data_primeiro_vencimento_formatada": primeiro_vencimento.strftime("%d/%m/%Y"),
                 "tipo_reajuste": tipo_reajuste,
                 "dia_vencimento_usado": dia_vencimento,
-                "observacao_regra": f"Próximo vencimento no dia {dia_vencimento}",
-                "dias_ate_vencimento": (primeiro_vencimento - hoje).days
+                "observacao_regra": f"Primeiro vencimento no dia {dia_vencimento} aplicando regras PDD",
+                "dias_ate_vencimento": (primeiro_vencimento.date() - hoje).days
             }
 
         except Exception as e:
@@ -699,7 +1238,16 @@ class ProcessadorRegrasNegocio:
                 }
 
             # PDD: Usar "Valor original" (valor unitário da parcela)
-            if "Valor original" not in parcelas_ct.columns:
+            # ✅ CORREÇÃO: Verificar coluna com fallbacks
+            coluna_valor_original = None
+            possiveis_nomes = [
+                'Valor original', 'VALOR ORIGINAL', 'Valor Original', 'valor original']
+            for nome in possiveis_nomes:
+                if nome in parcelas_ct.columns:
+                    coluna_valor_original = nome
+                    break
+
+            if not coluna_valor_original:
                 return {
                     "sucesso": False,
                     "motivo": "Coluna obrigatória ausente: VALOR ORIGINAL",
@@ -710,7 +1258,7 @@ class ProcessadorRegrasNegocio:
             for _, row in parcelas_ct.iterrows():
                 try:
                     valor_str = str(
-                        row.get("Valor original", "0")).replace(",", ".")
+                        row.get(coluna_valor_original, "0")).replace(",", ".")
                     valor_unitario = float(valor_str)
                     if valor_unitario > 0:
                         valores_unitarios.append(valor_unitario)
@@ -789,7 +1337,7 @@ class ProcessadorRegrasNegocio:
             for _, row in parcelas_ct.iterrows():
                 try:
                     valor_original = float(
-                        str(row.get("Valor original", "0")).replace(",", "."))
+                        str(row.get(coluna_valor_original, "0")).replace(",", "."))
 
                     tipo_condicao = str(row.get("Tipo condição", "")).strip()
 
@@ -845,7 +1393,16 @@ class ProcessadorRegrasNegocio:
 
             # Calcular valores
             valor_ct = 0
-            if not "Valor original" in parcelas_ct.columns:
+            # ✅ CORREÇÃO: Verificar coluna com fallbacks
+            coluna_valor_original = None
+            possiveis_nomes = [
+                'Valor original', 'VALOR ORIGINAL', 'Valor Original', 'valor original']
+            for nome in possiveis_nomes:
+                if nome in parcelas_ct.columns:
+                    coluna_valor_original = nome
+                    break
+
+            if not coluna_valor_original:
                 return {
                     "sucesso": False,
                     "motivo": "Coluna obrigatória ausente: VALOR ORIGINAL",
@@ -860,7 +1417,7 @@ class ProcessadorRegrasNegocio:
             for _, row in parcelas_ct.iterrows():
                 try:
                     valor = float(
-                        str(row.get("Valor original", "0")).replace(",", "."))
+                        str(row.get(coluna_valor_original, "0")).replace(",", "."))
                     valor_ct += valor
                 except:
                     continue
@@ -893,11 +1450,11 @@ class ProcessadorRegrasNegocio:
                 "quantidade_iptu_a_vencer": 0
             }
 
-    def _regra_6_parcelas_vencidas_ct_csv(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _regra_6_parcelas_vencidas_ct_csv(self, df: pd.DataFrame, mes_base: int = None, ano_base: int = None, tipo_reajuste: str = None, data_assinatura: datetime = None) -> Dict[str, Any]:
         """
         REGRA 6 PDD: Quantidade de Parcelas Vencidas CT (já implementada no método de inadimplência)
         """
-        return self._aplicar_regra_inadimplencia_csv(df)
+        return self._aplicar_regra_inadimplencia_csv(df, mes_base, ano_base, tipo_reajuste, data_assinatura)
 
     def _regra_7_pendencias_rec_fat_iptu_csv(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -1053,7 +1610,7 @@ class ProcessadorRegrasNegocio:
             # Data primeiro vencimento (próximo mês, dia 15)
             hoje = date.today()
             primeiro_vencimento = (hoje.replace(
-                day=1) + timedelta(days=32)).replace(day=15)
+                day=1) + timedelta(days=31)).replace(day=15)
 
             # REGRA PDD: Quantidade de parcelas deve ser 12 (não todas as pendentes)
             quantidade_parcelas_reparcelamento = min(parcelas_pendentes, 12)
@@ -1223,6 +1780,154 @@ class ProcessadorRegrasNegocio:
             import traceback
             self.logger.error(f"Detalhes: {traceback.format_exc()}")
             return []
+
+    def _filtrar_parcelas_por_mes_base_pdd(self, parcelas_ct_todas: pd.DataFrame, mes_base: int, ano_base: int,
+                                           tipo_reajuste: str, data_assinatura: datetime) -> pd.DataFrame:
+        """
+        ✅ CORREÇÃO PDD: Filtra parcelas conforme regra PDD de "parcelas a partir do mês base do reparcelamento"
+
+        Regras PDD:
+        - Anual: apenas parcelas com vencimento dentro do mês base da correção
+        - Aniversário: considerar regra do aniversário (mês seguinte se após aniversário)
+
+        Args:
+            parcelas_ct_todas: DataFrame com todas as parcelas CT
+            mes_base: Mês base do reparcelamento
+            ano_base: Ano base do reparcelamento
+            tipo_reajuste: Tipo de reajuste ('anual' ou 'aniversário')
+            data_assinatura: Data de assinatura do contrato
+
+        Returns:
+            DataFrame com parcelas filtradas conforme regra PDD
+        """
+        try:
+            if parcelas_ct_todas.empty:
+                self.logger.info(
+                    "🔍 [PDD] Nenhuma parcela CT para filtrar")
+                return parcelas_ct_todas
+
+            # Converter para DataFrame se necessário
+            if not isinstance(parcelas_ct_todas, pd.DataFrame):
+                parcelas_ct_todas = pd.DataFrame(parcelas_ct_todas)
+
+            parcelas_filtradas = []
+            tipo_reajuste_lower = str(
+                tipo_reajuste).lower() if tipo_reajuste else "anual"
+
+            self.logger.info(
+                f"🔍 [PDD] Filtrando parcelas por mês base: {mes_base:02d}/{ano_base}")
+            self.logger.info(
+                f"🔍 [PDD] Tipo de reajuste: {tipo_reajuste_lower}")
+
+            for _, parcela in parcelas_ct_todas.iterrows():
+                try:
+                    # Processar data de vencimento (tentar diferentes nomes de coluna)
+                    data_venc_str = None
+                    for col_name in ["DATA VENCIMENTO", "Data vencimento", "data_vencimento"]:
+                        if col_name in parcela:
+                            data_venc_str = str(
+                                parcela.get(col_name, "")).strip()
+                            break
+
+                    if not data_venc_str or data_venc_str in ['', '#N/A', 'N/A', '#REF!', '#VALUE!', 'null', 'None']:
+                        self.logger.debug(
+                            f"🔍 [PDD] Parcela sem data válida: {data_venc_str}")
+                        continue
+
+                    # Tentar diferentes formatos de data
+                    data_vencimento = None
+                    formatos = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y"]
+
+                    for formato in formatos:
+                        try:
+                            data_vencimento = datetime.strptime(
+                                data_venc_str, formato)
+                            break
+                        except ValueError:
+                            continue
+
+                    if not data_vencimento:
+                        self.logger.debug(
+                            f"🔍 [PDD] Não foi possível processar data: {data_venc_str}")
+                        continue
+
+                    self.logger.debug(
+                        f"🔍 [PDD] Processando parcela: {data_vencimento.strftime('%d/%m/%Y')}")
+
+                    # Aplicar regras PDD conforme tipo de reajuste
+                    incluir_parcela = False
+
+                    if 'anivers' in tipo_reajuste_lower and data_assinatura:
+                        # ✅ REGRA ANIVERSÁRIO PDD
+                        dia_aniversario = data_assinatura.day
+                        dia_vencimento = data_vencimento.day
+
+                        self.logger.debug(
+                            f"🔍 [PDD] Aniversário dia {dia_aniversario}, vencimento dia {dia_vencimento}")
+
+                        if dia_vencimento < dia_aniversario:
+                            # Vencimento antes do aniversário: mês base
+                            if data_vencimento.month == mes_base and data_vencimento.year == ano_base:
+                                incluir_parcela = True
+                                self.logger.debug(
+                                    f"🔍 [PDD] Aniversário - antes: {data_vencimento.strftime('%d/%m/%Y')} (mês base)")
+                            else:
+                                self.logger.debug(
+                                    f"🔍 [PDD] Aniversário - antes: {data_vencimento.strftime('%d/%m/%Y')} (fora do mês base)")
+                        else:
+                            # Vencimento após aniversário: mês seguinte
+                            mes_venc = mes_base + 1
+                            ano_venc = ano_base
+                            if mes_venc > 12:
+                                mes_venc = 1
+                                ano_venc += 1
+
+                            if data_vencimento.month == mes_venc and data_vencimento.year == ano_venc:
+                                incluir_parcela = True
+                                self.logger.debug(
+                                    f"🔍 [PDD] Aniversário - após: {data_vencimento.strftime('%d/%m/%Y')} (mês seguinte)")
+                            else:
+                                self.logger.debug(
+                                    f"🔍 [PDD] Aniversário - após: {data_vencimento.strftime('%d/%m/%Y')} (fora do mês seguinte)")
+                    else:
+                        # ✅ REGRA ANUAL PDD
+                        if data_vencimento.month == mes_base and data_vencimento.year == ano_base:
+                            incluir_parcela = True
+                            self.logger.debug(
+                                f"🔍 [PDD] Anual: {data_vencimento.strftime('%d/%m/%Y')} (mês base)")
+                        else:
+                            self.logger.debug(
+                                f"🔍 [PDD] Anual: {data_vencimento.strftime('%d/%m/%Y')} (fora do mês base)")
+
+                    if incluir_parcela:
+                        parcelas_filtradas.append(parcela)
+                        self.logger.debug(
+                            f"🔍 [PDD] Parcela incluída: {data_vencimento.strftime('%d/%m/%Y')}")
+                    else:
+                        self.logger.debug(
+                            f"🔍 [PDD] Parcela excluída: {data_vencimento.strftime('%d/%m/%Y')}")
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"🔍 [PDD] Erro ao processar parcela: {str(e)}")
+                    continue
+
+            # Criar DataFrame com parcelas filtradas
+            if parcelas_filtradas:
+                df_filtrado = pd.DataFrame(parcelas_filtradas)
+                self.logger.info(
+                    f"🔍 [PDD] Parcelas filtradas: {len(df_filtrado)} de {len(parcelas_ct_todas)}")
+                return df_filtrado
+            else:
+                self.logger.warning(
+                    f"🔍 [PDD] Nenhuma parcela atende aos critérios de filtro PDD")
+                return pd.DataFrame()  # Retorna DataFrame vazio
+
+        except Exception as e:
+            self.logger.error(
+                f"🔍 [PDD] Erro ao filtrar parcelas por mês base: {str(e)}")
+            # Em caso de erro, retorna todas as parcelas (comportamento anterior)
+            return parcelas_ct_todas
 
     def _retorno_erro(self, erro: str, cliente: str, numero_titulo: str) -> Dict[str, Any]:
         """Helper para retornos de erro padronizados"""

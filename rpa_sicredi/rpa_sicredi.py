@@ -95,6 +95,21 @@ class RPASicredi(BaseRPA):
             # Faz login no Sicredi WebBank
             await self._fazer_login_sicredi()
 
+            # Carregar metadados do arquivo de remessa
+            self.log_progresso("Carregando metadados do arquivo de remessa")
+            metadados_contratos = await self._carregar_metadados_arquivo_remessa(arquivo_remessa)
+
+            if metadados_contratos:
+                self.log_progresso(
+                    f"📊 Arquivo contém {metadados_contratos.get('total_contratos_processados', 0)} contratos")
+                self.log_progresso(
+                    f"🏢 Empresa: {metadados_contratos.get('empresa', 'N/A')}")
+                self.log_progresso(
+                    f"📅 Período: {metadados_contratos.get('data_inicial', 'N/A')} → {metadados_contratos.get('data_final', 'N/A')}")
+            else:
+                self.log_progresso(
+                    "⚠️ Metadados não encontrados - processando sem informações detalhadas")
+
             # Valida arquivo antes do upload
             self.log_progresso("Validando arquivo de remessa")
             """ validacao_arquivo = await self._validar_arquivo_remessa(arquivo_remessa)
@@ -144,6 +159,7 @@ class RPASicredi(BaseRPA):
                 "processamento": resultado_processamento,
                 "confirmacao": confirmacao,
                 "dados_originais": dados_processamento,
+                "metadados_contratos": metadados_contratos,
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
@@ -166,6 +182,48 @@ class RPASicredi(BaseRPA):
         finally:
             # Sempre faz logout
             await self._fazer_logout_sicredi()
+
+    async def _carregar_metadados_arquivo_remessa(self, arquivo_remessa: str) -> Optional[Dict[str, Any]]:
+        """
+        Carrega metadados do arquivo de remessa baseado no nome do arquivo
+
+        Args:
+            arquivo_remessa: Caminho do arquivo de remessa
+
+        Returns:
+            Metadados dos contratos ou None se não encontrado
+        """
+        try:
+            import json
+            import os
+            from pathlib import Path
+
+            # Extrair nome base do arquivo (sem extensão)
+            nome_arquivo = Path(arquivo_remessa).stem
+
+            # Procurar arquivo de metadados correspondente
+            metadados_dir = "dados_extraidos/metadados_remessa"
+            arquivo_metadados = os.path.join(
+                metadados_dir, f"dados_{nome_arquivo}.json")
+
+            if os.path.exists(arquivo_metadados):
+                with open(arquivo_metadados, 'r', encoding='utf-8') as f:
+                    metadados = json.load(f)
+
+                self.log_progresso(
+                    f"✅ Metadados carregados: {arquivo_metadados}")
+                self.log_progresso(
+                    f"📊 {metadados.get('total_contratos_processados', 0)} contratos no arquivo de remessa")
+
+                return metadados
+            else:
+                self.log_progresso(
+                    f"⚠️ Arquivo de metadados não encontrado: {arquivo_metadados}")
+                return None
+
+        except Exception as e:
+            self.log_progresso(f"❌ Erro ao carregar metadados: {str(e)}")
+            return None
 
     async def _buscar_cnpj_empresa(self, empresa_nome: str) -> Optional[str]:
         """

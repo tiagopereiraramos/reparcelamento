@@ -533,10 +533,42 @@ class RPAColetaIndices(BaseRPA):
             raise Exception(f"Erro ao atualizar planilha: {str(e)}")
 
     def _obter_mes_atual_formatado(self) -> str:
-        """Retorna o mês atual no formato de data para planilha (ex: 01/07/25)"""
+        """Retorna o mês atual no formato MM-AA para planilha (ex: 09-25)"""
         agora = datetime.now()
-        # Retorna data no formato DD/MM/YY onde DD=01 (primeiro dia do mês)
-        return f"01/{agora.month:02d}/{agora.year % 100:02d}"
+        # ✅ CORREÇÃO: Retorna formato MM-AA como esperado pela planilha
+        return f"{agora.month:02d}-{agora.year % 100:02d}"
+
+    def _normalizar_formato_mes_planilha(self, mes_dados: str) -> str:
+        """
+        Normaliza qualquer formato de data para MM-AA antes de inserir na planilha.
+
+        Args:
+            mes_dados: Data em qualquer formato (DD/MM/YY, MM-AA, etc.)
+
+        Returns:
+            str: Data no formato MM-AA (ex: 09-25)
+        """
+        try:
+            # Se já está no formato MM-AA, retorna diretamente
+            if re.match(r'[0-9]{2}-[0-9]{2}', mes_dados):
+                return mes_dados
+
+            # Se está no formato DD/MM/YY, converte para MM-AA
+            if re.match(r'[0-9]{2}/[0-9]{2}/[0-9]{2}', mes_dados):
+                partes = mes_dados.split('/')
+                mes = partes[1]  # MM
+                ano = partes[2]  # YY
+                return f"{mes}-{ano}"
+
+            # Se não reconhece o formato, usa mês atual
+            self.log_progresso(
+                f"⚠️ Formato de data não reconhecido: '{mes_dados}', usando mês atual")
+            return self._obter_mes_atual_formatado()
+
+        except Exception as e:
+            self.log_progresso(
+                f"⚠️ Erro ao normalizar formato de data '{mes_dados}': {str(e)}, usando mês atual")
+            return self._obter_mes_atual_formatado()
 
     def _converter_formato_mes(self, mes_scrapping: str) -> str:
         """
@@ -760,8 +792,11 @@ class RPAColetaIndices(BaseRPA):
             # +2 porque índice é baseado em 1 e queremos linha abaixo
             proxima_linha = max(linhas_usadas) + 2 if linhas_usadas else 2
 
+            # ✅ CORREÇÃO: Normalizar formato para MM-AA antes de inserir
+            mes_formatado = self._normalizar_formato_mes_planilha(mes_dados)
+
             # Atualiza células
-            aba_ipca.update_acell(f'A{proxima_linha}', mes_dados)
+            aba_ipca.update_acell(f'A{proxima_linha}', mes_formatado)
             aba_ipca.update_acell(f'B{proxima_linha}', valor_coletado)
 
             self.log_progresso(
@@ -839,8 +874,11 @@ class RPAColetaIndices(BaseRPA):
             # +2 porque índice é baseado em 1 e queremos linha abaixo
             proxima_linha = max(linhas_usadas) + 2 if linhas_usadas else 2
 
+            # ✅ CORREÇÃO: Normalizar formato para MM-AA antes de inserir
+            mes_formatado = self._normalizar_formato_mes_planilha(mes_dados)
+
             # Atualiza células
-            aba_igpm.update_acell(f'A{proxima_linha}', mes_dados)
+            aba_igpm.update_acell(f'A{proxima_linha}', mes_formatado)
             aba_igpm.update_acell(f'B{proxima_linha}', valor_coletado)
 
             self.log_progresso(

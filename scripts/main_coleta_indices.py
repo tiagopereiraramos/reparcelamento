@@ -7,10 +7,11 @@ Utiliza variáveis de ambiente para configuração.
 
 Pode ser chamado por agendadores, CI/CD ou manualmente.
 """
-from rpa_coleta_indices import executar_coleta_indices
+from rpa_coleta_indices.rpa_coleta_indices import executar_coleta_indices
 import os
 import sys
 import asyncio
+import argparse
 from datetime import datetime
 from pathlib import Path
 
@@ -37,7 +38,26 @@ def get_env_or_fail(var_name, default=None):
 
 async def main():
     """Executa o RPA de coleta de índices em produção."""
-    log("Iniciando execução do RPA Coleta de Índices (produção)...")
+    # Configurar argumentos de linha de comando
+    parser = argparse.ArgumentParser(description='RPA Coleta de Índices')
+    parser.add_argument('--teste', action='store_true',
+                        help='Executar em modo teste usando planilha de teste')
+    args = parser.parse_args()
+
+    # Configurar modo teste se solicitado
+    if args.teste:
+        log("🧪 MODO TESTE ATIVADO: Usando planilha de teste")
+        # Substituir PLANILHA_CALCULO_ID por PLANILHA_TESTE_HOM
+        if os.getenv("PLANILHA_TESTE_HOM"):
+            os.environ["PLANILHA_CALCULO_ID"] = os.getenv("PLANILHA_TESTE_HOM")
+            log(
+                f"🔄 Redirecionado para planilha de teste: {os.getenv('PLANILHA_TESTE_HOM')}")
+        else:
+            log("⚠️ PLANILHA_TESTE_HOM não configurada, usando planilha de produção")
+    else:
+        log("🏭 MODO PRODUÇÃO: Usando planilha de produção")
+
+    log("Iniciando execução do RPA Coleta de Índices...")
 
     planilha_calculo_id = get_env_or_fail("PLANILHA_CALCULO_ID")
     credenciais_google = os.getenv(

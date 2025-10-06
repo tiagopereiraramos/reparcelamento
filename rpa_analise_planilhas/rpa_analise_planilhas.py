@@ -46,6 +46,9 @@ class RPAAnalisePlanilhas(BaseRPA):
             super().__init__(nome_rpa="Analise_Planilhas", usar_browser=False)
         self.cliente_sheets = None
         self.rastreamento = None
+        from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
+        self.repositorio_contratos = repositorio_contratos_arquivo
+        self.log_info("💾 Repositório JSON transacional inicializado")
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -68,9 +71,7 @@ class RPAAnalisePlanilhas(BaseRPA):
             await self.rastreamento.registrar_inicio_rpa(parametros)
 
             # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
-            from core.data_manager import data_manager
-            await data_manager.inicializar()
-            self.log_info("💾 Sistema híbrido MongoDB+JSON inicializado")
+            self.log_info("🔧 Persistência baseada em JSON pronta para uso")
 
             self.log_info("🔍 Iniciando análise de planilhas...")
             self.log_info(
@@ -711,22 +712,22 @@ class RPAAnalisePlanilhas(BaseRPA):
                 aba_base_calculo = planilha_principal.worksheet(
                     "Base de cálculo")
 
-                # Adiciona novos contratos se houver
-                if novos_contratos:
-                    self.log_progresso(
-                        f"Adicionando {len(novos_contratos)} novos contratos")
-                    await self._adicionar_novos_contratos(aba_base_calculo, novos_contratos)
-
-                # Atualiza pendências IPTU se houver
-                if pendencias_iptu:
-                    self.log_progresso(
-                        f"Atualizando {len(pendencias_iptu)} pendências IPTU")
-                    await self._atualizar_pendencias_iptu(aba_base_calculo, pendencias_iptu)
-
+            # Adiciona novos contratos se houver
+            if novos_contratos:
                 self.log_progresso(
-                    "✅ Planilha principal atualizada com sucesso")
-                return
-            except Exception as e:
+                    f"Adicionando {len(novos_contratos)} novos contratos")
+                await self._adicionar_novos_contratos(aba_base_calculo, novos_contratos)
+
+            # Atualiza pendências IPTU se houver
+            if pendencias_iptu:
+                self.log_progresso(
+                    f"Atualizando {len(pendencias_iptu)} pendências IPTU")
+                await self._atualizar_pendencias_iptu(aba_base_calculo, pendencias_iptu)
+
+            self.log_progresso(
+                "✅ Planilha principal atualizada com sucesso")
+            return
+        except Exception as e:
                 if "503" in str(e) and tentativa < max_tentativas - 1:
                     tempo_espera = (tentativa + 1) * 30  # 30, 60, 90 segundos
                     self.log_progresso(
@@ -1127,46 +1128,47 @@ class RPAAnalisePlanilhas(BaseRPA):
 
                 # ✅ NOVO: Estrutura compatível com modelo "um a um" + persistência MongoDB
                 item_fila = {
-                    "id_fila": f"reajuste_{numero_titulo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                    "numero_titulo": numero_titulo,
-                    "cliente": cliente_nome,
-                    "empreendimento": contrato.get('Loteamento') or contrato.get('empreendimento') or '',
-                    "cnpj_unidade": contrato.get('Empresa') or contrato.get('cnpj_unidade') or '',
-                    "quadra": contrato.get('Quadra') or '',
-                    "lote": contrato.get('Lote') or '',
-                    "indexador": "IGPM",  # Sempre IGPM conforme PDD
-                    "ultimo_reajuste": ultimo_reajuste,
-                    "dias_desde_ultimo_reajuste": contrato.get('dias_desde_ultimo_reajuste', 0),
-                    "linha_planilha": contrato.get('linha_planilha', 0),
-
-                    # ✅ NOVO: Status granular para modelo "um a um"
-                    "status_processamento": "PENDENTE",  # Status inicial padronizado
-                    "timestamp_identificacao": datetime.now().isoformat(),
-                    "timestamp_ultima_atualizacao": datetime.now().isoformat(),
-
-                    # ✅ NOVO: Campos para controle de processo e fallback
-                    "tentativas_processamento": 0,
-                    "max_tentativas": 3,
-                    "forcar_nova_extracao": False,  # Flag para forçar webscraping
-                    "origem_identificacao": "rpa_analise_planilhas",
-
-                    # ✅ NOVO: Campos para auditoria e rastreamento
-                    "validacao_pdd_previa": contrato.get('validacao_pdd', '{}'),
-                    "motivo_elegibilidade": contrato.get('motivo_elegibilidade', ''),
-                    "mes_reajuste_original": contrato.get('mes_reajuste_original', ''),
+                    "Empresa": str(contrato.get('Empresa', '')).strip(),
+                    "Loteamento": str(contrato.get('Loteamento', '')).strip(),
+                    "Código Cliente": normalizar_codigo_cliente(str(contrato.get('Código Cliente', '')).strip()),
+                    "Cliente": cliente_nome,
+                    "Quadra": str(contrato.get('Quadra', '')).strip(),
+                    "Lote": str(contrato.get('Lote', '')).strip(),
+                    "Titulo": numero_titulo,
+                    "Data de consulta  IPTU ": str(contrato.get('Data de consulta IPTU', '') or '').strip(),
+                    "PENDENCIAS PMFI ": str(contrato.get('PENDENCIAS PMFI', '') or '').strip(),
+                    "PENDENCIAS SIENGE INAD": str(contrato.get('PENDENCIAS SIENGE INAD', '') or '').strip(),
+                    "PENDENCIAS SIENGE": str(contrato.get('PENDENCIAS SIENGE', '') or '').strip(),
+                    "Assinatura ultimo Contrato": str(contrato.get('Assinatura ultimo Contrato', '') or '').strip(),
+                    "1 º vencimento": str(contrato.get('1 º vencimento', '') or '').strip(),
+                    "Índice": str(contrato.get('Índice', '') or '').strip(),
+                    "Juros": str(contrato.get('Juros', '') or '').strip(),
+                    "Tipo reajuste": str(contrato.get('Tipo reajuste', '') or '').strip(),
+                    "\"original ou corrigido\"": str(contrato.get('"original ou corrigido"', '') or '').strip(),
+                    "Último reajuste": str(ultimo_reajuste or '').strip(),
+                    "Valor da Parcela Base": str(contrato.get('Valor da Parcela Base', '') or '').strip(),
+                    "Parcelas a vencer": str(contrato.get('Parcelas a vencer', '') or '').strip(),
+                    "Saldo devedor Base": str(contrato.get('Saldo devedor Base', '') or '').strip(),
+                    "OK, se acaso precisar na Catacuy use esta": str(contrato.get('OK, se acaso precisar na Catacuy use esta', '') or '').strip(),
+                    "Mês reajuste": str(contrato.get('Mês reajuste', '') or '').strip(),
+                    "1º vencimento carnê": str(contrato.get('1º vencimento carnê', '') or '').strip(),
+                    "% Reajuste total": str(contrato.get('% Reajuste total', '') or '').strip(),
+                    "Parcela final": str(contrato.get('Parcela final', '') or '').strip(),
+                    "Saldo devedor final": str(contrato.get('Saldo devedor final', '') or '').strip(),
+                    "Próximo reajuste": str(contrato.get('Próximo reajuste', '') or '').strip(),
+                    "Data de Migração": str(contrato.get('Data de Migração', '') or '').strip(),
+                    "status": "PENDENTE",
+                    "_metadata": {
                     "prioridade": self._calcular_prioridade(contrato),
-
-                    # ✅ NOVO: Metadados para sistema de persistência
-                    "metadata": {
-                        "versao_fila": "2.0_um_a_um",
-                        "data_identificacao": datetime.now().isoformat(),
-                        "usuario_identificacao": os.getenv("USER", "sistema"),
-                        "ambiente": os.getenv("AMBIENTE", "producao")
-                    },
-
-                    # Dados completos preservados para compatibilidade
-                    "dados_completos": contrato
+                        "origem_identificacao": "rpa_analise_planilhas"
+                    }
                 }
+
+                for campo in item_fila:
+                    if campo == "_metadata":
+                        continue
+                    if item_fila[campo] is None:
+                        item_fila[campo] = ""
 
                 fila_processamento.append(item_fila)
 
@@ -1175,7 +1177,7 @@ class RPAAnalisePlanilhas(BaseRPA):
                 key=lambda x: x['prioridade'], reverse=True)
 
             # ✅ NOVO: Salva fila usando data_manager.py (MongoDB + JSON)
-            await self._salvar_fila_data_manager(fila_processamento)
+            await self._persistir_fila_contratos(fila_processamento)
 
             self.log_progresso(
                 f"✅ Fila de processamento gerada com {len(fila_processamento)} itens (modelo um a um)")
@@ -1219,172 +1221,27 @@ class RPAAnalisePlanilhas(BaseRPA):
 
         return prioridade
 
-    async def _salvar_fila_data_manager(self, fila_processamento: List[Dict[str, Any]]):
-        """
-        ✅ ATUALIZADO: Verifica status existente antes de adicionar contratos à fila
-        Só adiciona se status for "PENDENTE" ou se não existir registro
+    async def _persistir_fila_contratos(self, fila_processamento: List[Dict[str, Any]]):
+        if not fila_processamento:
+            self.log_progresso("⚠️ Nenhum item para salvar na fila")
+            return
 
-        Args:
-            fila_processamento: Lista de itens da fila
-        """
-        try:
-            # ✅ USA EXCLUSIVAMENTE data_manager.py
-            from core.data_manager import data_manager
+        resultado = self.repositorio_contratos.salvar_lote(fila_processamento)
+        self.contratos_salvos = resultado.get("inseridos", 0)
+        self.contratos_atualizados = resultado.get("atualizados", 0)
+        self.contratos_ja_processados = resultado.get("ignorados", 0)
+        self.contratos_falharam = resultado.get("erros", 0)
 
-            if fila_processamento:
+        self.log_progresso("\n📊 RELATÓRIO DE PROCESSAMENTO DA FILA:")
                 self.log_progresso(
-                    f"🔍 Verificando {len(fila_processamento)} contratos antes de adicionar à fila...")
-
-                contratos_salvos = 0
-                contratos_falharam = 0
-                contratos_ja_processados = 0
-                contratos_ignorados = 0
-
-                # ✅ CORRIGIDO: Salva cada contrato como documento separado
-                for contrato in fila_processamento:
-                    try:
-                        # ✅ FORMATO PADRONIZADO conforme solicitado + CAMPOS ESPECÍFICOS PDD
-                        documento_contrato = {
-                            # MongoDB gerará _id automaticamente
-                            "numero_titulo": contrato["numero_titulo"],
-                            "cliente": contrato["cliente"],
-                            # ✅ CORREÇÃO: Campo 'Empresa' da planilha (não Loteamento)
-                            "empresa": contrato.get("cnpj_unidade", ""),
-                            "status": "PENDENTE",  # Status inicial sempre PENDENTE
-                            "tentativa_extracao": 1,
-                            "timestamp_inicio_extracao": datetime.now().isoformat(),
-                            "timestamp_ultima_atualizacao": datetime.now(),
-
-                            # Campos que serão preenchidos durante processamento
-                            "dados_extraidos": False,
-                            "parcelas_pendentes": 0,
-                            "pode_reparcelar": True,  # ✅ PDD: Todos podem reparcelar
-                            "pode_gerar_carne": False,  # ✅ PDD: Inicialmente False, será validado no Sienge
-                            "saldo_total": 0,
-                            "timestamp_extracao": "",
-                            "fonte_dados": "",
-                            "timestamp_extracao_concluida": "",
-                            "etapa_atual": "",
-                            "timestamp_inicio_processamento": "",
-                            "processo_completo": False,
-                            "resultado_final": "",
-                            "timestamp_finalizacao": "",
-
-                            # ✅ NOVOS CAMPOS ESPECÍFICOS DO PDD 9.1.1 - Valores padrão/vazios
-                            "parcelas_vencidas": 0,
-                            "valor_parcela_atual": 0.0,
-                            "dia_vencimento_identificado": 0,
-                            "primeiro_vencimento_carne": "",
-                            "pendencias_sienge_inad": "",
-                            "pendencias_sienge": "",
-                            "cliente_inadimplente": False,
-                            "status_cliente": "pendente_validacao"  # Será validado no RPA Sienge
-                        }
-
-                        # ✅ CORRIGIDO: Usa mongodb_manager diretamente para salvar cada contrato
-                        from core.mongodb_manager import mongodb_manager
-
-                        if not mongodb_manager.conectado:
-                            await mongodb_manager.conectar()
-
-                        # ✅ NOVO: Verifica status existente antes de adicionar
-                        if mongodb_manager.conectado and hasattr(mongodb_manager, 'database') and mongodb_manager.database is not None:
-                            collection = mongodb_manager.database.fila_contratos
-                            # Verifica duplicidade por numero_titulo + cliente
-                            filtro = {
-                                "numero_titulo": documento_contrato["numero_titulo"],
-                                "cliente": documento_contrato["cliente"]
-                            }
-                            existente = collection.find_one(filtro)
-
-                            if existente:
-                                # ✅ NOVO: Verifica status do registro existente
-                                status_existente = existente.get(
-                                    "status", "PENDENTE")
-
-                                if status_existente == "PENDENTE":
-                                    # ✅ ATUALIZA: Registro existe e está pendente - pode atualizar
-                                    update_fields = documento_contrato.copy()
-                                    update_fields["timestamp_ultima_atualizacao"] = datetime.now(
-                                    )
-                                    collection.update_one(
-                                        filtro, {"$set": update_fields})
-                                    self.log_progresso(
-                                        f"🔄 Contrato atualizado na fila: {documento_contrato['cliente']} - {documento_contrato['numero_titulo']} (Status: PENDENTE)")
-                                    contratos_salvos += 1
-                                else:
-                                    # ✅ IGNORA: Registro existe mas não está pendente - já foi processado
-                                    self.log_progresso(
-                                        f"⚠️ Contrato já processado - IGNORADO: {documento_contrato['cliente']} - {documento_contrato['numero_titulo']} (Status: {status_existente})")
-                                    contratos_ja_processados += 1
-                                    continue
-                            else:
-                                # ✅ NOVO: Registro não existe - insere novo
-                                collection.insert_one(documento_contrato)
-                                self.log_progresso(
-                                    f"✅ Contrato novo adicionado à fila: {contrato['cliente']} - {contrato['numero_titulo']}")
-                                contratos_salvos += 1
-
-                    except Exception as e:
-                        contratos_falharam += 1
+            f"   ✅ Contratos inseridos: {self.contratos_salvos}")
                         self.log_progresso(
-                            f"❌ Erro ao salvar contrato {contrato.get('numero_titulo', 'N/A')}: {str(e)}")
+            f"   🔄 Contratos atualizados: {self.contratos_atualizados}")
+                                    self.log_progresso(
+            f"   ⚠️ Contratos ignorados: {self.contratos_ja_processados}")
+                                    self.log_progresso(
+            f"   ❌ Contratos com erro: {self.contratos_falharam}")
 
-                # ✅ NOVO: Relatório detalhado de status
-                self.log_progresso(f"\n📊 RELATÓRIO DE PROCESSAMENTO DA FILA:")
-                self.log_progresso(
-                    f"   ✅ Contratos salvos/atualizados: {contratos_salvos}")
-                self.log_progresso(
-                    f"   ⚠️ Contratos já processados (ignorados): {contratos_ja_processados}")
-                self.log_progresso(
-                    f"   ❌ Contratos com erro: {contratos_falharam}")
-
-                # ✅ NOVO: Armazena estatísticas na instância para uso no resultado final
-                self.contratos_ja_processados = contratos_ja_processados
-                self.contratos_salvos = contratos_salvos
-                self.contratos_falharam = contratos_falharam
-
-                if contratos_ja_processados > 0:
-                    self.log_progresso(
-                        f"   ℹ️ NOTIFICAÇÃO: {contratos_ja_processados} contratos já foram processados anteriormente")
-
-                # ✅ TAMBÉM salva resumo da fila para compatibilidade
-                try:
-                    from core.mongodb_manager import mongodb_manager
-
-                    estrutura_fila_resumo = {
-                        "_id": f"fila_resumo_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                        "total_contratos": len(fila_processamento),
-                        "contratos_salvos": contratos_salvos,
-                        "contratos_ja_processados": contratos_ja_processados,
-                        "contratos_falharam": contratos_falharam,
-                        "status_geral": "ativo",
-                        "timestamp_criacao": datetime.now().isoformat(),
-                        "origem": "rpa_analise_planilhas",
-                        "versao": "2.1_verificacao_status"
-                    }
-
-                    if mongodb_manager.conectado and hasattr(mongodb_manager, 'database') and mongodb_manager.database is not None:
-                        collection_resumos = mongodb_manager.database.fila_resumos
-                        collection_resumos.insert_one(estrutura_fila_resumo)
-                except Exception as e:
-                    self.log_progresso(f"⚠️ Erro ao salvar resumo: {str(e)}")
-
-                # ✅ Também salva em JSON local para backup
-                await self._salvar_fila_local(fila_processamento)
-
-                self.log_progresso(
-                    f"✅ VERIFICAÇÃO CONCLUÍDA: {contratos_salvos} contratos salvos/atualizados, {contratos_ja_processados} já processados")
-                self.log_progresso(
-                    f"📊 Resumo: {contratos_salvos} sucessos, {contratos_ja_processados} ignorados, {contratos_falharam} falhas")
-
-            else:
-                self.log_progresso("⚠️ Nenhum item para salvar na fila")
-
-        except Exception as e:
-            self.log_erro(
-                f"❌ Erro ao salvar fila separadamente: {str(e)}", e)
-            # Fallback para método local como último recurso
             await self._salvar_fila_local(fila_processamento)
 
     async def _atualizar_ultimo_reajuste(self, aba_base_calculo, linha: int, contrato: Dict[str, Any]):
@@ -1473,9 +1330,9 @@ class RPAAnalisePlanilhas(BaseRPA):
             # Lê todos os dados
             dados_contratos = aba_base_calculo.get_all_records()
 
-            # Obtém mês atual
-            mes_atual = datetime.now().month
-            ano_atual = datetime.now().year
+                # Obtém mês atual
+                mes_atual = datetime.now().month
+                ano_atual = datetime.now().year
 
             contratos_para_reajuste = []
             contratos_auditoria = []  # Lista para rastreamento completo
@@ -1679,14 +1536,14 @@ class RPAAnalisePlanilhas(BaseRPA):
 
                         contratos_para_reajuste.append(
                             contrato_processado)
-                        contratos_auditoria.append({
-                            'cliente': cliente or 'Sem nome',
-                            'titulo': titulo_final,
-                            'status': 'aprovado',
+                            contratos_auditoria.append({
+                                'cliente': cliente or 'Sem nome',
+                                'titulo': titulo_final,
+                                'status': 'aprovado',
                             'motivo': f"Elegível para reparcelamento (mês de reajuste atual: {mes_reajuste_str})",
-                            'tem_pendencia_iptu': not consulta_iptu_ok or not consulta_iptu_atualizada,
-                            'origem': 'base_calculo'
-                        })
+                                'tem_pendencia_iptu': not consulta_iptu_ok or not consulta_iptu_atualizada,
+                                'origem': 'base_calculo'
+                            })
 
                     elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
                         # ⚠️ ATRASADO: Deveria ter sido processado antes
@@ -1721,11 +1578,11 @@ class RPAAnalisePlanilhas(BaseRPA):
             # ✅ NOVO: Relatório final detalhado
             self.log_progresso(
                 f"\n📊 RELATÓRIO FINAL - IDENTIFICAÇÃO DE CONTRATOS:")
-            self.log_progresso(
+                self.log_progresso(
                 f"   ✅ Contratos elegíveis para reparcelamento: {len(contratos_para_reajuste)}")
-            self.log_progresso(
+                    self.log_progresso(
                 f"   ⚠️ Contratos não processados: {len([c for c in contratos_auditoria if c['status'] == 'não processado'])}")
-            self.log_progresso(
+                    self.log_progresso(
                 f"   📋 Contratos com pendências IPTU identificadas: {len(pendencias_iptu_identificadas)}")
             self.log_progresso(
                 f"   📧 Pendências IPTU serão reportadas no e-mail de notificação")

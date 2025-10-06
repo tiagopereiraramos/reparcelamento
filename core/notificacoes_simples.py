@@ -22,6 +22,10 @@ from typing import Dict, List, Any, Optional
 from enum import Enum
 from core.logger_avancado import LoggerAvancado
 import traceback
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv()
 
 
 # Configurar logger para notificações
@@ -61,13 +65,22 @@ class NotificadorEmail:
             self._inicializar_gmail()
 
     def _carregar_config_smtp(self):
-        """Carrega configuração SMTP das variáveis de ambiente SMTP_*"""
-        smtp_user = os.getenv('SMTP_USER', '')
-        smtp_pass = os.getenv('SMTP_PASS', '')
-        smtp_host = os.getenv('SMTP_HOST', '')
-        smtp_port = os.getenv('SMTP_PORT', '')
-        smtp_sender = os.getenv('SMTP_SENDER', '')
+        """Carrega configuração SMTP das variáveis de ambiente EMAIL_* (legado) ou SMTP_* (fallback)"""
+        # Prioridade para variáveis legadas (que funcionam nos outros scripts)
+        smtp_user = os.getenv(
+            'EMAIL_USUARIO', '') or os.getenv('SMTP_USER', '')
+        smtp_pass = os.getenv('EMAIL_SENHA', '') or os.getenv('SMTP_PASS', '')
+        smtp_host = os.getenv('SMTP_SERVER', '') or os.getenv('SMTP_HOST', '')
+        smtp_port = os.getenv('SMTP_PORT', '587') or os.getenv(
+            'EMAIL_PORT', '587')
+        smtp_sender = os.getenv('EMAIL_REMETENTE', '') or os.getenv(
+            'EMAIL_FROM', '') or os.getenv('SMTP_SENDER', '')
         smtp_ssl = os.getenv('SMTP_SSL', 'false').lower() == 'true'
+
+        # Log para debug
+        print(
+            f"[DEBUG SMTP] HOST={smtp_host} USER={smtp_user} SENDER={smtp_sender} PORT={smtp_port} SSL={smtp_ssl}")
+
         if all([smtp_user, smtp_pass, smtp_host, smtp_port, smtp_sender]):
             return {
                 'user': smtp_user,
@@ -84,7 +97,7 @@ class NotificadorEmail:
         # Método mantido apenas para compatibilidade, pode ser removido futuramente.
         return None
 
-    def enviar_email(self, destinatario: str, assunto: str, corpo_html: str) -> bool:
+    def enviar_email(self, destinatario: str, assunto: str, corpo_html: str, anexos: Optional[List[str]] = None) -> bool:
         """Envia email usando SMTP tradicional (se configurado)"""
         if self.smtp_config:
             try:
@@ -93,6 +106,26 @@ class NotificadorEmail:
                 msg['To'] = destinatario
                 msg['Subject'] = assunto
                 msg.attach(MIMEText(corpo_html, 'html', 'utf-8'))
+
+                # ✅ NOVO: Adicionar anexos se fornecidos
+                if anexos:
+                    from email.mime.application import MIMEApplication
+                    for caminho_anexo in anexos:
+                        if os.path.exists(caminho_anexo):
+                            try:
+                                with open(caminho_anexo, 'rb') as f:
+                                    anexo = MIMEApplication(f.read())
+                                    anexo.add_header('Content-Disposition', 'attachment',
+                                                     filename=os.path.basename(caminho_anexo))
+                                    msg.attach(anexo)
+                                logger.info(
+                                    f"📎 Anexo adicionado: {os.path.basename(caminho_anexo)}")
+                            except Exception as e:
+                                logger.warning(
+                                    f"⚠️ Erro ao anexar arquivo {caminho_anexo}: {e}")
+                        else:
+                            logger.warning(
+                                f"⚠️ Arquivo de anexo não encontrado: {caminho_anexo}")
 
                 if self.smtp_config['ssl']:
                     server = smtplib.SMTP_SSL(
@@ -194,7 +227,7 @@ class GeradorTemplates:
                                             </tr>
                                             <tr>
                                                 <td><strong>Sistema:</strong></td>
-                                                <td>RPA de Reparcelamento v2.0</td>
+                                                <td>RPA Processar Regras Extração Sienge e Alimentação de Pendências</td>
                                             </tr>
                                             <tr>
                                                 <td><strong>Tipo de Evento:</strong></td>
@@ -246,21 +279,24 @@ class GeradorTemplates:
                 </tr>
             </table>
         </div>
-
-        <div style=\"background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;\">
-            <h4 style=\"margin-top: 0; color: #0056b3;\">📊 Resultados Principais</h4>
-            <ul style=\"margin: 10px 0; padding-left: 20px;\">
         """
 
-        for chave, valor in resultados.items():
-            if chave == "relatorio":
-                continue
-            conteudo += f"<li><strong>{chave.replace('_', ' ').title()}:</strong> {valor}</li>"
+        if resultados:
+            conteudo += """
+            <div style=\"background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;\">
+                <h4 style=\"margin-top: 0; color: #0056b3;\">📊 Resultados Principais</h4>
+                <ul style=\"margin: 10px 0; padding-left: 20px;\">
+            """
 
-        conteudo += """
-            </ul>
-        </div>
-        """
+            for chave, valor in resultados.items():
+                if chave in {"relatorio", "titulo", "caminhos_anexos", "arquivo_html"}:
+                    continue
+                conteudo += f"<li><strong>{chave}:</strong> {valor}</li>"
+
+            conteudo += """
+                </ul>
+            </div>
+            """
         # Adiciona o relatório detalhado, se existir
         relatorio = resultados.get("relatorio")
         if relatorio:
@@ -298,14 +334,16 @@ class GeradorTemplates:
                 </tr>
                 <tr style=\"border-bottom: 1px solid #f5c6cb;\">
                     <td style=\"padding: 10px 0; font-weight: bold;\">Tipo de Erro:</td>
-                    <td style=\"padding: 10px 0; color: #dc3545; font-weight: bold;\">{erro}</td>
+                    #dc3545; font-weight: bold;\">{erro}</td>
+                    <td style=\"padding: 10px 0; color:
                 </tr>
             </table>
         </div>
 
         <div style=\"background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;\">
             <h4 style=\"margin-top: 0; color: #856404;\">📝 Detalhes Técnicos</h4>
-            <div style=\"background-color: #ffffff; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #495057; white-space: pre-wrap;\">{detalhes}</div>
+            #ffffff; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #495057; white-space: pre-wrap;\">{detalhes}</div>
+            <div style=\"background-color:
         </div>
         """
         # Se o campo detalhes for um relatório detalhado, destacar
@@ -313,7 +351,8 @@ class GeradorTemplates:
             conteudo += f"""
             <div style=\"background-color: #fffbe6; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 20px;\">
                 <h4 style=\"margin-top: 0; color: #856404;\">📝 Relatório Detalhado de Aprovação e Rejeição</h4>
-                <pre style=\"background: #f8f9fa; color: #333; font-size: 15px; padding: 15px; border-radius: 6px; overflow-x: auto;\">{detalhes.strip()}</pre>
+                #f8f9fa; color: #333; font-size: 15px; padding: 15px; border-radius: 6px; overflow-x: auto;\">{detalhes.strip()}</pre>
+                <pre style=\"background:
             </div>
             """
 
@@ -351,6 +390,7 @@ class SistemaNotificacoes:
                 os.getenv('EMAIL_ADMIN', 'admin@empresa.com')
             ],
             "eventos": {
+                "inicio_fluxo": True,
                 "rpa_concluido": True,
                 "rpa_erro": True,
                 "workflow_concluido": True,
@@ -386,8 +426,36 @@ class SistemaNotificacoes:
         try:
             html = GeradorTemplates.template_rpa_concluido(
                 nome_rpa, tempo_execucao, resultados)
-            sucesso = self._enviar_para_todos(
-                f"✅ RPA {nome_rpa} - Execução Concluída", html)
+
+            # ✅ NOVO: Extrair caminhos de anexos dos resultados
+            anexos = []
+            if 'caminhos_anexos' in resultados:
+                caminhos_anexos = resultados['caminhos_anexos']
+                if isinstance(caminhos_anexos, dict):
+                    # Se for dicionário, pegar todos os valores
+                    for categoria_anexos in caminhos_anexos.values():
+                        if isinstance(categoria_anexos, list):
+                            anexos.extend(categoria_anexos)
+                        elif isinstance(categoria_anexos, str):
+                            anexos.append(categoria_anexos)
+                elif isinstance(caminhos_anexos, list):
+                    # Se for lista, usar diretamente
+                    anexos.extend(caminhos_anexos)
+                elif isinstance(caminhos_anexos, str):
+                    # Se for string, adicionar como único anexo
+                    anexos.append(caminhos_anexos)
+
+            # Adicionar arquivo HTML de relatório se especificado
+            if 'arquivo_html' in resultados and os.path.exists(resultados['arquivo_html']):
+                anexos.append(resultados['arquivo_html'])
+
+            logger_manager.info(
+                f"📎 Preparando {len(anexos)} anexos para envio")
+
+            # ✅ CORREÇÃO: Usar título personalizado se fornecido
+            titulo_email = resultados.get(
+                'titulo', f"✅ RPA {nome_rpa} - Execução Concluída")
+            sucesso = self._enviar_para_todos(titulo_email, html, anexos)
 
             if sucesso:
                 logger_manager.info(
@@ -464,7 +532,28 @@ class SistemaNotificacoes:
 
         return self._enviar_para_todos("🔄 Workflow de Reparcelamento Concluído", html)
 
-    def _enviar_para_todos(self, assunto: str, html: str) -> bool:
+    def notificar_inicio_fluxo(self, descricao: str) -> bool:
+        """Notifica início de um fluxo composto (ex.: pipeline principal)."""
+        if not self.configuracoes.get('eventos', {}).get('inicio_fluxo', True):
+            return True
+
+        conteudo = f"""
+        <h2 style="color: #007bff;">🚀 Início de Execução</h2>
+        <p>{descricao}</p>
+        <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px;">
+            <strong>Status:</strong> Execução iniciada às {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}.
+        </div>
+        """
+
+        html = GeradorTemplates.gerar_template_base(
+            "Início de Execução - Sistema RPA",
+            conteudo,
+            TipoEvento.INICIO
+        )
+
+        return self._enviar_para_todos("🚀 Pipeline iniciado", html)
+
+    def _enviar_para_todos(self, assunto: str, html: str, anexos: Optional[List[str]] = None) -> bool:
         """Envia notificação para todos os destinatários configurados"""
         if not self.configuracoes.get('habilitado', True):
             return True
@@ -477,7 +566,7 @@ class SistemaNotificacoes:
         sucesso_geral = True
         for destinatario in destinatarios:
             sucesso = self.notificador.enviar_email(
-                destinatario, assunto, html)
+                destinatario, assunto, html, anexos)
             sucesso_geral = sucesso_geral and sucesso
 
         return sucesso_geral
@@ -520,6 +609,11 @@ def notificar_erro(nome_rpa: str, erro: str, detalhes: str) -> bool:
 def notificar_workflow(rpas: List[str], contratos: int, tempo: str) -> bool:
     """Notifica conclusão de workflow"""
     return notificacoes.notificar_workflow_concluido(rpas, contratos, tempo)
+
+
+def notificar_inicio(descricao: str) -> bool:
+    """Notifica início de fluxo composto."""
+    return notificacoes.notificar_inicio_fluxo(descricao)
 
 
 def testar_notificacoes() -> bool:

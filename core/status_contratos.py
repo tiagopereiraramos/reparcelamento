@@ -20,6 +20,7 @@ class StatusContrato:
     EXTRAIDO = "EXTRAIDO"
     REPARCELADO = "REPARCELADO"
     CARNE_GERADO = "CARNE_GERADO"
+    PROCESSANDO = "PROCESSANDO"  # Status intermediário durante processamento
     PROCESSADO = "PROCESSADO"
     ERRO = "ERRO"
 
@@ -44,6 +45,7 @@ class StatusDescricoes:
         StatusContrato.EXTRAIDO: "Dados extraídos da planilha",
         StatusContrato.REPARCELADO: "Reparcelamento processado no Sienge",
         StatusContrato.CARNE_GERADO: "Carnê gerado, aguardando upload no banco",
+        StatusContrato.PROCESSANDO: "Contrato em processamento ativo",
         StatusContrato.PROCESSADO: "Processamento completo no banco",
         StatusContrato.ERRO: "Erro durante processamento",
 

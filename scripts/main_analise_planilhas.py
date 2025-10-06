@@ -8,7 +8,7 @@ Utiliza variáveis de ambiente para configuração.
 Pode ser chamado por agendadores, CI/CD ou manualmente.
 A persistência híbrida (MongoDB + JSON) é garantida pelo core do RPA.
 """
-from rpa_analise_planilhas import executar_analise_planilhas
+from rpa_analise_planilhas.rpa_analise_planilhas import executar_analise_planilhas
 import os
 import sys
 import asyncio

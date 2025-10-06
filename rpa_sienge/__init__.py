@@ -1,3 +1,6 @@
 # RPA Module
 
 from .rpa_sienge import RPASienge
+from .rpa_sienge_extracao import RPAExtracaoRelatorioSienge
+from .processar_regras_extracao_inadimplencia import AtualizadorPlanilhaBase
+from .atualizar_planilha_extracao_resultados import ConfiguracaoRetroalimentacao

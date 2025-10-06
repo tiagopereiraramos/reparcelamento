@@ -283,9 +283,19 @@ Havendo estas parcelas registrar no log para envio de relatório para verificaç
 
 Ex: 150 parcelas
 
-(validar informação de parcelas a partir do mês base do reparcelamento). Levar em consideração se a data de vencimento é após a data do aniversário do mês base, caso seja, será a parcela do mês seguinte ao mês da base do reparcelamento.
+**✅ REGRA CORRIGIDA:** Contar parcelas A PARTIR do mês de reparcelamento (mês seguinte ao atual).
 
-*Essa condição será usada somente para os contratos mês de Aniversário.* Para anual será considerada a parcela com vencimento dentro do mês base da correção.
+**Para Contratos Anuais:**
+- Contar parcelas a partir do mês de reparcelamento
+- Ex: Processamento em agosto → Contar parcelas a partir de setembro/2025
+
+**Para Contratos de Aniversário:**
+- **Se vencimento < aniversário:** Contar parcelas a partir do mês seguinte ao mês de reparcelamento
+  - Ex: Processamento em agosto, vencimento dia 10, aniversário dia 20 → Contar parcelas a partir de outubro/2025
+- **Se vencimento ≥ aniversário:** Contar parcelas a partir do mês de reparcelamento
+  - Ex: Processamento em agosto, vencimento dia 25, aniversário dia 20 → Contar parcelas a partir de setembro/2025
+
+*Essa regra garante que todas as parcelas futuras sejam incluídas no reparcelamento, considerando o primeiro vencimento real do novo carnê.*
 
 #### ★ Quantidade de parcelas vencidas
 (Filtrado por Colunas "**Documento**" *(CT)* / "**Status da parcela**" - *(vencida)* - contar as parcelas que estão vencidas)

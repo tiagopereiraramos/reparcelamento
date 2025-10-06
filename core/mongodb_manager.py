@@ -770,6 +770,56 @@ class MongoDBManager:
             logger.error(f"   Traceback: {traceback.format_exc()}")
             return False
 
+    async def buscar_contratos_por_codigos(self, codigos: List[str]) -> List[Dict[str, Any]]:
+        """
+        Busca contratos por códigos de cliente fazendo busca individual para cada código
+        (evita problemas com operador $in do MongoDB)
+        
+        Args:
+            codigos: Lista de códigos de cliente para buscar
+            
+        Returns:
+            Lista de contratos encontrados
+        """
+        if not self.conectado:
+            logger.warning("⚠️ MongoDB não conectado - não pode buscar contratos")
+            return []
+        
+        try:
+            def _search_contracts_individual():
+                collection = self.database.fila_contratos
+                resultados = []
+                
+                # Buscar cada código individualmente para evitar problemas com $in
+                for codigo in codigos:
+                    try:
+                        contrato = collection.find_one({"codigo_cliente": codigo})
+                        if contrato:
+                            # Converter ObjectId para string
+                            if "_id" in contrato:
+                                contrato["_id"] = str(contrato["_id"])
+                            resultados.append(contrato)
+                            logger.info(f"✅ Contrato encontrado para código {codigo}: status {contrato.get('status', 'N/A')}")
+                        else:
+                            logger.warning(f"⚠️ Nenhum contrato encontrado para código {codigo}")
+                    except Exception as e:
+                        logger.error(f"❌ Erro ao buscar contrato para código {codigo}: {str(e)}")
+                
+                return resultados
+            
+            contratos = await asyncio.get_event_loop().run_in_executor(
+                self.executor, _search_contracts_individual
+            )
+            
+            logger.info(f"🔍 Busca individual concluída: {len(contratos)} contratos encontrados para {len(codigos)} códigos")
+            return contratos
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar contratos por códigos: {str(e)}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
+            return []
+
 
 # Instância global
 mongodb_manager = MongoDBManager()
