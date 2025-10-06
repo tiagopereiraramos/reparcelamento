@@ -71,8 +71,4 @@ node_modules/
 # Task files
 # tasks.json
 # tasks/ 
-!docs/documentacao_rpa_extracao.md
-!rpa_sienge/rpa_sienge_extracao.py
-!scripts/main_extracao_relatorio_sienge.py
-!rpa_sienge/processar_regras_extracao_inadimplencia.py
-!rpa_sienge/atualizar_planilha_extracao_resultados.py 
+
