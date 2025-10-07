@@ -157,8 +157,8 @@ def verificar_pendencias_contrato(linha_planilha: Dict[str, Any]) -> tuple[bool,
     pendencias_sienge_inad = str(linha_planilha.get(
         "PENDENCIAS SIENGE INAD ", "")).strip().upper()
 
-    if pendencias_sienge_inad and pendencias_sienge_inad != "OK":  # Qualquer coisa diferente de OK = NÃO gerar
-        return False, f"Pendência Sienge Inad: {pendencias_sienge_inad}"
+    if pendencias_sienge_inad == "INADIMPLÊNCIA":
+        return False, "Pendência Sienge Inad: INADIMPLÊNCIA"
 
     # Verificar PENDÊNCIAS SIENGE (Outras pendências)
     pendencias_sienge = str(linha_planilha.get(

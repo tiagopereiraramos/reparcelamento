@@ -6,17 +6,113 @@ Funções comuns utilizadas por todos os módulos de processamento
 Desenvolvido em Português Brasileiro
 """
 
+import csv
 import os
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
 
 
 def log(msg):
     """Loga mensagem com timestamp."""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
+
+
+CAMINHO_ARQUIVO_CONTAS = Path(__file__).resolve(
+).parent.parent / "docs" / "empresas_contas_correntes.csv"
+_CACHE_CONTAS_CORRENTES: Dict[str, str] = {}
+
+
+def _normalizar_empresa(valor: str) -> str:
+    """Normaliza nomes de empresa removendo acentos e padronizando caixa.
+
+    Args:
+        valor: Nome da empresa informado.
+
+    Returns:
+        Representação normalizada para comparação.
+    """
+
+    texto = unicodedata.normalize("NFKD", valor)
+    texto = "".join(char for char in texto if not unicodedata.combining(char))
+    return texto.strip().lower()
+
+
+def _carregar_contas_correntes() -> Dict[str, str]:
+    """Carrega o mapeamento de empresas para contas corrente de remessa.
+
+    Returns:
+        Dicionário onde a chave é o nome normalizado da empresa e o valor é a
+        conta corrente correspondente.
+
+    Raises:
+        FileNotFoundError: Quando o arquivo CSV não está presente.
+        ValueError: Se o arquivo estiver vazio ou com cabeçalho inválido.
+    """
+
+    if _CACHE_CONTAS_CORRENTES:
+        return _CACHE_CONTAS_CORRENTES
+
+    if not CAMINHO_ARQUIVO_CONTAS.exists():
+        raise FileNotFoundError(
+            f"Arquivo de contas corrente não encontrado: {CAMINHO_ARQUIVO_CONTAS}"
+        )
+
+    with CAMINHO_ARQUIVO_CONTAS.open("r", encoding="utf-8-sig", newline="") as arquivo:
+        leitor = csv.DictReader(arquivo)
+        if not leitor.fieldnames or "EMPRESA" not in leitor.fieldnames or "CONTA CORRENTE REMESSA" not in leitor.fieldnames:
+            raise ValueError(
+                "Cabeçalho do CSV de contas corrente inválido. Esperado colunas 'EMPRESA' e 'CONTA CORRENTE REMESSA'."
+            )
+
+        for linha in leitor:
+            empresa = linha.get("EMPRESA")
+            conta = linha.get("CONTA CORRENTE REMESSA")
+            if not empresa or not conta:
+                continue
+            chave = _normalizar_empresa(empresa)
+            if chave and chave not in _CACHE_CONTAS_CORRENTES:
+                _CACHE_CONTAS_CORRENTES[chave] = conta.strip()
+
+    if not _CACHE_CONTAS_CORRENTES:
+        raise ValueError(
+            "CSV de contas corrente não possui registros válidos.")
+
+    return _CACHE_CONTAS_CORRENTES
+
+
+def obter_conta_corrente_remessa(nome_empresa: str) -> str:
+    """Obtém a conta corrente de remessa associada a uma empresa.
+
+    Args:
+        nome_empresa: Nome da empresa conforme padronização do CSV.
+
+    Returns:
+        Texto da coluna "CONTA CORRENTE REMESSA" correspondente.
+
+    Raises:
+        ValueError: Se o nome informado for vazio ou a empresa não estiver no CSV.
+        FileNotFoundError: Quando o arquivo de contas corrente não é encontrado.
+    """
+
+    if not nome_empresa or not nome_empresa.strip():
+        raise ValueError(
+            "Nome da empresa é obrigatório para obter a conta corrente de remessa."
+        )
+
+    contas = _carregar_contas_correntes()
+    chave = _normalizar_empresa(nome_empresa)
+    conta = contas.get(chave)
+
+    if conta is None:
+        raise ValueError(
+            f"Empresa '{nome_empresa}' não localizada no mapeamento de contas corrente."
+        )
+
+    return conta
 
 
 def sanitizar_nome_arquivo(nome: str) -> str:

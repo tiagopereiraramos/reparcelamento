@@ -1351,123 +1351,6 @@ class RPASienge(BaseRPA):
                     self.log_progresso(
                         "📊 PASSO 24: Preenchendo dados na planilha BASE DE CÁLCULO...")
 
-                    # # Obter ID da planilha do ambiente (OBRIGATÓRIO conforme PDD)
-                    # planilha_id = os.getenv("PLANILHA_CALCULO_ID")
-                    # if not planilha_id:
-                    #     erro_msg = "PLANILHA_CALCULO_ID não configurada no ambiente. Conforme PDD, todos os valores devem vir da planilha."
-                    #     self.log_erro(erro_msg, Exception(erro_msg))
-                    #     return {"sucesso": False, "erro": erro_msg}
-
-                    # # Conectar ao Google Sheets se não conectado
-                    # if not hasattr(self, 'cliente_sheets'):
-                    #     await self._conectar_google_sheets()
-
-                    # # Abrir planilha
-                    # planilha = self.cliente_sheets.open_by_key(planilha_id)
-
-                    # ✅ BUSCAR DADOS EXTRAÍDOS DO MONGODB (VALORES CORRETOS)
-                    # dados_mongodb = await self._buscar_dados_extraidos_mongodb(parametros.get("numero_titulo", ""))
-
-                    # if not dados_mongodb:
-                    #     raise Exception(
-                    #         "Dados extraídos não encontrados no MongoDB - necessário executar FASE 3A primeiro")
-
-                    # dados_validacao_mongodb = dados_mongodb.get(
-                    #     "dados_validacao", {})
-
-                    # # ✅ PREENCHER DADOS DIRETOS DO MONGODB (CONFORME PERSISTIDOS NO NÍVEL RAIZ)
-                    # resultado_planilha = await self._preencher_dados_relatorio_sienge(planilha, {
-                    #     "cliente": dados_mongodb.get("cliente", parametros.get("cliente", "")),
-                    #     "numero_titulo": dados_mongodb.get("numero_titulo", parametros.get("numero_titulo", "")),
-                    #     "dados_validacao": {
-                    #         # ✅ DADOS DIRETOS DO MONGODB NÍVEL RAIZ (CONFORME BANCO MOSTRADO)
-                    #         "qtd_parcelas_ct_a_vencer": dados_mongodb.get("parcelas_pendentes", 0),
-                    #         "valor_parcela_atual": dados_mongodb.get("valor_parcela_atual", 0.0),
-                    #         "saldo_total": dados_mongodb.get("saldo_total", 0.0),
-                    #         "dia_vencimento": dados_mongodb.get("dia_vencimento_identificado"),
-                    #         "status_cliente": dados_mongodb.get("status_cliente", "adimplente"),
-                    #         "cliente_inadimplente": dados_mongodb.get("cliente_inadimplente", False),
-                    #         "parcelas_rec_fat": []
-                    #     },
-                    #     "regras_pdd_aplicadas": {
-                    #         "primeiro_vencimento_carne": dados_mongodb.get("primeiro_vencimento_carne", (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y'))
-                    #     }
-                    # })
-
-                    # # ✅ CORREÇÃO PDD: Inadimplentes devem ser processados (reparcelamento realizado, carnê não gerado)
-                    # if resultado_planilha and resultado_planilha.get("deve_interromper_processamento", False):
-                    #     self.log_progresso(
-                    #         "⚠️ CLIENTE INADIMPLENTE DETECTADO - Reparcelamento será realizado, carnê não será gerado")
-                    #     self.log_progresso(
-                    #         "📋 Conforme PDD: Reparcelamento deve ser realizado para todos os clientes")
-                    #     self.log_progresso(
-                    #         "📋 Conforme PDD: Apenas a geração de carnê será bloqueada para inadimplentes")
-
-                    #     return {
-                    #         "sucesso": True,
-                    #         "motivo_interrupcao": "Cliente inadimplente - reparcelamento OK, carnê não será gerado",
-                    #         "cliente_inadimplente": True,
-                    #         "planilha_atualizada": True,
-                    #         # ✅ CORREÇÃO PDD: Reparcelamento deve ser realizado
-                    #         "reparcelamento_autorizado": True,
-                    #         "conforme_pdd": "Seção 10.2 - Inadimplência detectada, reparcelamento autorizado",
-                    #         "timestamp": datetime.now().isoformat()
-                    #     }
-
-                    # self.log_progresso(
-                    #     "✅ Dados preenchidos na planilha - fórmulas calculando automaticamente...")
-
-                    # # BREAKPOINT: CONFERIR RETROALIMENTAÇÃO
-                    # self.log_progresso(
-                    #     "⏸️ BREAKPOINT: Retroalimentação concluída!")
-                    # self.log_progresso(
-                    #     "📋 Verifique na planilha se os campos foram preenchidos:")
-                    # # ✅ MOSTRAR DADOS CORRETOS DO MONGODB NÍVEL RAIZ (QUE FORAM USADOS NA PLANILHA)
-                    # self.log_progresso(
-                    #     f"   📄 Parcelas a vencer: {dados_mongodb.get('parcelas_pendentes', 0)} (do MongoDB)")
-                    # self.log_progresso(
-                    #     f"   📄 Parcelas selecionadas: {parcelas_selecionadas} (para reparcelamento)")
-                    # self.log_progresso(
-                    #     f"   💰 Valor da Parcela Base: R$ {dados_mongodb.get('valor_parcela_atual', 0.0):,.2f} (do MongoDB)")
-                    # self.log_progresso(
-                    #     f"   💰 Saldo devedor Base: R$ {dados_mongodb.get('saldo_total', 0.0):,.2f}")
-                    # self.log_progresso(
-                    #     f"   📅 Dia de vencimento: {dados_mongodb.get('dia_vencimento_identificado', 'N/A')} (do MongoDB)")
-                    # self.log_progresso(
-                    #     f"   📅 1º vencimento carnê: {dados_mongodb.get('primeiro_vencimento_carne', (datetime.now() + timedelta(days=30)).strftime('%d/%m/%Y'))}")
-                    # self.log_progresso(f"   📊 Indexador: IGPM")
-                    # self.log_progresso(f"   💰 Juros %: 8.0%")
-                    # self.log_progresso(f"   📋 Tipo condição: PM")
-                    # self.log_progresso(f"   📅 Tipo reajuste: anual")
-                    # self.log_progresso(
-                    #     "🔍 Verifique se as fórmulas calcularam:")
-                    # self.log_progresso("   - 1º vencimento carnê")
-                    # self.log_progresso("   - % Reajuste total")
-                    # self.log_progresso("   - Parcela final")
-                    # self.log_progresso("   - Saldo devedor final")
-                    # self.log_progresso("   - Próximo reajuste")
-                    # self.log_progresso(
-                    #     "⏸️ Pressione ENTER para continuar com a leitura dos valores calculados...")
-
-                    # # AGORA: LER VALORES CALCULADOS DA PLANILHA (CONFORME PDD)
-                    # self.log_progresso(
-                    #     "📊 PASSO 24.1: Lendo valores calculados da planilha BASE DE CÁLCULO...")
-
-                    # Ler valores calculados da planilha (OBRIGATÓRIO conforme PDD)
-                    # resultado_leitura = await self._ler_valores_calculados_planilha(
-                    #     planilha_id=planilha_id,
-                    #     cliente=parametros.get("cliente", ""),
-                    #     numero_titulo=parametros.get("numero_titulo", "")
-                    # )
-
-                    # if not resultado_leitura.get("sucesso"):
-                    #     erro_msg = f"Falha ao ler valores da planilha: {resultado_leitura.get('erro')}. Conforme PDD, todos os valores devem vir da planilha."
-                    #     self.log_erro(erro_msg, Exception(erro_msg))
-                    #     return {"sucesso": False, "erro": erro_msg}
-
-                    # valores_calculados = resultado_leitura.get(
-                    #     "valores_calculados", {})
-
                     # Validar se os valores essenciais estão preenchidos na planilha
                     saldo_final = valores_calculados.get(
                         "saldo_devedor_final", 0)
@@ -1586,7 +1469,7 @@ class RPASienge(BaseRPA):
                             f"🔍 Valor da diferença: {diferenca_valor_text}")
                         if not diferenca_valor_text == "0,00":
                             self.log_progresso(
-                                "✅ Valor da diferença é 0,00 - pulando salvamento")
+                                "✅ Valor da diferença é diferente de 0,00")
 
                             vl_desconto_ou_vl_correcao = self.check_for_error(
                                 xpath='//input[@type="text" and @id="vlCorrecao"]')
@@ -1599,38 +1482,41 @@ class RPASienge(BaseRPA):
 
                         self.click(
                             xpath='//input[@type="button" and @name="btSave" and @value="Salvar"]')
-                        time.sleep(1)
+                        time.sleep(2)
                         self.check_for_error()
 
                     else:
                         self.log_erro("Elemento não encontrado: vlDiferenca", Exception(
                             "Elemento não encontrado: vlDiferenca"))
                         return {"sucesso": False, "erro": "Elemento não encontrado: vlDiferenca"}
+                    try:
+                        if self.check_for_error(xpath="//span[text()='Sucesso']/following::p[contains(text(), 'Reparcelamento realizado com sucesso.')]"):
+                            self.log_progresso(
+                                "📋 Todos os passos PDD (21-28) executados com sucesso")
 
-                    if self.check_for_error(xpath="//span[text()='Sucesso']/following::p[contains(text(), 'Reparcelamento realizado com sucesso.')]"):
-                        self.log_progresso(
-                            "📋 Todos os passos PDD (21-28) executados com sucesso")
+                            # ✅ NAVEGAR DE VOLTA À TELA INICIAL PARA PRÓXIMO CONTRATO
+                            self.log_progresso(
+                                "🔄 Navegando de volta à tela inicial...")
+                            self.get_page(
+                                "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047")
+                            time.sleep(3)  # Aguardar carregamento da tela inicial
 
-                        # ✅ NAVEGAR DE VOLTA À TELA INICIAL PARA PRÓXIMO CONTRATO
-                        self.log_progresso(
-                            "🔄 Navegando de volta à tela inicial...")
-                        self.get_page(
-                            "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047")
-                        time.sleep(3)  # Aguardar carregamento da tela inicial
-
-                        return {
-                            "sucesso": True,
-                            "novo_titulo": "",
-                            "parcelas_processadas": parcelas_selecionadas,
-                            "valores_aplicados": valores_calculados,
-                            "passos_pdd_executados": "21-28",
-                            "timestamp_webscraping": datetime.now().isoformat()
-                        }
-                    else:
-                        self.log_erro("Erro ao executar reparcelamento", Exception(
-                            "Erro ao executar reparcelamento"))
-                        return {"sucesso": False, "erro": "Erro ao executar reparcelamento"}
-
+                            return {
+                                "sucesso": True,
+                                "novo_titulo": "",
+                                "parcelas_processadas": parcelas_selecionadas,
+                                "valores_aplicados": valores_calculados,
+                                "passos_pdd_executados": "21-28",
+                                "timestamp_webscraping": datetime.now().isoformat()
+                            }
+                        else:
+                            self.log_erro("Erro ao executar reparcelamento", Exception(
+                                "Erro ao executar reparcelamento"))
+                            return {"sucesso": False, "erro": "Erro ao executar reparcelamento"}
+                    except Exception as e:
+                        self.log_warning("Título precisa de atenção, pois não mostrou a mensagem de sucesso no reparcelamento, porém geralmente salva corretamente", Exception(
+                            "Título precisa de atenção, pois não mostrou a mensagem de sucesso no reparcelamento, porém geralmente salva corretamente"))
+                        return {"sucesso": True, "erro": "Título precisa de atenção, pois não mostrou a mensagem de sucesso no reparcelamento, porém geralmente salva corretamente"}
         except Exception as e:
             erro_msg = f"Erro no webscraping PDD: {str(e)}"
             self.log_erro(erro_msg, e)

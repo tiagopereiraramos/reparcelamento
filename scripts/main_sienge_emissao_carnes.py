@@ -32,6 +32,43 @@ from typing import Dict, Any, Optional, List
 
 # Garante execução com browser visível para debug
 os.environ["HEADLESS"] = "0"
+LOGS_DIR = Path("logs")
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+ARQUIVO_LOG_ATUAL: Optional[Path] = None
+
+
+class LoggerMultiplo:
+    """Direciona logs para stdout e arquivo do fluxo."""
+
+    def __init__(self, *destinos):
+        self.destinos = destinos
+
+    def write(self, mensagem):
+        for destino in self.destinos:
+            destino.write(mensagem)
+
+    def flush(self):
+        for destino in self.destinos:
+            destino.flush()
+
+
+def preparar_logs_execucao():
+    """Configura saída padrão para registrar logs da execução em arquivo."""
+    global ARQUIVO_LOG_ATUAL
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ARQUIVO_LOG_ATUAL = LOGS_DIR / f"emissao_carnes_{timestamp}.log"
+
+    stdout_original = sys.stdout
+    stderr_original = sys.stderr
+
+    arquivo_log = open(ARQUIVO_LOG_ATUAL, "a", encoding="utf-8")
+    multilog = LoggerMultiplo(stdout_original, arquivo_log)
+    sys.stdout = multilog
+    sys.stderr = multilog
+    log(f"📁 Log da execução: {ARQUIVO_LOG_ATUAL}")
+    return arquivo_log, stdout_original, stderr_original
+
 
 # Garante que o diretório raiz está no sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -222,23 +259,42 @@ def verificar_pendencias_contrato(contrato: Dict[str, Any]) -> Dict[str, Any]:
     dados_planilha = contrato.get('dados_planilha', {})
     cliente = contrato.get('cliente', 'N/A')
 
+    def obter_valor_coluna(nome_coluna: str) -> str:
+        valor = dados_planilha.get(nome_coluna)
+        if valor is None:
+            nome_normalizado = nome_coluna.strip().upper()
+            for chave_existente, valor_existente in dados_planilha.items():
+                if isinstance(chave_existente, str) and chave_existente.strip().upper() == nome_normalizado:
+                    valor = valor_existente
+                    break
+        return str(valor or "").strip()
+
     # Verificar PENDÊNCIAS PMFI (IPTU)
-    pendencias_pmfi = dados_planilha.get("PENDENCIAS PMFI", "").strip()
+    pendencias_pmfi = obter_valor_coluna("PENDENCIAS PMFI")
 
     # Verificar PENDÊNCIAS SIENGE INAD (Inadimplência)
-    pendencias_sienge_inad = dados_planilha.get(
-        "PENDENCIAS SIENGE INAD", "").strip()
+    pendencias_sienge_inad = obter_valor_coluna("PENDENCIAS SIENGE INAD")
 
     # Verificar PENDÊNCIAS SIENGE (Outras pendências)
-    pendencias_sienge = dados_planilha.get("PENDENCIAS SIENGE", "").strip()
+    pendencias_sienge = obter_valor_coluna("PENDENCIAS SIENGE")
 
-    # ✅ LÓGICA CORRETA CONFORME PDD:
-    # IPTU: "SIM" = COM pendências (inapto), "NÃO" = SEM pendências (apto)
-    # INADIMPLÊNCIA: "OK" = inadimplente (inapto), vazio = adimplente (apto)
-    # OUTRAS PENDÊNCIAS: "OK" = COM pendências (inapto), vazio = SEM pendências (apto)
+    # ✅ LÓGICA CORRETA CONFORME PDD ATUALIZADO:
+    # IPTU: "SIM" = COM pendências (inapto), "NÃO" ou vazio = SEM pendências (apto)
+    # INADIMPLÊNCIA: "Inadimplência" = COM pendência (inapto); vazio ou "OK" = adimplente (apto)
+    # OUTRAS PENDÊNCIAS: qualquer valor preenchido = COM pendência (inapto); vazio = SEM pendências (apto)
     pmfi_ok = not pendencias_pmfi or pendencias_pmfi.upper() == "NÃO"
-    sienge_inad_ok = not pendencias_sienge_inad
-    sienge_ok = not pendencias_sienge
+
+    sienge_inad_normalizado = pendencias_sienge_inad.casefold()
+    sienge_inad_ok = (
+        not pendencias_sienge_inad
+        or sienge_inad_normalizado == "ok"
+    )
+
+    pendencia_sienge_normalizada = pendencias_sienge.upper()
+    sienge_ok = (
+        not pendencias_sienge
+        or pendencia_sienge_normalizada == "OK"
+    )
 
     # Contrato apto se TODAS as pendências estão OK
     contrato_apto = pmfi_ok and sienge_inad_ok and sienge_ok
@@ -260,10 +316,10 @@ def verificar_pendencias_contrato(contrato: Dict[str, Any]) -> Dict[str, Any]:
                 f"      ❌ PENDÊNCIAS PMFI: '{pendencias_pmfi}' (deve ser 'NÃO' ou vazio para ser apto)")
         if not sienge_inad_ok:
             log(
-                f"      ❌ PENDÊNCIAS SIENGE INAD: '{pendencias_sienge_inad}' (deve estar vazio para ser adimplente)")
+                f"      ❌ PENDÊNCIAS SIENGE INAD: '{pendencias_sienge_inad}' (deve estar vazio ou 'OK' para ser adimplente)")
         if not sienge_ok:
             log(
-                f"      ❌ PENDÊNCIAS SIENGE: '{pendencias_sienge}' (deve estar vazio para ser apto)")
+                f"      ❌ PENDÊNCIAS SIENGE: '{pendencias_sienge}' (deve estar vazio ou 'OK' para ser apto)")
 
     return resultado
 
@@ -439,13 +495,18 @@ async def executar_fase_geracao_carnes(rpa: RPASienge, contratos_aptos: List[Dic
                 data_inicial = data_temp.replace(day=1)
                 data_inicial_formatada = data_inicial.strftime("%d/%m/%Y")
 
-                # Data final: último dia do mesmo mês, um ano depois
+                # Data final: último dia do mês 12 meses após a data inicial
                 import calendar
-                ano_seguinte = data_inicial.year + 1
+                meses_adiantados = data_inicial.month + 11
+                ano_final = data_inicial.year + (meses_adiantados - 1) // 12
+                mes_final = ((meses_adiantados - 1) % 12) + 1
                 ultimo_dia = calendar.monthrange(
-                    ano_seguinte, data_inicial.month)[1]
+                    ano_final, mes_final)[1]
                 data_final = data_inicial.replace(
-                    year=ano_seguinte, day=ultimo_dia)
+                    year=ano_final,
+                    month=mes_final,
+                    day=ultimo_dia
+                )
                 data_final_formatada = data_final.strftime("%d/%m/%Y")
 
                 parametros_empresa = {
@@ -636,6 +697,7 @@ Exemplos de uso:
     log("=" * 60)
 
     try:
+        arquivo_log_execucao, stdout_original, stderr_original = preparar_logs_execucao()
         # Notificar início
         notificar_sucesso_simples(
             "🚀 EMISSÃO DE CARNÊS INICIADA",
@@ -739,7 +801,7 @@ Exemplos de uso:
         resultados_notificacao = {
             "titulo": "🎉 RPA SIENGE: Emissão de carnês concluída",
             "mensagem": f"Duração: {duracao} | Carnês: {contratos_processados} | Erros: {contratos_erro} | Vinculados: {contratos_vinculados} | Não encontrados: {len(contratos_nao_encontrados)}",
-            "caminhos_anexos": []
+            "caminhos_anexos": [str(ARQUIVO_LOG_ATUAL), str(arquivo_html)]
         }
 
         notificar_sucesso(
@@ -794,7 +856,7 @@ Exemplos de uso:
         resultados_erro = {
             "titulo": "❌ RPA SIENGE: Emissão de carnês falhou",
             "mensagem": f"Erro: {str(e)} | Duração: {duracao}",
-            "caminhos_anexos": []
+            "caminhos_anexos": [str(ARQUIVO_LOG_ATUAL)]
         }
 
         notificar_sucesso(
@@ -804,6 +866,20 @@ Exemplos de uso:
         )
 
         return 1  # Falha
+
+    finally:
+        try:
+            arquivo_log_execucao.close()
+        except Exception:
+            pass
+
+        if 'stdout_original' in locals() and 'stderr_original' in locals():
+            sys.stdout = stdout_original
+            sys.stderr = stderr_original
+            try:
+                arquivo_log_execucao.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
