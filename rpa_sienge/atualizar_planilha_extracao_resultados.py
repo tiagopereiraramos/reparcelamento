@@ -442,6 +442,23 @@ def preparar_atualizacoes(contratos: List[Dict[str, Any]],
 
             info = COLUNAS_ATUALIZACAO[chave_canonica]
             valor = contrato.get(info["contrato"], "")
+
+            # Converte valores numéricos para evitar apóstrofo no Sheets
+            if valor and isinstance(valor, str):
+                valor_original = valor
+                if chave_canonica == "valor_parcela_base":
+                    try:
+                        # Converte '1.133,25' para o float 1133.25
+                        valor = float(valor.replace(".", "").replace(",", "."))
+                    except ValueError:
+                        valor = valor_original  # Mantém string se falhar
+                elif chave_canonica == "parcelas_a_vencer":
+                    try:
+                        # Converte '120' para o inteiro 120
+                        valor = int(valor)
+                    except ValueError:
+                        valor = valor_original  # Mantém string se falhar
+
             indice_coluna = mapa_cabecalhos[chave_canonica]
             letra_coluna = indice_para_coluna_excel(indice_coluna)
             intervalo = f"{letra_coluna}{linha_excel}:{letra_coluna}{linha_excel}"
@@ -566,7 +583,7 @@ def executar_atualizacao(config: ConfiguracaoRetroalimentacao) -> None:
         return
 
     registrar_log("Enviando batch_update ao Google Sheets...")
-    worksheet.batch_update(atualizacoes)
+    worksheet.batch_update(atualizacoes, value_input_option="USER_ENTERED")
     registrar_log("✅ Retroalimentação concluída com sucesso.")
 
 

@@ -7,10 +7,10 @@ Baseado no PDD seção 7 - Processamento de dados das planilhas
 """
 
 from core.rastreamento_unificado import iniciar_rastreamento
-from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.notificacoes_simples import notificar_sucesso
 from core.base_rpa import BaseRPA, ResultadoRPA
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 import gspread
 from google.oauth2.service_account import Credentials
@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 import unicodedata
 import re
+
 
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -70,6 +71,10 @@ class RPAAnalisePlanilhas(BaseRPA):
 
             await self.rastreamento.registrar_inicio_rpa(parametros)
 
+            # ✅ NOVO: Inicializa gerador de anexos
+            from core.gerador_anexos import gerador_anexos
+            self.gerador_anexos = gerador_anexos
+
             # ✅ FORÇA inicialização do sistema híbrido ANTES de tudo
             self.log_info("🔧 Persistência baseada em JSON pronta para uso")
 
@@ -109,16 +114,16 @@ class RPAAnalisePlanilhas(BaseRPA):
                 'Título') or c.get('numero_titulo', '')).strip(), str(c.get('Cliente', '')).strip()) in titulos_aprovados]
 
             # Processa pendências IPTU
-            self.log_progresso("Processando pendências de IPTU")
-            pendencias_iptu = await self._processar_pendencias_iptu(planilha_apoio_id)
+            # self.log_progresso("Processando pendências de IPTU")
+            # pendencias_iptu = await self._processar_pendencias_iptu(planilha_apoio_id)
 
             # Atualiza planilha principal com novos dados SOMENTE se houver aprovados
-            if novos_contratos_aprovados or pendencias_iptu:
-                self.log_progresso(
-                    "Atualizando planilha principal com novos dados")
-                await self._atualizar_planilha_principal(
-                    planilha_calculo_id, novos_contratos_aprovados, pendencias_iptu
-                )
+            # if novos_contratos_aprovados or pendencias_iptu:
+            #    self.log_progresso(
+            #        "Atualizando planilha principal com novos dados")
+            #    await self._atualizar_planilha_principal(
+            #        planilha_calculo_id, novos_contratos_aprovados, pendencias_iptu
+            #    )
 
             # --- Separação de logs: Auditoria da planilha de apoio ---
             self.log_progresso(
@@ -152,7 +157,11 @@ class RPAAnalisePlanilhas(BaseRPA):
                 "\n✅ Base de cálculo: Contratos homologados processados normalmente")
 
             # Gera fila para próximos RPAs
+            self.log_progresso(
+                f"Identificados {len(contratos_reajuste)} contratos para gerar a fila.")
             fila_processamento = await self._gerar_fila_processamento(contratos_reajuste)
+            self.log_progresso(
+                f"Fila de processamento gerada com {len(fila_processamento)} itens.")
 
             # ✅ NOVO: Obtém estatísticas de contratos já processados da função _salvar_fila_data_manager
             contratos_ja_processados = getattr(
@@ -161,7 +170,6 @@ class RPAAnalisePlanilhas(BaseRPA):
             # Monta resultado final
             resultado_dados = {
                 "novos_contratos_processados": len(novos_contratos_aprovados),
-                "pendencias_iptu_atualizadas": len(pendencias_iptu),
                 "contratos_para_reajuste": len(contratos_reajuste),
                 # ✅ NOVO: Contratos já processados
                 "contratos_ja_processados": contratos_ja_processados,
@@ -357,6 +365,14 @@ class RPAAnalisePlanilhas(BaseRPA):
             relatorio += "\n✅ Integridade OK: Processamento concluído com sucesso.\n"
             relatorio += "O sistema continuará monitorando as próximas execuções automaticamente.\n"
 
+            # ✅ NOVO: Gera anexos Excel com dados detalhados dos contratos
+            self.log_progresso("\n📎 Gerando anexos para relatório...")
+            anexos_paths = await self._gerar_anexos_relatorio(
+                contratos_auditoria_apoio,
+                contratos_auditoria_base,
+                resultado_dados
+            )
+
             # Monta resultados para notificação
             contratos_identificados = resultado_dados.get(
                 'contratos_para_reajuste', 0)
@@ -386,12 +402,19 @@ class RPAAnalisePlanilhas(BaseRPA):
                 resultados_notificacao["tem_pendencias_iptu"] = len(
                     self.pendencias_iptu_identificadas) > 0
 
-            # Envia notificação de sucesso
-            notificar_sucesso(
-                nome_rpa="RPA Análise de Planilhas",
-                tempo_execucao=f"{(datetime.now() - self.inicio_execucao).total_seconds():.2f}s",
-                resultados=resultados_notificacao
-            )
+            # ✅ NOVO: Adiciona anexos ao e-mail
+            if anexos_paths:
+                resultados_notificacao["caminhos_anexos"] = anexos_paths
+                self.log_progresso(
+                    f"✅ {len(anexos_paths)} anexo(s) preparado(s) para envio")
+
+            # Envia notificação de sucesso (opcional, preferimos centralizar no main)
+            if parametros.get("notificar", False):
+                notificar_sucesso(
+                    nome_rpa="RPA Análise de Planilhas",
+                    tempo_execucao=f"{(datetime.now() - self.inicio_execucao).total_seconds():.2f}s",
+                    resultados=resultados_notificacao
+                )
 
             return ResultadoRPA(
                 sucesso=True,
@@ -712,24 +735,25 @@ class RPAAnalisePlanilhas(BaseRPA):
                 aba_base_calculo = planilha_principal.worksheet(
                     "Base de cálculo")
 
-            # Adiciona novos contratos se houver
-            if novos_contratos:
-                self.log_progresso(
-                    f"Adicionando {len(novos_contratos)} novos contratos")
-                await self._adicionar_novos_contratos(aba_base_calculo, novos_contratos)
+                # Adiciona novos contratos se houver
+                if novos_contratos:
+                    self.log_progresso(
+                        f"Adicionando {len(novos_contratos)} novos contratos")
+                    await self._adicionar_novos_contratos(aba_base_calculo, novos_contratos)
 
-            # Atualiza pendências IPTU se houver
-            if pendencias_iptu:
-                self.log_progresso(
-                    f"Atualizando {len(pendencias_iptu)} pendências IPTU")
-                await self._atualizar_pendencias_iptu(aba_base_calculo, pendencias_iptu)
+                # Atualiza pendências IPTU se houver
+                if pendencias_iptu:
+                    self.log_progresso(
+                        f"Atualizando {len(pendencias_iptu)} pendências IPTU")
+                    await self._atualizar_pendencias_iptu(aba_base_calculo, pendencias_iptu)
 
-            self.log_progresso(
-                "✅ Planilha principal atualizada com sucesso")
-            return
-        except Exception as e:
+                self.log_progresso(
+                    "✅ Planilha principal atualizada com sucesso")
+                return
+            except Exception as e:
                 if "503" in str(e) and tentativa < max_tentativas - 1:
-                    tempo_espera = (tentativa + 1) * 30  # 30, 60, 90 segundos
+                    tempo_espera = (tentativa + 1) * \
+                        30  # 30, 60, 90 segundos
                     self.log_progresso(
                         f"⚠️ Erro 503 ao atualizar planilha principal - aguardando {tempo_espera}s antes da próxima tentativa...")
                     time.sleep(tempo_espera)
@@ -1159,7 +1183,7 @@ class RPAAnalisePlanilhas(BaseRPA):
                     "Data de Migração": str(contrato.get('Data de Migração', '') or '').strip(),
                     "status": "PENDENTE",
                     "_metadata": {
-                    "prioridade": self._calcular_prioridade(contrato),
+                        "prioridade": self._calcular_prioridade(contrato),
                         "origem_identificacao": "rpa_analise_planilhas"
                     }
                 }
@@ -1174,7 +1198,7 @@ class RPAAnalisePlanilhas(BaseRPA):
 
             # Ordena por prioridade (mais urgente primeiro)
             fila_processamento.sort(
-                key=lambda x: x['prioridade'], reverse=True)
+                key=lambda x: x['_metadata']['prioridade'], reverse=True)
 
             # ✅ NOVO: Salva fila usando data_manager.py (MongoDB + JSON)
             await self._persistir_fila_contratos(fila_processamento)
@@ -1233,16 +1257,17 @@ class RPAAnalisePlanilhas(BaseRPA):
         self.contratos_falharam = resultado.get("erros", 0)
 
         self.log_progresso("\n📊 RELATÓRIO DE PROCESSAMENTO DA FILA:")
-                self.log_progresso(
+        self.log_progresso(
             f"   ✅ Contratos inseridos: {self.contratos_salvos}")
-                        self.log_progresso(
+        self.log_progresso(
             f"   🔄 Contratos atualizados: {self.contratos_atualizados}")
-                                    self.log_progresso(
+        self.log_progresso(
             f"   ⚠️ Contratos ignorados: {self.contratos_ja_processados}")
-                                    self.log_progresso(
+        self.log_progresso(
             f"   ❌ Contratos com erro: {self.contratos_falharam}")
 
-            await self._salvar_fila_local(fila_processamento)
+        await self._salvar_fila_local(fila_processamento)
+        self.log_progresso("Persistência da fila de contratos concluída.")
 
     async def _atualizar_ultimo_reajuste(self, aba_base_calculo, linha: int, contrato: Dict[str, Any]):
         """
@@ -1271,6 +1296,169 @@ class RPAAnalisePlanilhas(BaseRPA):
             f"ℹ️ Função desabilitada para {cliente} - 'Último reajuste' não será alterado (preserva fórmulas)")
 
         return  # Sai da função sem fazer alterações
+
+    async def _gerar_anexos_relatorio(
+        self,
+        contratos_auditoria_apoio: List[Dict[str, Any]],
+        contratos_auditoria_base: List[Dict[str, Any]],
+        resultado_dados: Dict[str, Any]
+    ) -> List[str]:
+        """
+        Gera anexos Excel com dados detalhados dos contratos para envio por e-mail
+
+        Args:
+            contratos_auditoria_apoio: Lista de contratos da planilha de apoio
+            contratos_auditoria_base: Lista de contratos da base de cálculo
+            resultado_dados: Dados completos do resultado da análise
+
+        Returns:
+            Lista de caminhos dos arquivos gerados
+        """
+        anexos = []
+
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # ✅ ANEXO 1: Planilha de Apoio (Novos Contratos)
+            if contratos_auditoria_apoio:
+                dados_apoio = []
+                for contrato in contratos_auditoria_apoio:
+                    dados_apoio.append({
+                        'Cliente': contrato.get('cliente', 'N/A'),
+                        'Título': contrato.get('titulo', 'N/A'),
+                        'Status': contrato.get('status', 'N/A').upper(),
+                        'Motivo': contrato.get('motivo', 'N/A'),
+                        'Origem': 'Planilha de Apoio'
+                    })
+
+                if dados_apoio:
+                    caminho_excel_apoio = self.gerador_anexos.gerar_anexo_excel(
+                        dados=dados_apoio,
+                        nome_arquivo="analise_planilha_apoio",
+                        nome_aba="Novos Contratos"
+                    )
+                    anexos.append(caminho_excel_apoio)
+                    self.log_progresso(
+                        f"   ✅ Anexo gerado: {os.path.basename(caminho_excel_apoio)}")
+
+            # ✅ ANEXO 2: Base de Cálculo (Contratos para Reparcelamento)
+            if contratos_auditoria_base:
+                dados_base = []
+                for contrato in contratos_auditoria_base:
+                    dados_base.append({
+                        'Cliente': contrato.get('cliente', 'N/A'),
+                        'Título': contrato.get('titulo', 'N/A'),
+                        'Status': contrato.get('status', 'N/A').upper(),
+                        'Motivo': contrato.get('motivo', 'N/A'),
+                        'Tem Pendência IPTU': 'SIM' if contrato.get('tem_pendencia_iptu', False) else 'NÃO',
+                        'Origem': 'Base de Cálculo'
+                    })
+
+                if dados_base:
+                    caminho_excel_base = self.gerador_anexos.gerar_anexo_excel(
+                        dados=dados_base,
+                        nome_arquivo="analise_base_calculo",
+                        nome_aba="Contratos Reparcelamento"
+                    )
+                    anexos.append(caminho_excel_base)
+                    self.log_progresso(
+                        f"   ✅ Anexo gerado: {os.path.basename(caminho_excel_base)}")
+
+            # ✅ ANEXO 3: Fila de Processamento (Contratos Aprovados para Extração)
+            fila_processamento = resultado_dados.get('fila_processamento', [])
+            if fila_processamento:
+                dados_fila = []
+                for item in fila_processamento:
+                    dados_fila.append({
+                        'Empresa': item.get('Empresa', 'N/A'),
+                        'Loteamento': item.get('Loteamento', 'N/A'),
+                        'Cliente': item.get('Cliente', 'N/A'),
+                        'Código Cliente': item.get('Código Cliente', 'N/A'),
+                        'Título': item.get('Titulo', 'N/A'),
+                        'Último Reajuste': item.get('Último reajuste', 'N/A'),
+                        'Mês Reajuste': item.get('Mês reajuste', 'N/A'),
+                        'Status': item.get('status', 'PENDENTE'),
+                        'Prioridade': item.get('_metadata', {}).get('prioridade', 0)
+                    })
+
+                if dados_fila:
+                    caminho_excel_fila = self.gerador_anexos.gerar_anexo_excel(
+                        dados=dados_fila,
+                        nome_arquivo="fila_processamento_sienge",
+                        nome_aba="Fila de Extração"
+                    )
+                    anexos.append(caminho_excel_fila)
+                    self.log_progresso(
+                        f"   ✅ Anexo gerado: {os.path.basename(caminho_excel_fila)}")
+
+            # ✅ ANEXO 4: Pendências IPTU (se existirem)
+            if hasattr(self, 'pendencias_iptu_identificadas') and self.pendencias_iptu_identificadas:
+                dados_pendencias = []
+                for pendencia in self.pendencias_iptu_identificadas:
+                    dados_pendencias.append({
+                        'Cliente': pendencia.get('cliente', 'N/A'),
+                        'Título': pendencia.get('titulo', 'N/A'),
+                        'Pendência PMFI': pendencia.get('pendencia_pmfi', 'N/A'),
+                        'Data Consulta IPTU': pendencia.get('data_consulta_iptu', 'N/A'),
+                        'Motivo': pendencia.get('motivo', 'N/A'),
+                        'Observação': 'Apenas informativo - NÃO bloqueia processamento'
+                    })
+
+                if dados_pendencias:
+                    caminho_excel_pendencias = self.gerador_anexos.gerar_anexo_excel(
+                        dados=dados_pendencias,
+                        nome_arquivo="pendencias_iptu_identificadas",
+                        nome_aba="Pendências IPTU"
+                    )
+                    anexos.append(caminho_excel_pendencias)
+                    self.log_progresso(
+                        f"   ✅ Anexo gerado: {os.path.basename(caminho_excel_pendencias)}")
+
+            # ✅ ANEXO 5: Resumo Executivo
+            dados_resumo = [{
+                'Métrica': 'Total de Contratos Lidos (Planilha de Apoio)',
+                'Valor': len(contratos_auditoria_apoio)
+            }, {
+                'Métrica': 'Total de Contratos Aprovados (Planilha de Apoio)',
+                'Valor': len([c for c in contratos_auditoria_apoio if c.get('status') == 'aprovado'])
+            }, {
+                'Métrica': 'Total de Contratos Rejeitados (Planilha de Apoio)',
+                'Valor': len([c for c in contratos_auditoria_apoio if c.get('status') == 'rejeitado'])
+            }, {
+                'Métrica': 'Total de Contratos Lidos (Base de Cálculo)',
+                'Valor': len(contratos_auditoria_base)
+            }, {
+                'Métrica': 'Total Elegíveis para Reparcelamento',
+                'Valor': len([c for c in contratos_auditoria_base if c.get('status') == 'aprovado'])
+            }, {
+                'Métrica': 'Total de Contratos na Fila de Processamento',
+                'Valor': len(fila_processamento)
+            }, {
+                'Métrica': 'Total de Contratos Já Processados (Ignorados)',
+                'Valor': resultado_dados.get('contratos_ja_processados', 0)
+            }, {
+                'Métrica': 'Total de Pendências IPTU Identificadas',
+                'Valor': len(self.pendencias_iptu_identificadas) if hasattr(self, 'pendencias_iptu_identificadas') else 0
+            }, {
+                'Métrica': 'Data/Hora da Análise',
+                'Valor': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            }]
+
+            caminho_excel_resumo = self.gerador_anexos.gerar_anexo_excel(
+                dados=dados_resumo,
+                nome_arquivo="resumo_executivo_analise",
+                nome_aba="Resumo Executivo"
+            )
+            anexos.append(caminho_excel_resumo)
+            self.log_progresso(
+                f"   ✅ Anexo gerado: {os.path.basename(caminho_excel_resumo)}")
+
+            self.log_progresso(f"✅ Total de anexos gerados: {len(anexos)}")
+            return anexos
+
+        except Exception as e:
+            self.log_erro("Erro ao gerar anexos do relatório", e)
+            return []
 
     async def _salvar_fila_local(self, fila_processamento: List[Dict[str, Any]]):
         """
@@ -1330,9 +1518,9 @@ class RPAAnalisePlanilhas(BaseRPA):
             # Lê todos os dados
             dados_contratos = aba_base_calculo.get_all_records()
 
-                # Obtém mês atual
-                mes_atual = datetime.now().month
-                ano_atual = datetime.now().year
+            # Obtém mês atual
+            mes_atual = datetime.now().month
+            ano_atual = datetime.now().year
 
             contratos_para_reajuste = []
             contratos_auditoria = []  # Lista para rastreamento completo
@@ -1446,8 +1634,18 @@ class RPAAnalisePlanilhas(BaseRPA):
                             else:
                                 continue
 
-                    if ano_atual == ano_reajuste and mes_atual == mes_reajuste:
-                        # ✅ ELEGÍVEL: Mês atual - APLICAR REGRAS PDD
+                    esta_no_mes_atual = ano_atual == ano_reajuste and mes_atual == mes_reajuste
+                    proximo_mes = mes_atual + 1
+                    proximo_ano = ano_atual
+                    if proximo_mes > 12:
+                        proximo_mes = 1
+                        proximo_ano += 1
+                    esta_no_mes_seguinte = (
+                        ano_reajuste == proximo_ano and mes_reajuste == proximo_mes
+                    )
+
+                    if esta_no_mes_atual or esta_no_mes_seguinte:
+                        # ✅ ELEGÍVEL: mês atual ou imediatamente seguinte
 
                         # ===================== VERIFICAÇÃO PENDÊNCIAS IPTU (RESPONSABILIDADE CORRETA) =====================
 
@@ -1536,14 +1734,14 @@ class RPAAnalisePlanilhas(BaseRPA):
 
                         contratos_para_reajuste.append(
                             contrato_processado)
-                            contratos_auditoria.append({
-                                'cliente': cliente or 'Sem nome',
-                                'titulo': titulo_final,
-                                'status': 'aprovado',
+                        contratos_auditoria.append({
+                            'cliente': cliente or 'Sem nome',
+                            'titulo': titulo_final,
+                            'status': 'aprovado',
                             'motivo': f"Elegível para reparcelamento (mês de reajuste atual: {mes_reajuste_str})",
-                                'tem_pendencia_iptu': not consulta_iptu_ok or not consulta_iptu_atualizada,
-                                'origem': 'base_calculo'
-                            })
+                            'tem_pendencia_iptu': not consulta_iptu_ok or not consulta_iptu_atualizada,
+                            'origem': 'base_calculo'
+                        })
 
                     elif ano_atual > ano_reajuste or (ano_atual == ano_reajuste and mes_atual > mes_reajuste):
                         # ⚠️ ATRASADO: Deveria ter sido processado antes
@@ -1559,8 +1757,8 @@ class RPAAnalisePlanilhas(BaseRPA):
 
                     else:
                         # ❌ AINDA NÃO VENCEU: Mês seguinte conforme PDD
-                        self.log_progresso(
-                            f"   📅 PARA MÊS SEGUINTE: Ainda não chegou a data")
+                        # Logs de contratos fora do mês atual podem ser consultados
+                        # via auditoria; evitamos registrar item a item para reduzir ruído
                         contratos_auditoria.append({
                             'cliente': cliente or 'Sem nome',
                             'titulo': numero_titulo or 'N/A',
@@ -1578,11 +1776,11 @@ class RPAAnalisePlanilhas(BaseRPA):
             # ✅ NOVO: Relatório final detalhado
             self.log_progresso(
                 f"\n📊 RELATÓRIO FINAL - IDENTIFICAÇÃO DE CONTRATOS:")
-                self.log_progresso(
+            self.log_progresso(
                 f"   ✅ Contratos elegíveis para reparcelamento: {len(contratos_para_reajuste)}")
-                    self.log_progresso(
+            self.log_progresso(
                 f"   ⚠️ Contratos não processados: {len([c for c in contratos_auditoria if c['status'] == 'não processado'])}")
-                    self.log_progresso(
+            self.log_progresso(
                 f"   📋 Contratos com pendências IPTU identificadas: {len(pendencias_iptu_identificadas)}")
             self.log_progresso(
                 f"   📧 Pendências IPTU serão reportadas no e-mail de notificação")
@@ -1609,7 +1807,8 @@ async def executar_analise_planilhas(
     planilha_calculo_id: str,
     planilha_apoio_id: str,
     credenciais_google: Optional[str] = None,
-    headless: Optional[bool] = None
+    headless: Optional[bool] = None,
+    notificar: bool = False
 ) -> ResultadoRPA:
     """
     Função auxiliar para executar análise de planilhas diretamente
@@ -1633,7 +1832,8 @@ async def executar_analise_planilhas(
         parametros = {
             "planilha_calculo_id": planilha_calculo_id,
             "planilha_apoio_id": planilha_apoio_id,
-            "credenciais_google": credenciais_google
+            "credenciais_google": credenciais_google,
+            "notificar": notificar
         }
 
         resultado = await rpa.executar_com_monitoramento(parametros)
@@ -1717,6 +1917,13 @@ def indice_para_coluna_excel(n):
         string = chr(n % 26 + ord('A')) + string
         n = n // 26 - 1
     return string
+
+
+def normalizar_codigo_cliente(codigo: str) -> str:
+    """Normaliza o código do cliente, removendo caracteres não numéricos."""
+    if not codigo:
+        return ""
+    return re.sub(r'\D', '', str(codigo)).strip()
 
 
 def normalizar_nome(nome):

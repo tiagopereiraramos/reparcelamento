@@ -9,12 +9,14 @@ Pode ser chamado por agendadores, CI/CD ou manualmente.
 A persistência híbrida (MongoDB + JSON) é garantida pelo core do RPA.
 """
 from rpa_analise_planilhas.rpa_analise_planilhas import executar_analise_planilhas
+from core.relatorio_rpa import RelatorioRPA
+from core.notificacoes_simples import notificar_sucesso, notificar_erro
 import os
 import sys
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from core.notificacoes_simples import notificar_sucesso, notificar_erro
+from core.notificacoes_simples import notificar_erro
 
 # Garante execução headless em produção
 os.environ["HEADLESS"] = "1"  # Força modo headless para Selenium/Browser
@@ -47,100 +49,103 @@ async def main():
         "GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
 
     # Ao chamar o RPA, garanta que headless=True está sendo passado para execução em produção.
+    # Relatório unificado
+    relatorio = RelatorioRPA("Analise de Planilhas")
+    relatorio.iniciar_execucao()
+
     resultado = await executar_analise_planilhas(
         planilha_calculo_id=planilha_calculo_id,
         planilha_apoio_id=planilha_apoio_id,
         credenciais_google=credenciais_google,
-        headless=True
+        headless=True,
+        notificar=False
     )
-
-    # Relatório detalhado de aprovação, rejeição e não processados
-    corpo_relatorio = ""
-    total_processados = 0
-    total_aprovados = 0
-    total_rejeitados_iptu = 0
-    total_nao_processados = 0
-    aprovados = []
-    rejeitados_iptu = []
-    nao_processados = []
+    # Alimenta relatório unificado
+    total_aprovados = total_rejeitados = total_nao_processados = 0
     if hasattr(resultado, 'dados') and resultado.dados:
         auditoria = resultado.dados.get('contratos_auditoria', [])
-        violacoes_base = resultado.dados.get('violacoes_base_calculo', [])
-        for c in auditoria:
-            status = c.get('status')
-            if status == 'aprovado':
-                aprovados.append(c)
-            elif status == 'rejeitado':
-                rejeitados_iptu.append(c)
-            else:
-                nao_processados.append(c)
+        aprovados = [c for c in auditoria if c.get('status') == 'aprovado']
+        rejeitados = [c for c in auditoria if c.get('status') == 'rejeitado']
+        nao_processados = [c for c in auditoria if c.get('status') == 'não processado']
         total_aprovados = len(aprovados)
-        total_rejeitados_iptu = len(rejeitados_iptu)
+        total_rejeitados = len(rejeitados)
         total_nao_processados = len(nao_processados)
-        total_processados = total_aprovados + \
-            total_rejeitados_iptu + total_nao_processados
-
-    corpo_relatorio += "\nRELATÓRIO DE CONTRATOS APROVADOS:\n"
-    if aprovados:
-        for c in aprovados:
-            corpo_relatorio += f" - Cliente: {c.get('cliente','N/A')}, Título: {c.get('titulo','N/A')}, Motivo: {c.get('motivo','')}\n"
-    else:
-        corpo_relatorio += "Nenhum contrato aprovado para reparcelamento.\n"
-
-    corpo_relatorio += "\nRELATÓRIO DE CONTRATOS REJEITADOS:\n"
-    if rejeitados_iptu:
-        for c in rejeitados_iptu:
-            corpo_relatorio += f" - Cliente: {c.get('cliente','N/A')}, Título: {c.get('titulo','N/A')}, Motivo: {c.get('motivo','')}\n"
-    else:
-        corpo_relatorio += "Nenhum contrato rejeitado.\n"
-
-    corpo_relatorio += "\nRELATÓRIO DE CONTRATOS NÃO PROCESSADOS:\n"
-    if nao_processados:
-        for c in nao_processados:
-            corpo_relatorio += f" - Cliente: {c.get('cliente','N/A')}, Título: {c.get('titulo','N/A')}, Motivo: {c.get('motivo','')}\n"
-    else:
-        corpo_relatorio += "Nenhum contrato fora do mês de reajuste ou com dados inválidos.\n"
-
-    # Estatísticas gerais
-    corpo_relatorio += f"\nESTATÍSTICAS GERAIS:\n"
-    corpo_relatorio += f" - Total de contratos lidos: {total_processados}\n"
-    corpo_relatorio += f" - Total aprovados: {total_aprovados}\n"
-    corpo_relatorio += f" - Total rejeitados: {total_rejeitados_iptu}\n"
-    corpo_relatorio += f" - Total não processados: {total_nao_processados}\n"
-    corpo_relatorio += f" - Data/hora da análise: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n"
-
-    # Alerta de violação de integridade
-    if 'violacoes_base' in locals() and violacoes_base:
-        corpo_relatorio += "\n⚠️ <b>VIOLAÇÃO DE INTEGRIDADE:</b> Foram encontrados contratos na base de cálculo que não vieram da planilha de apoio (violação do PDD):\n"
-        for v in violacoes_base:
-            corpo_relatorio += f" - Cliente: {v.get('cliente','N/A')}, Título: {v.get('titulo','N/A')}, Motivo: {v.get('motivo','')}\n"
-    elif 'violacoes_base' in locals():
-        corpo_relatorio += "\n✅ Integridade OK: Todos os contratos da base de cálculo vieram da planilha de apoio.\n"
-
-    tempo_execucao = f"{getattr(resultado, 'tempo_execucao', 0):.2f}s"
-
+        relatorio.set_metricas({
+            "contratos_identificados": resultado.dados.get('contratos_para_reajuste', 0),
+            "contratos_ja_processados": resultado.dados.get('contratos_ja_processados', 0)
+        })
     if resultado.sucesso:
-        log(f"SUCESSO: {resultado.mensagem}")
-        # ✅ REMOVIDO: Notificação duplicada - já enviada dentro da classe RPAAnalisePlanilhas.executar()
-        # notificar_sucesso(
-        #     nome_rpa="RPA Análise de Planilhas",
-        #     tempo_execucao=tempo_execucao,
-        #     resultados={
-        #         "mensagem": resultado.mensagem,
-        #         "relatorio": corpo_relatorio
-        #     }
-        # )
-        sys.exit(0)
-    else:
-        log(f"FALHA: {resultado.mensagem}")
-        if resultado.erro:
-            log(f"Detalhe do erro: {resultado.erro}")
-        notificar_erro(
-            nome_rpa="RPA Análise de Planilhas",
-            erro=resultado.mensagem,
-            detalhes=corpo_relatorio or resultado.erro or "Erro desconhecido"
+        relatorio.adicionar_sucesso(
+            "Análise concluída",
+            {"mensagem": resultado.mensagem,
+             "aprovados": total_aprovados,
+             "rejeitados": total_rejeitados,
+             "nao_processados": total_nao_processados}
         )
-        sys.exit(1)
+    else:
+        relatorio.adicionar_erro(
+            "Falha na análise",
+            resultado.mensagem,
+            {"erro": resultado.erro or ""}
+        )
+
+    relatorio.finalizar_execucao()
+
+    # Salva relatórios e notifica (anexa TXT)
+    try:
+        arq_json = relatorio.salvar_relatorio_json()
+        arq_txt = relatorio.salvar_relatorio_txt()
+        log(f"Relatórios gerados: {arq_json} | {arq_txt}")
+    except Exception as e:
+        log(f"Falha ao salvar relatórios: {e}")
+        arq_txt = None
+
+    # ✅ NOVO: incluir Resumo Executivo (Excel) gerado pelo RPA
+    anexos = []
+    if arq_txt:
+        anexos.append(str(arq_txt))
+    try:
+        relatorios_dir = Path("outputs/relatorios")
+        if relatorios_dir.exists():
+            candidatos = sorted(
+                relatorios_dir.glob("resumo_executivo*.xlsx"),
+                key=lambda p: p.stat().st_mtime
+            )
+            if candidatos:
+                resumo_executivo = candidatos[-1]
+                anexos.append(str(resumo_executivo))
+                log(f"Anexo incluído: {resumo_executivo}")
+    except Exception as e:
+        log(f"Falha ao localizar Resumo Executivo: {e}")
+
+    resumo = relatorio.gerar_resumo()["resumo_execucao"]
+    try:
+        if resultado.sucesso:
+            notificar_sucesso(
+                nome_rpa="RPA Análise de Planilhas",
+                tempo_execucao=resumo["tempo_total"],
+                resultados={
+                    "titulo": "🎉 RPA ANÁLISE DE PLANILHAS: Concluído",
+                    "mensagem": resultado.mensagem,
+                    "status": "concluido",
+                    "caminhos_anexos": anexos
+                }
+            )
+        else:
+            notificar_erro(
+                nome_rpa="RPA Análise de Planilhas",
+                erro=resultado.mensagem,
+                detalhes={
+                    "titulo": "❌ RPA ANÁLISE DE PLANILHAS: Falhou",
+                    "mensagem": resultado.erro or resultado.mensagem,
+                    "status": "falhou",
+                    "caminhos_anexos": anexos
+                }
+            )
+    except Exception as e:
+        log(f"Falha ao enviar notificação: {e}")
+
+    sys.exit(0 if resultado.sucesso else 1)
 
 
 if __name__ == "__main__":

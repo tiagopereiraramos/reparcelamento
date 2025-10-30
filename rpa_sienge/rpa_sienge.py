@@ -23,6 +23,7 @@ from core.base_rpa import BaseRPA, ResultadoRPA
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
 from core.rastreamento_unificado import iniciar_rastreamento
 from core.processador_regras_pdd import ProcessadorRegrasNegocio, CalculadoraReparcelamentoPDD
+from core.utils_sienge import obter_conta_corrente_remessa
 
 # Selenium imports necessários
 from selenium.webdriver.common.by import By
@@ -179,8 +180,8 @@ class RPASienge(BaseRPA):
             self.log_progresso(
                 f"Iniciando RPA Sienge - Etapa: {etapa.upper()}")
             self.log_progresso(
-                f"Contrato: {contrato.get('numero_titulo', '')}")
-            self.log_progresso(f"Cliente: {contrato.get('cliente', '')}")
+                f"Contrato: {contrato.get('Titulo', '')}")
+            self.log_progresso(f"Cliente: {contrato.get('Cliente', '')}")
             self.log_progresso(
                 f"Autorização automática: {autorizar_reparcelamento}")
 
@@ -278,8 +279,8 @@ class RPASienge(BaseRPA):
                         "RPA Sienge",
                         f"{resultado_reparcelamento.tempo_execucao:.1f}s" if resultado_reparcelamento.tempo_execucao else "N/A",
                         resultados={
-                            "cliente": contrato.get('cliente', 'N/A'),
-                            "numero_titulo": contrato.get('numero_titulo', 'N/A'),
+                            "cliente": contrato.get('Cliente', 'N/A'),
+                            "numero_titulo": contrato.get('Titulo', 'N/A'),
                             "etapa": etapa,
                             "status": "Processamento concluído com sucesso"
                         }
@@ -884,7 +885,7 @@ class RPASienge(BaseRPA):
         try:
             await self._registrar_passo_execucao(
                 "INICIO_PROCESSAMENTO_REPARCELAMENTO", {
-                    "contrato": contrato.get("numero_titulo", ""),
+                    "contrato": contrato.get("Titulo", ""),
                     "indices_fornecidos": bool(indices),
                     "autorizar_automatico": autorizar_reparcelamento,
                     "timestamp": datetime.now().isoformat()
@@ -934,8 +935,8 @@ class RPASienge(BaseRPA):
             # Se chegou aqui, pode prosseguir com o reparcelamento
             await self._registrar_passo_execucao(
                 "CLIENTE_APROVADO_REPARCELAMENTO", {
-                    "numero_titulo": contrato.get("numero_titulo", ""),
-                    "cliente": contrato.get("cliente", ""),
+                    "numero_titulo": contrato.get("Titulo", ""),
+                    "cliente": contrato.get("Cliente", ""),
                     "timestamp": datetime.now().isoformat()
                 })
 
@@ -1029,8 +1030,8 @@ class RPASienge(BaseRPA):
 
             # Montar parâmetros para webscraping
             parametros_navegacao = {
-                "numero_titulo": contrato.get("numero_titulo", ""),
-                "cliente": contrato.get("cliente", ""),
+                "numero_titulo": contrato.get("Titulo", ""),
+                "cliente": contrato.get("Cliente", ""),
                 "url_reparcelamento": "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047",
                 "valores_sienge": calculo_resultado.get("valores_sienge", {}),
                 "saldo_anterior": saldo_atual,
@@ -1056,7 +1057,7 @@ class RPASienge(BaseRPA):
             # Estruturar resultado com dados do webscraping
             resultado_reparcelamento = {
                 "sucesso": True,
-                "novo_titulo_gerado": resultado_webscraping.get("novo_titulo_gerado", f"REP_{contrato.get('numero_titulo', '')}_2025"),
+                "novo_titulo_gerado": resultado_webscraping.get("novo_titulo_gerado", f"REP_{contrato.get('Titulo', '')}_2025"),
                 "valor_anterior": saldo_atual,
                 "valor_corrigido": calculo_resultado.get("novo_saldo"),
                 "igpm_aplicado": calculo_resultado.get("igpm_utilizado"),
@@ -1499,7 +1500,8 @@ class RPASienge(BaseRPA):
                                 "🔄 Navegando de volta à tela inicial...")
                             self.get_page(
                                 "https://jmservicos.sienge.com.br/sienge/8/index.html#/common/page/1047")
-                            time.sleep(3)  # Aguardar carregamento da tela inicial
+                            # Aguardar carregamento da tela inicial
+                            time.sleep(3)
 
                             return {
                                 "sucesso": True,
@@ -2073,7 +2075,7 @@ class RPASienge(BaseRPA):
                     aba_base_calculo.update(range_update, [linha_dados])
 
                     self.log_progresso(
-                        f"✅ Contrato adicionado: {contrato.get('Cliente', 'N/A')} - {contrato.get('numero_titulo', 'N/A')}")
+                        f"✅ Contrato adicionado: {contrato.get('Cliente', 'N/A')} - {contrato.get('Titulo', 'N/A')}")
                     proxima_linha += 1
 
             self.log_progresso(
@@ -2884,7 +2886,7 @@ class RPASienge(BaseRPA):
             for linha, contrato in enumerate(dados_contratos, start=2):
                 try:
                     cliente = contrato.get('Cliente', '').strip()
-                    numero_titulo = contrato.get('numero_titulo', '').strip()
+                    numero_titulo = contrato.get('Titulo', '').strip()
 
                     if not cliente and not numero_titulo:
                         continue
@@ -3100,7 +3102,7 @@ class RPASienge(BaseRPA):
             for i, contrato in enumerate(dados_contratos, start=2):
                 cliente_planilha = str(contrato.get('Cliente', '')).strip()
                 numero_titulo_planilha = str(
-                    contrato.get('numero_titulo', '')).strip()
+                    contrato.get('Titulo', '')).strip()
 
                 # Busca flexível: ignora diferenças pequenas no nome
                 cliente_match = (cliente_planilha.lower() == cliente.strip().lower() or
@@ -4185,7 +4187,7 @@ class RPASienge(BaseRPA):
                     contratos_validos.append(contrato)
                 else:
                     self.log_progresso(
-                        f"⚠️ Contrato {contrato.get('numero_titulo')} tem pendências - carnê não será gerado")
+                        f"⚠️ Contrato {contrato.get('Titulo')} tem pendências - carnê não será gerado")
 
             parametros = {
                 "empresa": empresa,  # Nome correto da empresa
@@ -4241,20 +4243,6 @@ class RPASienge(BaseRPA):
             empresa = parametros.get("empresa", "")  # Nome correto da empresa
             contratos = parametros.get("contratos", [])
 
-            # ✅ USAR PARÂMETROS JÁ PREPARADOS: Os dados já foram calculados no main_sienge_emissao_carnes.py
-            # Não precisamos recalcular - usar os parâmetros recebidos
-            data_inicial = parametros.get("data_inicial", "")
-            data_final = parametros.get("data_final", "")
-
-            if not data_inicial or not data_final:
-                # ❌ SEM FALLBACK: Erro se datas não foram fornecidas
-                erro_msg = "Datas não fornecidas nos parâmetros - sem fallback"
-                self.log_erro(erro_msg, Exception(erro_msg))
-                return {
-                    "sucesso": False,
-                    "erro": erro_msg
-                }
-
             # ✅ EXTRAÇÃO DO CÓDIGO DA EMPRESA: De "15 - URUCUI SCP" extrair "15"
             if " - " in empresa:
                 codigo_empresa = empresa.split(" - ")[0].strip()
@@ -4262,21 +4250,35 @@ class RPASienge(BaseRPA):
             else:
                 # Se não tiver formato esperado, usar valor original
                 codigo_empresa = empresa
+                empresa_original = empresa
+
+            try:
+                conta_corrente = obter_conta_corrente_remessa(codigo_empresa)
+            except (ValueError, FileNotFoundError) as erro:
+                mensagem_erro = (
+                    f"Erro ao localizar conta corrente de remessa para a empresa "
+                    f"'{empresa_original}': {erro}"
+                )
+                self.log_erro(mensagem_erro, erro)
+                return {
+                    "sucesso": False,
+                    "erro": mensagem_erro
+                }
 
             self.log_progresso(
                 f"🎫 Executando webscraping para geração de carnê")
             self.log_progresso(f"📋 Empresa (completa): {empresa}")
             self.log_progresso(
                 f"📋 Código empresa (extraído): {codigo_empresa}")
-            self.log_progresso(f"📋 Contratos esperados: {len(contratos)}")
             self.log_progresso(
-                f"📅 Período: {data_inicial} → {data_final}")
+                f"🏦 Conta corrente de remessa: {conta_corrente}")
+            self.log_progresso(f"📋 Contratos esperados: {len(contratos)}")
 
             # 🔍 DEBUG: Listar contratos esperados
             self.log_progresso("📋 CONTRATOS ESPERADOS PARA ESTA EMPRESA:")
             for i, contrato in enumerate(contratos, 1):
-                titulo = contrato.get('numero_titulo', 'N/A')
-                cliente = contrato.get('cliente', 'N/A')
+                titulo = contrato.get('Titulo', 'N/A')
+                cliente = contrato.get('Cliente', 'N/A')
                 self.log_progresso(f"   {i}. {cliente} (Título: {titulo})")
 
             # Webscraping implementado conforme PDD 10.2
@@ -4342,11 +4344,32 @@ class RPASienge(BaseRPA):
                                 self.send_text(
                                     xpath="//input[@type='text' and @id='entity.dtIniVencimento']", text=str(data_inicial))
                             time.sleep(1)
-                            # data final
-                            data_final = parametros.get('data_final')
-                            if data_final:
+                            # data final preciso somar mais um mês na data final (lidando com transbordo de ano)
+                            data_final_str = parametros.get('data_final')
+                            if data_final_str:
+                                data_final = datetime.strptime(
+                                    data_final_str, "%d/%m/%Y")
+                                # somar um mês corretamente
+                                mes = data_final.month + 1
+                                ano = data_final.year
+                                if mes > 12:
+                                    mes = 1
+                                    ano += 1
+                                # manter o dia consistente (lidar com caso de "31/01" para "28/02" ou "29/02" em ano bissexto)
+                                dia = data_final.day
+                                try:
+                                    data_final_mais_um_mes = data_final.replace(
+                                        year=ano, month=mes, day=dia)
+                                except ValueError:
+                                    # se o dia não existir no novo mês, ir para o último dia do mês
+                                    from calendar import monthrange
+                                    ultimo_dia_mes = monthrange(ano, mes)[1]
+                                    data_final_mais_um_mes = data_final.replace(
+                                        year=ano, month=mes, day=ultimo_dia_mes)
+                                data_final_formatada = data_final_mais_um_mes.strftime(
+                                    "%d/%m/%Y")
                                 self.send_text(
-                                    xpath="//input[@type='text' and @id='entity.dtFimVencimento']", text=str(data_final))
+                                    xpath="//input[@type='text' and @id='entity.dtFimVencimento']", text=str(data_final_formatada))
                             time.sleep(1)
                             # incluir titulo inadimplente
                             self.click(
@@ -4365,7 +4388,7 @@ class RPASienge(BaseRPA):
                                     xpath='//input[@id="entity.nmConta" and @type="text"]')
                                 if nome_conta_corrente_pesquisa:
                                     self.send_text(
-                                        xpath='//input[@id="entity.nmConta" and @type="text"]', text=empresa_original)
+                                        xpath='//input[@id="entity.nmConta" and @type="text"]', text=conta_corrente)
                                     time.sleep(1)
                                     self.click(
                                         xpath='//input[@id="pbProcurar" and @type="button"]')
@@ -4422,7 +4445,7 @@ class RPASienge(BaseRPA):
                                             f"🔍 Sequencial da remessa: {sequencial_remessa_text}")
                                     # Gerar nome do arquivo conforme PDD 10.2
                                     nome_arquivo_remessa = self._gerar_nome_arquivo_remessa(
-                                        empresa=empresa,
+                                        empresa=empresa_original,
                                         numero_conta=str(
                                             numero_conta_cliente_text) if numero_conta_cliente_text else "",
                                         sequencial=int(
@@ -4490,9 +4513,6 @@ class RPASienge(BaseRPA):
                                             if contratos_encontrados:
                                                 self.log_progresso(
                                                     f"📋 CONTRATOS ENCONTRADOS NO SIENGE: {len(contratos_encontrados)}")
-                                                for i, contrato in enumerate(contratos_encontrados, 1):
-                                                    self.log_progresso(
-                                                        f"   {i}. {contrato}")
 
                                                 # 🔍 VALIDAR SE OS CONTRATOS CORRETOS FORAM ENCONTRADOS
                                                 self._validar_contratos_encontrados(
@@ -4639,15 +4659,7 @@ class RPASienge(BaseRPA):
                                                 raise Exception(
                                                     f"Erro ao processar caminho do arquivo: {str(e)} - sem fallback")
 
-                                            from core.mongodb_manager import mongodb_manager
-                                            if not mongodb_manager.conectado:
-                                                await mongodb_manager.conectar()
-
-                                            if not hasattr(mongodb_manager, 'database') or mongodb_manager.database is None:
-                                                self.log_progresso(
-                                                    "⚠️ MongoDB não conectado - não foi possível atualizar status")
-                                                return {"sucesso": False, "erro": "MongoDB não conectado"}
-                                            # ✅ CORREÇÃO: Atualizar status de TODOS os contratos processados
+                                            # ✅ CORREÇÃO: Atualizar status de TODOS os contratos processados via JSONRPAFramework
                                             dados_atualizacao = {
                                                 "arquivo_remessa": caminho_relativo,
                                                 "empresa": parametros.get("empresa"),
@@ -4707,7 +4719,7 @@ class RPASienge(BaseRPA):
             # Extrair títulos dos contratos esperados
             titulos_esperados = set()
             for contrato in contratos_esperados:
-                titulo = contrato.get('numero_titulo', '').strip()
+                titulo = contrato.get('Titulo', '').strip()
                 if titulo:
                     # ✅ CORREÇÃO: Normalizar título (string, sem espaços, sem caracteres especiais)
                     titulo_normalizado = str(titulo).strip()
@@ -4719,6 +4731,19 @@ class RPASienge(BaseRPA):
                 f"🔍 Total de títulos esperados: {len(titulos_esperados)}")
             self.log_progresso(
                 f"🔍 Títulos esperados: {sorted(titulos_esperados)}")
+
+            # Extrair data de vencimento dos contratos encontrados
+            data_vencimento_encontrada = set()
+            for contrato_str in contratos_encontrados:
+                if "Data de vencimento:" in contrato_str:
+                    data_vencimento = contrato_str.split(
+                        "Data de vencimento:")[1].strip()
+                    data_vencimento_encontrada.add(data_vencimento)
+
+            self.log_progresso(
+                f"🔍 Total de datas de vencimento encontradas: {len(data_vencimento_encontrada)}")
+            self.log_progresso(
+                f"🔍 Datas de vencimento encontradas: {sorted(data_vencimento_encontrada)}")
 
             # Extrair títulos dos contratos encontrados
             titulos_encontrados = set()
@@ -4749,18 +4774,13 @@ class RPASienge(BaseRPA):
                 f"🔍 Total de títulos encontrados: {len(titulos_encontrados)}")
             self.log_progresso(
                 f"🔍 Títulos encontrados: {sorted(titulos_encontrados)}")
-
+            self.log_progresso(
+                f"🔍 Total de datas de vencimento encontradas: {len(data_vencimento_encontrada)}")
+            self.log_progresso(
+                f"🔍 Datas de vencimento encontradas: {sorted(data_vencimento_encontrada)}")
             # Comparar
             self.log_progresso(
-                f"🔍 DEBUG: Comparando {len(titulos_esperados)} esperados vs {len(titulos_encontrados)} encontrados")
-
-            # Debug: verificar se 6152 está nos encontrados
-            if '6152' in titulos_encontrados:
-                self.log_progresso(
-                    "✅ DEBUG: Título 6152 ENCONTRADO na lista de encontrados")
-            else:
-                self.log_progresso(
-                    "❌ DEBUG: Título 6152 NÃO ENCONTRADO na lista de encontrados")
+                f"🔍 DEBUG: Comparando {len(titulos_esperados)} esperados vs {len(titulos_encontrados)} encontrados) e {len(data_vencimento_encontrada)} datas de vencimento encontradas")
 
             # Debug: verificar tipos
             exemplo_esperado = list(titulos_esperados)[
@@ -5000,23 +5020,13 @@ class RPASienge(BaseRPA):
                                 titulo = partes[0].strip()  # "17466/124"
                                 # "ADEMIR JUCHNIEVSKI"
                                 cliente = partes[1].strip()
-                                contratos_encontrados.append(
-                                    f"{cliente} (Título: {titulo})")
-                                self.log_progresso(
-                                    f"   ✅ Extraído: {cliente} - {titulo}")
-                            else:
-                                # Fallback: usar dados consolidados completos
-                                contratos_encontrados.append(
-                                    f"Dados: {dados_consolidados}")
-                                self.log_progresso(
-                                    f"   ⚠️ Formato inesperado: {dados_consolidados}")
-                        else:
+                                # Extrair data de vencimento (partes[2] contém a data completa)
+                                # Formato esperado: "25/10/2025" - pegar apenas a data
+                                data_vencimento = partes[2].strip()
+                            contratos_encontrados.append(
+                                f"{cliente} (Título: {titulo}) - Data de vencimento: {data_vencimento}")
                             self.log_progresso(
-                                f"   ⚠️ Linha {i}: Dados consolidados vazios")
-                    else:
-                        self.log_progresso(
-                            f"   ⚠️ Linha {i}: Colunas insuficientes ({len(celulas)})")
-
+                                f"   ✅ Extraído: {cliente} - {titulo} - Data de vencimento: {data_vencimento}")
                 except Exception as e:
                     self.log_progresso(
                         f"   ❌ Erro ao extrair dados da linha {i}: {str(e)}")
@@ -5149,27 +5159,21 @@ class RPASienge(BaseRPA):
             resultado_carne: Resultado da geração do carnê
         """
         try:
-            from core.mongodb_manager import mongodb_manager
+            # ✅ USAR JSONRPAFramework - PRINCIPAL (não mais fallback)
+            from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
 
-            if not mongodb_manager.conectado:
-                await mongodb_manager.conectar()
-
-            if not hasattr(mongodb_manager, 'database') or mongodb_manager.database is None:
-                self.log_progresso(
-                    "⚠️ MongoDB não conectado - não foi possível atualizar status")
-                return
-
-            collection = mongodb_manager.database.fila_contratos
             contratos_atualizados = 0
 
             for contrato in contratos:
-                numero_titulo = contrato.get("numero_titulo", "")
+                # ✅ CORREÇÃO: Usar campo correto
+                numero_titulo = contrato.get("Titulo", "")
                 if numero_titulo:
                     # Preparar dados de atualização
                     dados_atualizacao = {
                         "status": "CARNE_GERADO",
                         "resultado_final": "CARNE_GERADO",  # Corrigir inconsistência
                         "timestamp_carne_gerado": datetime.now().isoformat(),
+                        "timestamp_ultima_atualizacao": datetime.now().isoformat(),
                         # Caminho completo
                         "arquivo_remessa": resultado_carne.get("arquivo_remessa", ""),
                         # Remover duplicidade
@@ -5184,16 +5188,30 @@ class RPASienge(BaseRPA):
                         if "caminho_arquivo_metadados" in metadados:
                             dados_atualizacao["caminho_metadados_remessa"] = metadados["caminho_arquivo_metadados"]
 
-                    # Atualizar status para CARNE_GERADO com dados corretos
-                    resultado_update = collection.update_one(
-                        {"numero_titulo": numero_titulo},
-                        {"$set": dados_atualizacao}
-                    )
+                    # Buscar contrato pelo número do título
+                    contratos_encontrados = repositorio_contratos_arquivo.framework.find(
+                        {"Titulo": numero_titulo})
 
-                    if resultado_update.modified_count > 0:
-                        contratos_atualizados += 1
-                        self.log_progresso(
-                            f"✅ Status atualizado para CARNE_GERADO: {numero_titulo}")
+                    if contratos_encontrados:
+                        # Pegar o primeiro (deve ser único)
+                        contrato_encontrado = contratos_encontrados[0]
+                        contrato_id = contrato_encontrado.get("_id")
+
+                        if contrato_id:
+                            # Atualizar contrato no repositório JSON
+                            resultado = repositorio_contratos_arquivo.framework.update(
+                                contrato_id, dados_atualizacao)
+
+                            if resultado:
+                                contratos_atualizados += 1
+                                self.log_progresso(
+                                    f"✅ Status atualizado para CARNE_GERADO: {numero_titulo}")
+                            else:
+                                self.log_progresso(
+                                    f"⚠️ Falha ao atualizar contrato: {numero_titulo}")
+                        else:
+                            self.log_progresso(
+                                f"⚠️ Contrato {numero_titulo} sem ID válido")
                     else:
                         self.log_progresso(
                             f"⚠️ Contrato não encontrado para atualização: {numero_titulo}")
@@ -5211,7 +5229,7 @@ class RPASienge(BaseRPA):
 
         Regras:
         - Primeiros 5 dígitos da conta corrente (sem zero à esquerda)
-        - Número do mês (SEM zero à esquerda)
+        - Número do mês (SEM zero à esquerda) Adicional da regra.. quando for mes 10, 11 ou 12: tem que usar O, N, D ao invés de 10, 11 ou 12
         - Número do dia (SEM zero à esquerda)
         - Ponto (.)
         - Número sequencial da remessa (SEM zero à esquerda)
@@ -5235,14 +5253,14 @@ class RPASienge(BaseRPA):
             dia = data_atual.day
 
             # Regras específicas conforme PDD 10.2
-            if "RIO ALMADA" in empresa.upper():
+            if "ALMADA" in empresa.upper():
                 prefixo_conta = "06300"
                 self.log_progresso(
-                    f"🏢 Rio Almada detectado - usando prefixo: {prefixo_conta}")
-            elif "SPE RESIDENCIAL PARQUE DA LAGOA" in empresa.upper():
+                    f"🏢 Almada detectado - usando prefixo: {prefixo_conta}")
+            elif "PARQUE DA LAGOA" in empresa.upper():
                 prefixo_conta = "01870"
                 self.log_progresso(
-                    f"🏢 SPE RESIDENCIAL PARQUE DA LAGOA detectado - usando prefixo: {prefixo_conta}")
+                    f"🏢 Parque da Lagoa detectado - usando prefixo: {prefixo_conta}")
             else:
                 # Usar primeiros 5 dígitos da conta corrente (ignorando zeros à esquerda)
                 if numero_conta:
@@ -5269,6 +5287,12 @@ class RPASienge(BaseRPA):
 
             # Formatar componentes (mês sem zero à esquerda, dia com zero à esquerda)
             mes_formatado = f"{mes}"  # Sem zero à esquerda (3 em vez de 03)
+            if mes == 10:
+                mes_formatado = "O"
+            elif mes == 11:
+                mes_formatado = "N"
+            elif mes == 12:
+                mes_formatado = "D"
             # Com zero à esquerda (12 em vez de 12)
             dia_formatado = f"{dia:02d}"
             # Sem zero à esquerda (2231 em vez de 0002231)

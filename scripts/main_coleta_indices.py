@@ -8,6 +8,8 @@ Utiliza variáveis de ambiente para configuração.
 Pode ser chamado por agendadores, CI/CD ou manualmente.
 """
 from rpa_coleta_indices.rpa_coleta_indices import executar_coleta_indices
+from core.relatorio_rpa import RelatorioRPA
+from core.notificacoes_simples import notificar_sucesso, notificar_erro
 import os
 import sys
 import asyncio
@@ -59,6 +61,10 @@ async def main():
 
     log("Iniciando execução do RPA Coleta de Índices...")
 
+    # Relatório unificado
+    relatorio = RelatorioRPA("Coleta de Índices")
+    relatorio.iniciar_execucao()
+
     planilha_calculo_id = get_env_or_fail("PLANILHA_CALCULO_ID")
     credenciais_google = os.getenv(
         "GOOGLE_CREDENTIALS_PATH", "./gspread-credentials.json")
@@ -66,17 +72,63 @@ async def main():
     resultado = await executar_coleta_indices(
         planilha_id=planilha_calculo_id,
         credenciais_google=credenciais_google,
-        headless=True
+        headless=True,
+        notificar=False
     )
 
+    # Alimenta relatório
     if resultado.sucesso:
-        log(f"SUCESSO: {resultado.mensagem}")
-        sys.exit(0)
+        relatorio.adicionar_sucesso(
+            titulo="Índices coletados e planilha atualizada",
+            detalhes={"mensagem": resultado.mensagem}
+        )
     else:
-        log(f"FALHA: {resultado.mensagem}")
-        if resultado.erro:
-            log(f"Detalhe do erro: {resultado.erro}")
-        sys.exit(1)
+        relatorio.adicionar_erro(
+            titulo="Falha na coleta/atualização",
+            erro=resultado.mensagem,
+            detalhes={"detalhe": resultado.erro or ""}
+        )
+
+    relatorio.finalizar_execucao()
+
+    # Salva relatórios e notifica com anexo TXT
+    try:
+        arq_json = relatorio.salvar_relatorio_json()
+        arq_txt = relatorio.salvar_relatorio_txt()
+        log(f"Relatórios gerados: {arq_json} | {arq_txt}")
+    except Exception as e:
+        log(f"Falha ao salvar relatórios: {e}")
+        arq_txt = None
+
+    resumo = relatorio.gerar_resumo()["resumo_execucao"]
+    try:
+        if resultado.sucesso:
+            notificar_sucesso(
+                nome_rpa="RPA Coleta de Índices",
+                tempo_execucao=resumo["tempo_total"],
+                resultados={
+                    "titulo": "🎉 RPA COLETA DE ÍNDICES: Concluído",
+                    "mensagem": resultado.mensagem,
+                    "status": "concluido",
+                    "caminhos_anexos": [str(arq_txt)] if arq_txt else []
+                }
+            )
+        else:
+            notificar_erro(
+                nome_rpa="RPA Coleta de Índices",
+                erro=resultado.mensagem,
+                detalhes={
+                    "titulo": "❌ RPA COLETA DE ÍNDICES: Falhou",
+                    "mensagem": resultado.erro or resultado.mensagem,
+                    "status": "falhou",
+                    "caminhos_anexos": [str(arq_txt)] if arq_txt else []
+                }
+            )
+    except Exception as e:
+        log(f"Falha ao enviar notificação: {e}")
+
+    # Código de saída
+    sys.exit(0 if resultado.sucesso else 1)
 
 
 if __name__ == "__main__":

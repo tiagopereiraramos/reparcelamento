@@ -22,8 +22,9 @@ def log(msg):
 
 
 CAMINHO_ARQUIVO_CONTAS = Path(__file__).resolve(
-).parent.parent / "docs" / "empresas_contas_correntes.csv"
+).parent.parent / "docs" / "contacorrente.csv"
 _CACHE_CONTAS_CORRENTES: Dict[str, str] = {}
+_CACHE_CNPJS_EMPRESAS: Dict[str, str] = {}
 
 
 def _normalizar_empresa(valor: str) -> str:
@@ -53,7 +54,7 @@ def _carregar_contas_correntes() -> Dict[str, str]:
         ValueError: Se o arquivo estiver vazio ou com cabeçalho inválido.
     """
 
-    if _CACHE_CONTAS_CORRENTES:
+    if _CACHE_CONTAS_CORRENTES and _CACHE_CNPJS_EMPRESAS:
         return _CACHE_CONTAS_CORRENTES
 
     if not CAMINHO_ARQUIVO_CONTAS.exists():
@@ -63,23 +64,45 @@ def _carregar_contas_correntes() -> Dict[str, str]:
 
     with CAMINHO_ARQUIVO_CONTAS.open("r", encoding="utf-8-sig", newline="") as arquivo:
         leitor = csv.DictReader(arquivo)
-        if not leitor.fieldnames or "EMPRESA" not in leitor.fieldnames or "CONTA CORRENTE REMESSA" not in leitor.fieldnames:
+        cabecalho_esperado = {"COD. EMPRESA",
+                              "EMPRESA", "CNPJ", "CONTA CORRENTE REMESSA"}
+        if not leitor.fieldnames or not cabecalho_esperado.issubset(set(leitor.fieldnames)):
             raise ValueError(
-                "Cabeçalho do CSV de contas corrente inválido. Esperado colunas 'EMPRESA' e 'CONTA CORRENTE REMESSA'."
+                "Cabeçalho do CSV de contas corrente inválido. Esperado colunas 'COD. EMPRESA', 'EMPRESA', 'CNPJ' e 'CONTA CORRENTE REMESSA'."
             )
 
         for linha in leitor:
-            empresa = linha.get("EMPRESA")
-            conta = linha.get("CONTA CORRENTE REMESSA")
-            if not empresa or not conta:
+            codigo_empresa = linha.get("COD. EMPRESA", "")
+            empresa = linha.get("EMPRESA", "")
+            cnpj = linha.get("CNPJ", "")
+            conta = linha.get("CONTA CORRENTE REMESSA", "")
+
+            if not codigo_empresa and not empresa:
                 continue
-            chave = _normalizar_empresa(empresa)
-            if chave and chave not in _CACHE_CONTAS_CORRENTES:
-                _CACHE_CONTAS_CORRENTES[chave] = conta.strip()
+
+            chaves = []
+            if codigo_empresa:
+                chaves.append(_normalizar_empresa(codigo_empresa))
+            if empresa:
+                chaves.append(_normalizar_empresa(empresa))
+
+            for chave in chaves:
+                if not chave:
+                    continue
+                if conta:
+                    _CACHE_CONTAS_CORRENTES.setdefault(chave, conta.strip())
+                if cnpj:
+                    _CACHE_CNPJS_EMPRESAS.setdefault(chave, cnpj.strip())
 
     if not _CACHE_CONTAS_CORRENTES:
         raise ValueError(
-            "CSV de contas corrente não possui registros válidos.")
+            "CSV de contas corrente não possui registros válidos."
+        )
+
+    if not _CACHE_CNPJS_EMPRESAS:
+        raise ValueError(
+            "CSV de contas corrente não possui CNPJ válidos."
+        )
 
     return _CACHE_CONTAS_CORRENTES
 
@@ -113,6 +136,35 @@ def obter_conta_corrente_remessa(nome_empresa: str) -> str:
         )
 
     return conta
+
+
+def obter_cnpj_empresa(nome_empresa: str) -> str:
+    """Retorna o CNPJ associado à empresa informada usando o CSV de contas corrente.
+
+    Args:
+        nome_empresa: Nome da empresa conforme consta no CSV (código ou razão social).
+
+    Returns:
+        CNPJ formatado da empresa encontrada no CSV.
+
+    Raises:
+        ValueError: Quando o nome é vazio ou não há correspondência no CSV.
+        FileNotFoundError: Caso o arquivo CSV não esteja disponível no caminho esperado.
+    """
+
+    if not nome_empresa or not nome_empresa.strip():
+        raise ValueError("Nome da empresa é obrigatório para obter o CNPJ.")
+
+    _carregar_contas_correntes()
+    chave = _normalizar_empresa(nome_empresa)
+    cnpj = _CACHE_CNPJS_EMPRESAS.get(chave)
+
+    if cnpj is None:
+        raise ValueError(
+            f"Empresa '{nome_empresa}' não localizada no mapeamento de CNPJ."
+        )
+
+    return cnpj
 
 
 def sanitizar_nome_arquivo(nome: str) -> str:

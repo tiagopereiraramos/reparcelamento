@@ -2,5 +2,7 @@
 
 from .rpa_sienge import RPASienge
 from .rpa_sienge_extracao import RPAExtracaoRelatorioSienge
+from .rpa_sienge_reparcelamento import RPAReparcelamentoSienge
 from .processar_regras_extracao_inadimplencia import AtualizadorPlanilhaBase
 from .atualizar_planilha_extracao_resultados import ConfiguracaoRetroalimentacao
+from .autorizador_reparcelamentos import AutorizadorReparcelamentos, autorizar_reparcelamentos

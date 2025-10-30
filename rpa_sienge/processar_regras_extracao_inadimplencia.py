@@ -296,7 +296,8 @@ class AtualizadorPlanilhaBase:
                     continue
 
                 # Normalizar chaves para lidar com variações de espaços e maiúsculas/minúsculas
-                chaves_brutas = {(chave or '').strip()                                 : valor for chave, valor in consulta.items()}
+                chaves_brutas = {(chave or '').strip()
+                                  : valor for chave, valor in consulta.items()}
                 chaves_normalizadas = {
                     re.sub(r'\s+', ' ', chave.lower()): valor
                     for chave, valor in chaves_brutas.items()
@@ -563,7 +564,8 @@ class AtualizadorPlanilhaBase:
             mes_base_normalizado = self._normalizar_mes_reajuste(
                 mes_base) if mes_base else None
             for linha in registros:
-                colunas_brutas = {(coluna or "").strip()                                  : valor for coluna, valor in linha.items()}
+                colunas_brutas = {(coluna or "").strip()
+                                   : valor for coluna, valor in linha.items()}
                 colunas_normalizadas = {self._normalizar_texto(
                     coluna): valor for coluna, valor in colunas_brutas.items()}
 
@@ -719,6 +721,27 @@ class AtualizadorPlanilhaBase:
             if 1 <= dia <= 31:
                 return dia
 
+        return None
+
+    def extrair_original_ou_corrigido_planilha(self, registro_base: Dict[str, Dict[str, Any]]) -> Optional[str]:
+        """Obtém o tipo de reajuste configurado na planilha base para o contrato."""
+        valor = self._obter_valor_coluna_base(
+            registro_base,
+            "original ou corrigido",
+            "Original ou corrigido",
+        )
+
+        if not valor:
+            return None
+
+        valor_normalizado = self._normalizar_texto(valor)
+
+        if "original" in valor_normalizado:
+            return "original"
+        if "corrigido" in valor_normalizado:
+            return "corrigido"
+
+        log(f"⚠️ Original ou corrigido desconhecido na planilha: '{valor}'")
         return None
 
     def extrair_tipo_reajuste_planilha(self, registro_base: Dict[str, Dict[str, Any]]) -> Optional[str]:
@@ -1147,7 +1170,7 @@ class AtualizadorPlanilhaBase:
 
         return False, ""
 
-    def extrair_valor_parcela_base(self, df: pd.DataFrame, usar_valor_corrigido: bool) -> Optional[float]:
+    def extrair_valor_parcela_base(self, df: pd.DataFrame, original_ou_corrigido: str) -> Optional[float]:
         """
         Extrai o valor da parcela base conforme PDD (linhas 267-273).
 
@@ -1169,12 +1192,20 @@ class AtualizadorPlanilhaBase:
 
         # Pegar o valor da primeira parcela a vencer
         primeira_parcela = parcelas_a_vencer.iloc[0]
-        campo = "Valor corrigido" if usar_valor_corrigido else "Valor original"
+        if original_ou_corrigido == "original":
+            campo = "Valor original"
+            valor_parcela_original = primeira_parcela[campo]
+            valor_parcela_corrigido = None
+        elif original_ou_corrigido == "corrigido":
+            campo = "Valor corrigido"
+            valor_parcela_corrigido = primeira_parcela[campo]
+            valor_parcela_original = None
+        else:
+            valor_parcela_original = None
+            valor_parcela_corrigido = None
+            return None
 
-        if campo in primeira_parcela:
-            return primeira_parcela[campo]
-
-        return None
+        return valor_parcela_original, valor_parcela_corrigido
 
     def extrair_dados_iptu_planilha(self, registro_base):
         """Extrai campos de IPTU e pendências diretamente da planilha base."""
@@ -1257,6 +1288,9 @@ class AtualizadorPlanilhaBase:
                     "sucesso": False,
                     "erro": "Não foi possível extrair o dia de vencimento"
                 }
+            if dia_vencimento:
+                log(
+                    f"📅 Dia do 1º vencimento (planilha): {dia_vencimento}")
 
             fonte_dia_vencimento = "relatorio"
             fonte_dia_aniversario = "parametro"
@@ -1278,13 +1312,7 @@ class AtualizadorPlanilhaBase:
                     tipo_reajuste_usado = tipo_reajuste_planilha
                     fonte_tipo_reajuste = "planilha"
 
-                dia_vencimento_planilha = self.extrair_dia_primeiro_vencimento_planilha(
-                    registro_base)
-                if dia_vencimento_planilha:
-                    log(
-                        f"📅 Dia do 1º vencimento (planilha): {dia_vencimento_planilha}")
-                    dia_vencimento = dia_vencimento_planilha
-                    fonte_dia_vencimento = "planilha"
+                fonte_dia_vencimento = "relatorio"
 
                 dia_aniversario_planilha = self.extrair_dia_aniversario_planilha(
                     registro_base)
@@ -1296,6 +1324,14 @@ class AtualizadorPlanilhaBase:
 
                 dados_iptu_planilha = self.extrair_dados_iptu_planilha(
                     registro_base)
+
+                original_ou_corrigido_planilha = self.extrair_original_ou_corrigido_planilha(
+                    registro_base)
+                if original_ou_corrigido_planilha:
+                    log(
+                        f"🔄 Original ou corrigido (planilha): {original_ou_corrigido_planilha}")
+                    original_ou_corrigido = original_ou_corrigido_planilha
+                    fonte_original_ou_corrigido = "planilha"
 
             if not tipo_reajuste_usado:
                 tipo_reajuste_relatorio = normalizar_tipo_reajuste(
@@ -1379,11 +1415,8 @@ class AtualizadorPlanilhaBase:
                     f"🧾 Pendências adicionais {codigo_cliente}-{numero_titulo}: {status_outras}"
                 )
 
-            # Extrair valor da parcela base (tentar original primeiro, depois corrigido)
-            valor_parcela_original = self.extrair_valor_parcela_base(
-                df_contrato, False)
-            valor_parcela_corrigido = self.extrair_valor_parcela_base(
-                df_contrato, True)
+            valor_parcela_original, valor_parcela_corrigido = self.extrair_valor_parcela_base(
+                df_contrato, original_ou_corrigido)
 
             # Montar resultado com todos os dados extraídos
             resultado = {
@@ -1610,7 +1643,7 @@ class AtualizadorPlanilhaBase:
                             "PENDENCIAS SIENGE": pendencias_sienge,
                             "1º vencimento carnê": dados_contrato.get("primeiro_vencimento"),
                             "Parcelas a vencer": dados_contrato.get("parcelas_a_vencer"),
-                            "Valor da Parcela Base": dados_contrato.get("valor_parcela_original"),
+                            "Valor da Parcela Base": dados_contrato.get("valor_parcela_original") or dados_contrato.get("valor_parcela_corrigido"),
                             "_lote": lote,
                             "arquivo_origem": arquivo.name,
                             "dia_vencimento": dados_contrato.get("dia_vencimento"),
@@ -1656,6 +1689,14 @@ class ConfiguracaoProcessamento:
 def interpretar_argumentos() -> ConfiguracaoProcessamento:
     """Interpreta os argumentos CLI e devolve configuração estruturada."""
 
+    hoje = datetime.now()
+    mes_seguinte = hoje.month + 1
+    ano_seguinte = hoje.year
+    if mes_seguinte > 12:
+        mes_seguinte = 1
+        ano_seguinte += 1
+    mes_base_default = f"{mes_seguinte:02d}/{ano_seguinte}"
+
     parser = argparse.ArgumentParser(
         description='Processamento e Atualização da Planilha Base de Cálculo',
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -1678,8 +1719,8 @@ def interpretar_argumentos() -> ConfiguracaoProcessamento:
     parser.add_argument(
         '--mes-base',
         type=str,
-        default="10/2025",
-        help='Mês/ano base do reparcelamento no formato MM/AAAA (padrão: 10/2025)'
+        default=mes_base_default,
+        help=f'Mês/ano base do reparcelamento no formato MM/AAAA (padrão: {mes_base_default})'
     )
 
     parser.add_argument(

@@ -2,38 +2,101 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Sienge Carnes",
+            "name": "RPA Sicredi - Modo Produção",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/scripts/main_sienge_carnes.py",
-            "args": [
-                "-d",
-                "05-09"
-            ],
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
-                "HEADLESS": "0"
+                "PYTHONPATH": "${workspaceFolder}"
             },
-            "justMyCode": false,
-            "stopOnEntry": false
+            "args": [],
+            "justMyCode": false
         },
         {
-            "name": "Debug Sienge Carnes (Break on Entry)",
+            "name": "RPA Sicredi - Debug Empresa 9",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/scripts/main_sienge_carnes.py",
-            "args": [
-                "-d",
-                "05-09"
-            ],
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
-                "HEADLESS": "0"
+                "PYTHONPATH": "${workspaceFolder}",
+                "TESTE_EMPRESA": "9 - SPE PARQUE DA LAGOA"
             },
-            "justMyCode": false,
-            "stopOnEntry": true
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "RPA Sicredi - Modo Teste Empresa 15",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "TESTE_EMPRESA": "15 - URUCUI SCP"
+            },
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "RPA Sicredi - Modo Teste Empresa 18",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "TESTE_EMPRESA": "18 - URUCUI SCP 2"
+            },
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "RPA Sicredi - Modo Teste Empresa 3",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "TESTE_EMPRESA": "3 - BVRB"
+            },
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "RPA Sicredi - Modo Teste Empresa 10",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "TESTE_EMPRESA": "10 - RAJ"
+            },
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "RPA Sicredi - Debug Empresa 8",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/main_sicredi.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "TESTE_EMPRESA": "8 - OLIVEIRA"
+            },
+            "args": [],
+            "justMyCode": false
         }
     ]
 }

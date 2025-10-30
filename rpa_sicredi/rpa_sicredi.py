@@ -95,34 +95,11 @@ class RPASicredi(BaseRPA):
             # Faz login no Sicredi WebBank
             await self._fazer_login_sicredi()
 
-            # Carregar metadados do arquivo de remessa
-            self.log_progresso("Carregando metadados do arquivo de remessa")
-            metadados_contratos = await self._carregar_metadados_arquivo_remessa(arquivo_remessa)
-
-            if metadados_contratos:
-                self.log_progresso(
-                    f"📊 Arquivo contém {metadados_contratos.get('total_contratos_processados', 0)} contratos")
-                self.log_progresso(
-                    f"🏢 Empresa: {metadados_contratos.get('empresa', 'N/A')}")
-                self.log_progresso(
-                    f"📅 Período: {metadados_contratos.get('data_inicial', 'N/A')} → {metadados_contratos.get('data_final', 'N/A')}")
-            else:
-                self.log_progresso(
-                    "⚠️ Metadados não encontrados - processando sem informações detalhadas")
+            # Log de início do processamento
+            self.log_progresso("Iniciando processamento do arquivo de remessa")
 
             # Valida arquivo antes do upload
             self.log_progresso("Validando arquivo de remessa")
-            """ validacao_arquivo = await self._validar_arquivo_remessa(arquivo_remessa)
-
-            if not validacao_arquivo["valido"]:
-                return ResultadoRPA(
-                    sucesso=False,
-                    mensagem=f"Arquivo de remessa inválido: {validacao_arquivo['motivo']}",
-                    dados={
-                        "arquivo": arquivo_remessa,
-                        "validacao": validacao_arquivo
-                    }
-                ) """
 
             # Faz upload do arquivo de remessa
             self.log_progresso("Fazendo upload do arquivo de remessa")
@@ -133,9 +110,13 @@ class RPASicredi(BaseRPA):
                 self.log_progresso("Processando arquivo no sistema Sicredi")
                 resultado_processamento = await self._processar_arquivo_sicredi(arquivo_remessa)
             else:
+                erro_upload = resultado_upload.get(
+                    "erro", "Erro desconhecido no upload")
+                self.log_erro(f"❌ FALHA NO UPLOAD: {erro_upload}")
                 return ResultadoRPA(
                     sucesso=False,
-                    mensagem="Falha no upload do arquivo",
+                    mensagem=f"Falha no upload: {erro_upload}",
+                    erro=erro_upload,
                     dados=resultado_upload
                 )
 
@@ -159,7 +140,6 @@ class RPASicredi(BaseRPA):
                 "processamento": resultado_processamento,
                 "confirmacao": confirmacao,
                 "dados_originais": dados_processamento,
-                "metadados_contratos": metadados_contratos,
                 "timestamp_processamento": datetime.now().isoformat()
             }
 
@@ -183,68 +163,27 @@ class RPASicredi(BaseRPA):
             # Sempre faz logout
             await self._fazer_logout_sicredi()
 
-    async def _carregar_metadados_arquivo_remessa(self, arquivo_remessa: str) -> Optional[Dict[str, Any]]:
-        """
-        Carrega metadados do arquivo de remessa baseado no nome do arquivo
-
-        Args:
-            arquivo_remessa: Caminho do arquivo de remessa
-
-        Returns:
-            Metadados dos contratos ou None se não encontrado
-        """
-        try:
-            import json
-            import os
-            from pathlib import Path
-
-            # Extrair nome base do arquivo (sem extensão)
-            nome_arquivo = Path(arquivo_remessa).stem
-
-            # Procurar arquivo de metadados correspondente
-            metadados_dir = "dados_extraidos/metadados_remessa"
-            arquivo_metadados = os.path.join(
-                metadados_dir, f"dados_{nome_arquivo}.json")
-
-            if os.path.exists(arquivo_metadados):
-                with open(arquivo_metadados, 'r', encoding='utf-8') as f:
-                    metadados = json.load(f)
-
-                self.log_progresso(
-                    f"✅ Metadados carregados: {arquivo_metadados}")
-                self.log_progresso(
-                    f"📊 {metadados.get('total_contratos_processados', 0)} contratos no arquivo de remessa")
-
-                return metadados
-            else:
-                self.log_progresso(
-                    f"⚠️ Arquivo de metadados não encontrado: {arquivo_metadados}")
-                return None
-
-        except Exception as e:
-            self.log_progresso(f"❌ Erro ao carregar metadados: {str(e)}")
-            return None
-
     async def _buscar_cnpj_empresa(self, empresa_nome: str) -> Optional[str]:
-        """
-        Busca CNPJ da empresa de forma assíncrona
-        """
-        try:
-            from core.data_manager import data_manager
-            self.log_progresso(f"🔍 Buscando CNPJ para empresa: {empresa_nome}")
+        """Busca CNPJ da empresa de forma assíncrona"""
 
-            cnpj_encontrado = await data_manager.buscar_cnpj_por_empresa(empresa_nome)
+        try:
+            from core.utils_sienge import obter_cnpj_empresa
+
+            self.log_progresso(f"🔍 Buscando CNPJ para empresa: {empresa_nome}")
+            cnpj_encontrado = obter_cnpj_empresa(empresa_nome)
 
             if cnpj_encontrado:
                 self.log_progresso(f"✅ CNPJ encontrado: {cnpj_encontrado}")
             else:
                 self.log_progresso(
-                    f"⚠️ CNPJ não encontrado para empresa: {empresa_nome}")
+                    f"⚠️ CNPJ não encontrado para empresa: {empresa_nome}"
+                )
 
             return cnpj_encontrado
         except Exception as e:
             self.log_progresso(
-                f"❌ Erro ao buscar CNPJ para empresa {empresa_nome}: {str(e)}")
+                f"❌ Erro ao buscar CNPJ para empresa {empresa_nome}: {str(e)}"
+            )
             return None
 
     async def _configurar_credenciais(self, credenciais: Dict[str, Any]):
@@ -453,20 +392,39 @@ class RPASicredi(BaseRPA):
 
                 self.log_progresso("✅ Upload realizado com sucesso")
             else:
-                self.log_progresso("❌ Upload não realizado")
+                # Verificar se há mensagem de erro específica
+                try:
+                    elemento_erro = self.browser.find_element(
+                        error_xpath, condition="visible")
+                    mensagem_erro = elemento_erro.text if elemento_erro else "Dados inválidos"
+                except:
+                    mensagem_erro = "Dados inválidos"
+
+                self.log_erro(f"❌ Upload falhou: {mensagem_erro}")
                 resultado_upload = {
                     "sucesso": False,
-                    "erro": "Upload não realizado",
-                    "arquivo": arquivo_remessa
+                    "erro": f"Upload rejeitado: {mensagem_erro}",
+                    "arquivo": arquivo_remessa,
+                    "detalhes_erro": {
+                        "motivo": "Arquivo rejeitado pelo sistema Sicredi",
+                        "mensagem_sistema": mensagem_erro,
+                        "timestamp_erro": datetime.now().isoformat()
+                    }
                 }
 
             return resultado_upload
 
         except Exception as e:
+            self.log_erro(f"❌ Erro durante upload: {str(e)}")
             return {
                 "sucesso": False,
-                "erro": str(e),
-                "arquivo": arquivo_remessa
+                "erro": f"Erro técnico no upload: {str(e)}",
+                "arquivo": arquivo_remessa,
+                "detalhes_erro": {
+                    "tipo": "erro_tecnico",
+                    "excecao": str(e),
+                    "timestamp_erro": datetime.now().isoformat()
+                }
             }
 
     async def _processar_arquivo_sicredi(self, arquivo_remessa: str) -> Dict[str, Any]:
@@ -595,26 +553,83 @@ class RPASicredi(BaseRPA):
             # Carrega dados existentes ou cria lista vazia
             dados_existentes = []
             if os.path.exists(arquivo_dados):
-                with open(arquivo_dados, 'r', encoding='utf-8') as f:
-                    dados_existentes = json.load(f)
+                try:
+                    with open(arquivo_dados, 'r', encoding='utf-8') as f:
+                        dados_existentes = json.load(f)
+                except json.JSONDecodeError as e:
+                    self.log_error(
+                        f"❌ Arquivo JSON corrompido, criando novo: {str(e)}")
+                    # Cria backup do arquivo corrompido
+                    backup_path = f"{arquivo_dados}.backup_corrupted_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    os.rename(arquivo_dados, backup_path)
+                    self.log_info(
+                        f"📦 Backup do arquivo corrompido criado: {backup_path}")
+                    dados_existentes = []
+
+            # Sanitiza dados para evitar problemas de serialização
+            dados_sanitizados = self._sanitizar_dados_json(dados_processamento)
 
             # Adiciona novo registro
             novo_registro = {
                 "timestamp": datetime.now().isoformat(),
-                "dados_processamento": dados_processamento,
+                "dados_processamento": dados_sanitizados,
                 "tipo": "processamento_sicredi",
                 "status": "processado"
             }
             dados_existentes.append(novo_registro)
 
-            # Salva arquivo atualizado
+            # Salva arquivo atualizado com validação
             with open(arquivo_dados, 'w', encoding='utf-8') as f:
-                json.dump(dados_existentes, f, indent=2, ensure_ascii=False)
+                json.dump(dados_existentes, f, indent=2,
+                          ensure_ascii=False, default=str)
+
+            # Valida o arquivo salvo
+            with open(arquivo_dados, 'r', encoding='utf-8') as f:
+                json.load(f)  # Testa se o JSON é válido
 
             self.log_info(f"✅ Dados salvos localmente: {arquivo_dados}")
 
         except Exception as e:
             self.log_error(f"❌ Erro ao salvar dados localmente: {str(e)}")
+            # Em caso de erro, tenta salvar em arquivo temporário
+            try:
+                arquivo_temp = f"dados_processamento/processamentos_sicredi_temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                with open(arquivo_temp, 'w', encoding='utf-8') as f:
+                    json.dump([{
+                        "timestamp": datetime.now().isoformat(),
+                        "dados_processamento": self._sanitizar_dados_json(dados_processamento),
+                        "tipo": "processamento_sicredi",
+                        "status": "processado"
+                    }], f, indent=2, ensure_ascii=False, default=str)
+                self.log_info(
+                    f"📦 Dados salvos em arquivo temporário: {arquivo_temp}")
+            except Exception as e2:
+                self.log_error(f"❌ Falha crítica ao salvar dados: {str(e2)}")
+
+    def _sanitizar_dados_json(self, dados: Any) -> Any:
+        """
+        Sanitiza dados para evitar problemas de serialização JSON
+
+        Args:
+            dados: Dados a serem sanitizados
+
+        Returns:
+            Dados sanitizados
+        """
+        if isinstance(dados, dict):
+            return {k: self._sanitizar_dados_json(v) for k, v in dados.items()}
+        elif isinstance(dados, list):
+            return [self._sanitizar_dados_json(item) for item in dados]
+        elif isinstance(dados, (datetime,)):
+            return dados.isoformat()
+        elif hasattr(dados, '__dict__'):
+            # Para objetos customizados, converte para dict
+            return self._sanitizar_dados_json(dados.__dict__)
+        elif isinstance(dados, (int, float, str, bool, type(None))):
+            return dados
+        else:
+            # Para outros tipos, converte para string
+            return str(dados)
 
     async def _fazer_logout_sicredi(self):
         """

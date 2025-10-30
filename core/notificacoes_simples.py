@@ -5,25 +5,17 @@ Notificações por email usando Google Gmail API com conta de serviço
 Desenvolvido em Português Brasileiro
 """
 
-import logging
 import json
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
-import os
-import base64
-from datetime import datetime
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import Dict, List, Any, Optional
+import os
 from enum import Enum
 from core.logger_avancado import LoggerAvancado
 import traceback
 from dotenv import load_dotenv
-from pathlib import Path
 
 load_dotenv()
 
@@ -297,6 +289,52 @@ class GeradorTemplates:
                 </ul>
             </div>
             """
+
+            # ✅ NOVO: Seção de anexos
+            anexos_total = []
+            if 'caminhos_anexos' in resultados:
+                caminhos_anexos = resultados['caminhos_anexos']
+                if isinstance(caminhos_anexos, list):
+                    anexos_total.extend(caminhos_anexos)
+                elif isinstance(caminhos_anexos, dict):
+                    for categoria_anexos in caminhos_anexos.values():
+                        if isinstance(categoria_anexos, list):
+                            anexos_total.extend(categoria_anexos)
+                        elif isinstance(categoria_anexos, str):
+                            anexos_total.append(categoria_anexos)
+                elif isinstance(caminhos_anexos, str):
+                    anexos_total.append(caminhos_anexos)
+
+            if anexos_total:
+                conteudo += """
+                <div style=\"background-color: #d4edda; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; margin-top: 20px;\">
+                    <h4 style=\"margin-top: 0; color: #155724;\">📎 Anexos Incluídos ({}) arquivo(s)</h4>
+                    <p style=\"margin: 10px 0; color: #155724;\">Os seguintes arquivos foram anexados a este e-mail para sua análise detalhada:</p>
+                    <ul style=\"margin: 10px 0; padding-left: 20px; color: #155724;\">
+                """.format(len(anexos_total))
+
+                for anexo in anexos_total:
+                    nome_arquivo = os.path.basename(
+                        anexo) if os.path.exists(anexo) else anexo
+                    tamanho = ""
+                    if os.path.exists(anexo):
+                        tamanho_bytes = os.path.getsize(anexo)
+                        if tamanho_bytes < 1024:
+                            tamanho = f" ({tamanho_bytes} bytes)"
+                        elif tamanho_bytes < 1024 * 1024:
+                            tamanho = f" ({tamanho_bytes / 1024:.1f} KB)"
+                        else:
+                            tamanho = f" ({tamanho_bytes / (1024 * 1024):.1f} MB)"
+
+                    conteudo += f"<li><strong>{nome_arquivo}</strong>{tamanho}</li>"
+
+                conteudo += """
+                    </ul>
+                    <p style=\"margin: 10px 0 0 0; color: #155724; font-size: 14px; font-style: italic;\">
+                        💡 Dica: Abra os anexos Excel para visualizar os dados detalhados e fazer análises customizadas.
+                    </p>
+                </div>
+                """
         # Adiciona o relatório detalhado, se existir
         relatorio = resultados.get("relatorio")
         if relatorio:

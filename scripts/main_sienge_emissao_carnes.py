@@ -23,11 +23,11 @@ from core.gerador_anexos import gerador_anexos
 from core.templates_relatorios import templates_relatorios
 import os
 import sys
+from pathlib import Path
 import asyncio
 import argparse
 import traceback
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 # Garante execução com browser visível para debug
@@ -76,36 +76,41 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 async def obter_contratos_reparcelados() -> List[Dict[str, Any]]:
     """
-    FASE 1: Buscar contratos com status REPARCELADO no banco
+    FASE 1: Buscar contratos com status REPARCELADO no repositório JSON
 
     Returns:
         Lista de contratos com status REPARCELADO
     """
-    log("\n💾 FASE 1: BUSCANDO CONTRATOS REPARCELADOS NO BANCO...")
+    log("\n💾 FASE 1: BUSCANDO CONTRATOS REPARCELADOS NO REPOSITÓRIO JSON...")
     log("=" * 60)
 
     try:
-        # ✅ USAR MESMO PADRÃO DO alterar_status_direto.py
-        from core.mongodb_manager import MongoDBManager
-
-        # Conectar ao MongoDB
-        mongo_manager = MongoDBManager()
-        await mongo_manager.conectar()
-        db = mongo_manager.database
-        colecao = db.fila_contratos
+        # ✅ USAR JSONRPAFramework - PRINCIPAL (não mais fallback)
+        from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
 
         # Buscar contratos com status REPARCELADO
-        contratos_reparcelados = list(colecao.find({"status": "REPARCELADO"}))
+        contratos_reparcelados = repositorio_contratos_arquivo.framework.find(
+            {"status": "REPARCELADO"})
+
+        # 🔍 DEBUG: Verificar estrutura dos contratos encontrados
+        if contratos_reparcelados:
+            log(f"🔍 DEBUG: Primeiro contrato encontrado:")
+            primeiro_contrato = contratos_reparcelados[0]
+            log(f"   📋 Chaves disponíveis: {list(primeiro_contrato.keys())}")
+            log(f"   📋 Código Cliente: '{primeiro_contrato.get('Código Cliente', 'N/A')}'")
+            log(f"   📋 Cliente: '{primeiro_contrato.get('Cliente', 'N/A')}'")
+            log(f"   📋 Título: '{primeiro_contrato.get('Titulo', 'N/A')}'")
+            log(f"   📋 Status: '{primeiro_contrato.get('status', 'N/A')}'")
 
         if not contratos_reparcelados:
-            log("⚠️ Nenhum contrato com status REPARCELADO encontrado no banco")
+            log("⚠️ Nenhum contrato com status REPARCELADO encontrado no repositório")
             return []
 
         log(f"✅ Encontrados {len(contratos_reparcelados)} contratos com status REPARCELADO:")
         for i, contrato in enumerate(contratos_reparcelados[:5], 1):
-            codigo_cliente = contrato.get('codigo_cliente', 'N/A')
-            cliente = contrato.get('cliente', 'N/A')
-            numero_titulo = contrato.get('numero_titulo', 'N/A')
+            codigo_cliente = contrato.get('Código Cliente', 'N/A')
+            cliente = contrato.get('Cliente', 'N/A')
+            numero_titulo = contrato.get('Titulo', 'N/A')
             log(f"   {i}. {codigo_cliente} - {cliente} (Título: {numero_titulo})")
 
         if len(contratos_reparcelados) > 5:
@@ -205,9 +210,9 @@ def associar_contratos_com_planilha(contratos_reparcelados: List[Dict[str, Any]]
     contratos_nao_encontrados = []
 
     for contrato in contratos_reparcelados:
-        codigo_cliente = contrato.get('codigo_cliente', '').strip()
-        numero_titulo = contrato.get('numero_titulo', '').strip()
-        cliente = contrato.get('cliente', 'N/A')
+        codigo_cliente = contrato.get('Código Cliente', '').strip()
+        numero_titulo = contrato.get('Titulo', '').strip()
+        cliente = contrato.get('Cliente', 'N/A')
 
         if not codigo_cliente or not numero_titulo:
             log(f"⚠️ Contrato {cliente} sem código_cliente ou número_titulo válidos")
@@ -235,9 +240,9 @@ def associar_contratos_com_planilha(contratos_reparcelados: List[Dict[str, Any]]
     if contratos_nao_encontrados:
         log(f"\n⚠️ CONTRATOS NÃO ENCONTRADOS NA PLANILHA:")
         for contrato in contratos_nao_encontrados:
-            codigo = contrato.get('codigo_cliente', 'N/A')
-            titulo = contrato.get('numero_titulo', 'N/A')
-            cliente = contrato.get('cliente', 'N/A')
+            codigo = contrato.get('Código Cliente', 'N/A')
+            titulo = contrato.get('Titulo', 'N/A')
+            cliente = contrato.get('Cliente', 'N/A')
             log(f"   ❌ {cliente} (Código: {codigo}, Título: {titulo})")
 
         log(f"\n📋 CONTINUANDO COM {len(contratos_associados)} CONTRATOS ENCONTRADOS")
@@ -576,7 +581,7 @@ async def executar_fase_geracao_carnes(rpa: RPASienge, contratos_aptos: List[Dic
 
 async def vincular_arquivos_gerados_banco(resultado_carnes: Dict[str, Any]) -> Dict[str, Any]:
     """
-    FASE 6: Vincular arquivos de remessa gerados aos contratos no banco
+    FASE 6: Vincular arquivos de remessa gerados aos contratos no repositório JSON
 
     Args:
         resultado_carnes: Resultado da geração de carnês
@@ -584,37 +589,39 @@ async def vincular_arquivos_gerados_banco(resultado_carnes: Dict[str, Any]) -> D
     Returns:
         Resultado da vinculação
     """
-    log("\n🔗 FASE 6: VINCULANDO ARQUIVOS GERADOS AOS CONTRATOS NO BANCO...")
+    log("\n🔗 FASE 6: VINCULANDO ARQUIVOS GERADOS AOS CONTRATOS NO REPOSITÓRIO...")
     log("=" * 60)
 
     try:
-        # ✅ USAR MESMO PADRÃO DO alterar_status_direto.py
-        from core.mongodb_manager import MongoDBManager
+        # ✅ USAR JSONRPAFramework - PRINCIPAL (não mais fallback)
+        from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
 
         # Verificar se há carnês gerados com sucesso
-        carnes_sucesso = resultado_carnes.get("detalhes_carnes_sucesso", [])
+        carnes_gerados = resultado_carnes.get("carnês_gerados", [])
 
-        if not carnes_sucesso:
+        if not carnes_gerados:
             log("⚠️ Nenhum carnê foi gerado com sucesso para vincular")
             return {"sucesso": True, "contratos_vinculados": 0}
 
-        # Conectar ao MongoDB
-        mongo_manager = MongoDBManager()
-        await mongo_manager.conectar()
-        db = mongo_manager.database
-        colecao = db.fila_contratos
-
         contratos_vinculados = 0
 
-        for carne in carnes_sucesso:
-            numero_titulo = carne.get("numero_titulo", "")
+        for carne in carnes_gerados:
             arquivo_remessa = carne.get("arquivo_remessa", "")
+            # Lista de números de título
+            contratos_empresa = carne.get("contratos", [])
 
-            if numero_titulo and arquivo_remessa:
+            if arquivo_remessa and contratos_empresa:
+                # Atualizar cada contrato da empresa
+                for numero_titulo in contratos_empresa:
+                    if numero_titulo and numero_titulo != 'N/A':
                 # Buscar contrato pelo número do título
-                contrato = colecao.find_one({"numero_titulo": numero_titulo})
+                        contratos_encontrados = repositorio_contratos_arquivo.framework.find(
+                            {"Titulo": numero_titulo})
 
-                if contrato:
+                        if contratos_encontrados:
+                            # Pegar o primeiro (deve ser único)
+                            contrato = contratos_encontrados[0]
+
                     # Preparar dados de atualização
                     update_data = {
                         "status": "CARNE_GERADO",
@@ -623,32 +630,36 @@ async def vincular_arquivos_gerados_banco(resultado_carnes: Dict[str, Any]) -> D
                         "timestamp_ultima_atualizacao": datetime.now().isoformat()
                     }
 
-                    # Atualizar contrato
-                    resultado = colecao.update_one(
-                        {"_id": contrato["_id"]},
-                        {"$set": update_data}
-                    )
+                            # Atualizar contrato no repositório JSON
+                            contrato_id = contrato.get("_id")
+                            if contrato_id:
+                                resultado = repositorio_contratos_arquivo.framework.update(
+                                    contrato_id, update_data)
 
-                    if resultado.modified_count > 0:
+                                if resultado:
                         contratos_vinculados += 1
-                        log(f"✅ Contrato {numero_titulo} vinculado ao arquivo {arquivo_remessa}")
+                                    log(
+                                        f"✅ Contrato {numero_titulo} vinculado ao arquivo {arquivo_remessa}")
                     else:
-                        log(f"❌ Falha ao vincular contrato {numero_titulo}")
+                                    log(
+                                        f"❌ Falha ao vincular contrato {numero_titulo}")
                 else:
-                    log(f"❌ Contrato {numero_titulo} não encontrado no banco")
+                                log(f"❌ Contrato {numero_titulo} sem ID válido")
+                        else:
+                            log(f"❌ Contrato {numero_titulo} não encontrado no repositório")
 
         log(f"✅ Vinculação concluída: {contratos_vinculados} contratos vinculados")
 
         return {
             "sucesso": True,
             "contratos_vinculados": contratos_vinculados,
-            "arquivos_vinculados": len(carnes_sucesso)
+            "arquivos_vinculados": len(carnes_gerados)
         }
 
     except Exception as e:
-        log(f"❌ Erro ao vincular arquivos ao banco: {str(e)}")
+        log(f"❌ Erro ao vincular arquivos ao repositório: {str(e)}")
         raise Exception(
-            f"Erro ao vincular arquivos ao banco: {str(e)} - sem fallback")
+            f"Erro ao vincular arquivos ao repositório: {str(e)} - sem fallback")
 
 
 async def main():
@@ -739,6 +750,9 @@ Exemplos de uso:
         # Finalizar RPA
         await rpa.finalizar()
 
+        # ✅ NOTA: Atualização do último reajuste será executada via cron separadamente
+        log("ℹ️ Atualização do último reajuste será executada via cron separadamente")
+
         # ✅ FASE 6 REMOVIDA: O RPA já vincula os arquivos ao banco automaticamente
         # resultado_vinculacao = await vincular_arquivos_gerados_banco(resultado_carnes)
 
@@ -826,9 +840,9 @@ Exemplos de uso:
             if contratos_nao_encontrados:
                 detalhes_erro += f"\n\n📋 CONTRATOS NÃO ENCONTRADOS NA PLANILHA ({len(contratos_nao_encontrados)}):\n"
                 for contrato in contratos_nao_encontrados:
-                    codigo = contrato.get('codigo_cliente', 'N/A')
-                    titulo = contrato.get('numero_titulo', 'N/A')
-                    cliente = contrato.get('cliente', 'N/A')
+                    codigo = contrato.get('Código Cliente', 'N/A')
+                    titulo = contrato.get('Titulo', 'N/A')
+                    cliente = contrato.get('Cliente', 'N/A')
                     detalhes_erro += f"   ❌ {cliente} (Código: {codigo}, Título: {titulo})\n"
 
         html_erro = templates_relatorios.relatorio_erro(

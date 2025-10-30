@@ -13,7 +13,8 @@ Cada etapa pode ser executada isoladamente conforme flags da CLI.
 
 from __future__ import annotations
 from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
-from core.notificacoes_simples import notificar_inicio
+from core.notificacoes_simples import notificar_inicio, notificar_sucesso, notificar_erro
+from core.relatorio_rpa import RelatorioRPA
 from rpa_sienge.atualizar_planilha_extracao_resultados import (
     construir_configuracao,
     executar_atualizacao,
@@ -30,6 +31,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from datetime import datetime
 
 RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
@@ -45,6 +47,14 @@ def carregar_json(path: Path) -> Dict[str, Any]:
 
 def montar_argumentos() -> argparse.Namespace:
     """Constrói o parser de argumentos principal do pipeline."""
+
+    hoje = datetime.now()
+    mes_seguinte = hoje.month + 1
+    ano_seguinte = hoje.year
+    if mes_seguinte > 12:
+        mes_seguinte = 1
+        ano_seguinte += 1
+    mes_base_default = f"{mes_seguinte:02d}/{ano_seguinte}"
 
     parser = argparse.ArgumentParser(
         description="Executa extração, processamento e retroalimentação do fluxo Sienge",
@@ -102,8 +112,8 @@ def montar_argumentos() -> argparse.Namespace:
     parser.add_argument(
         "--mes-base",
         type=str,
-        default="10/2025",
-        help="Mês/ano base do reparcelamento para processamento de regras.",
+        default=mes_base_default,
+        help=f"Mês/ano base do reparcelamento para processamento de regras (padrão: {mes_base_default}).",
     )
     # Parâmetros de regras passam a ser derivados da planilha; evita sobrescrever lógica
     parser.add_argument(
@@ -351,8 +361,108 @@ def escrever_saida(caminho: Path, dados: Dict[str, Any]) -> None:
 
 def main() -> None:
     """Função principal síncrona da CLI."""
+    # Executa pipeline e, ao final, envia notificação com anexos TXT/CSV
+    relatorio = RelatorioRPA("Extracao Relatorio Sienge")
+    relatorio.iniciar_execucao()
 
-    asyncio.run(main_async())
+    args = montar_argumentos()
+    resultados_csv = Path(args.resultados_csv)
+    resultados_txt = Path("resultados_processamento.txt")
+
+    sucesso = True
+    erro_msg = ""
+    try:
+        asyncio.run(main_async())
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        sucesso = False
+        erro_msg = str(e)
+    finally:
+        relatorio.finalizar_execucao()
+
+    # Alimenta relatório e envia notificação
+    anexos: List[str] = []
+    metricas: Dict[str, Any] = {}
+
+    try:
+        if resultados_txt.exists():
+            anexos.append(str(resultados_txt))
+            # Tenta extrair métricas básicas do TXT (JSON embutido)
+            try:
+                conteudo = resultados_txt.read_text(encoding="utf-8")
+                import json as _json
+                # procura primeira chave '{' e ultima '}' para extrair bloco JSON
+                ini = conteudo.find("{")
+                fim = conteudo.rfind("}")
+                if ini != -1 and fim != -1 and fim > ini:
+                    blob = conteudo[ini:fim+1]
+                    dados_txt = _json.loads(blob)
+                    est = dados_txt.get("estatisticas", {})
+                    metricas.update({
+                        "arquivos_processados": est.get("arquivos_processados"),
+                        "contratos_processados": est.get("contratos_processados"),
+                        "contratos_sucesso": est.get("contratos_sucesso"),
+                        "erros": est.get("erros"),
+                    })
+            except Exception:
+                pass
+
+        if resultados_csv.exists():
+            anexos.append(str(resultados_csv))
+    except Exception:
+        pass
+
+    relatorio.set_metricas(metricas)
+
+    if sucesso:
+        relatorio.adicionar_sucesso(
+            "Pipeline concluído",
+            {"mensagem": "Extração/Regras/Retro executados com sucesso",
+             **metricas}
+        )
+    else:
+        relatorio.adicionar_erro(
+            "Falha no pipeline",
+            erro_msg or "Erro desconhecido"
+        )
+
+    try:
+        arq_json = relatorio.salvar_relatorio_json()
+        arq_txt_rel = relatorio.salvar_relatorio_txt()
+        anexos.append(str(arq_txt_rel))
+        # Não anexamos o JSON genérico por padrão; mantemos local para suporte
+    except Exception:
+        pass
+
+    resumo = relatorio.gerar_resumo()["resumo_execucao"]
+
+    try:
+        if sucesso:
+            notificar_sucesso(
+                nome_rpa="RPA Extração/Processamento Sienge",
+                tempo_execucao=resumo.get("tempo_total", "0s"),
+                resultados={
+                    "titulo": "🎉 RPA SIENGE: Processamento concluído",
+                    "mensagem": (
+                        f"Arquivos: {metricas.get('arquivos_processados','-')} | "
+                        f"Contratos: {metricas.get('contratos_processados','-')} | "
+                        f"Sucesso: {metricas.get('contratos_sucesso','-')} | "
+                        f"Erros: {metricas.get('erros','-')}"
+                    ),
+                    "status": "concluido",
+                    "caminhos_anexos": anexos
+                }
+            )
+        else:
+            detalhes_txt = (
+                "❌ RPA SIENGE: Falha no processamento\n" + (erro_msg or "")
+            )
+            notificar_erro(
+                nome_rpa="RPA Extração/Processamento Sienge",
+                erro="Falha no pipeline",
+                detalhes=detalhes_txt
+            )
+    except Exception as e:
+        print(f"⚠️ Falha ao enviar notificação final: {e}")
 
 
 if __name__ == "__main__":

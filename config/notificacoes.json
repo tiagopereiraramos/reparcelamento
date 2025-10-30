@@ -1,8 +1,7 @@
 {
     "habilitado": true,
     "destinatarios": [
-        "tiagopereiraramos@gmail.com",
-        "patriciasena@trajetoriaconsultoria.com.br"
+        "tiagopereiraramos@gmail.com"
     ],
     "eventos": {
         "rpa_concluido": true,

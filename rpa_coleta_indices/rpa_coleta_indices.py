@@ -28,6 +28,7 @@ from PyPDF2 import PdfReader
 import requests
 import aiohttp
 import re
+from core.repositorio_indices_arquivo import repositorio_indices_arquivo
 
 # Adiciona o diretório raiz ao Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -49,6 +50,7 @@ class RPAColetaIndices(BaseRPA):
             super().__init__(nome_rpa="Coleta_Indices", usar_browser=True)
         self.cliente_sheets = None
         self.rastreamento = None
+        self.repositorio_indices = repositorio_indices_arquivo
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -921,21 +923,20 @@ class RPAColetaIndices(BaseRPA):
             indices_data = {
                 "ipca": dados_ipca,
                 "igpm": dados_igpm,
-                "planilha_id": planilha_id
             }
 
-            resultados_salvamento = await data_manager.salvar_indices_economicos(indices_data)
+            resultado = self.repositorio_indices.salvar_indices(
+                indices_data.values(), planilha_id
+            )
 
-            # Log do resultado
-            if resultados_salvamento.get("json") == "sucesso":
-                self.log_progresso(
-                    "✅ Índices salvos com sucesso (sistema híbrido)")
-            else:
-                self.log_progresso("⚠️ Falha ao salvar índices")
+            self.log_progresso(
+                "✅ Índices salvos no armazenamento transacional: "
+                f"{resultado['inseridos']} inseridos | {resultado['atualizados']} atualizados | "
+                f"{resultado['erros']} erros"
+            )
 
         except Exception as e:
             self.log_progresso(f"❌ Erro crítico ao salvar índices: {str(e)}")
-            # Log de erro mas não tenta fallback local que cria arquivo errado
 
     async def verificar_saude(self) -> Dict[str, Any]:
         """
@@ -1028,7 +1029,8 @@ class RPAColetaIndices(BaseRPA):
 async def executar_coleta_indices(
     planilha_id: str,
     credenciais_google: Optional[str] = None,
-    headless: Optional[bool] = None
+    headless: Optional[bool] = None,
+    notificar: bool = False
 ) -> ResultadoRPA:
     """
     Função auxiliar para executar coleta de índices de forma independente
@@ -1060,29 +1062,31 @@ async def executar_coleta_indices(
 
         resultado = await rpa.executar_com_monitoramento(parametros)
 
-        # Notificações automáticas
-        if resultado.sucesso:
-            notificar_sucesso(
-                "RPA Coleta de Índices",
-                f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
-                resultados=resultado.dados
-            )
-        else:
-            notificar_erro(
-                "RPA Coleta de Índices",
-                erro=resultado.mensagem,
-                detalhes=resultado.erro or "Erro desconhecido"
-            )
+        # Notificações automáticas opcionais (preferimos centralizar no main)
+        if notificar:
+            if resultado.sucesso:
+                notificar_sucesso(
+                    "RPA Coleta de Índices",
+                    f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
+                    resultados=resultado.dados
+                )
+            else:
+                notificar_erro(
+                    "RPA Coleta de Índices",
+                    erro=resultado.mensagem,
+                    detalhes=resultado.erro or "Erro desconhecido"
+                )
 
         return resultado
 
     except Exception as e:
         erro_msg = f"Erro crítico na execução: {str(e)}"
-        notificar_erro(
-            "RPA Coleta de Índices",
-            erro=erro_msg,
-            detalhes=str(e)
-        )
+        if notificar:
+            notificar_erro(
+                "RPA Coleta de Índices",
+                erro=erro_msg,
+                detalhes=str(e)
+            )
         return ResultadoRPA(
             sucesso=False,
             mensagem=erro_msg,
