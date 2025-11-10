@@ -1,7 +1,9 @@
 {
     "habilitado": true,
     "destinatarios": [
-        "tiagopereiraramos@gmail.com"
+        "tiagopereiraramos@gmail.com",
+        "patriciasena@trajetoriaconsultoria.com.br",
+        "comercial@rorato.adm.br"
     ],
     "eventos": {
         "rpa_concluido": true,

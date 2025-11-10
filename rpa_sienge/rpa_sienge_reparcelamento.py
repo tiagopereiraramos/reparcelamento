@@ -26,6 +26,7 @@ from core.base_rpa import BaseRPA, ResultadoRPA
 from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
 from core.status_contratos import StatusContrato
 from core.utils_sienge import carregar_credenciais_sienge, log
+from core.rastreamento_unificado import iniciar_rastreamento
 
 
 @dataclass
@@ -85,6 +86,7 @@ class RPAReparcelamentoSienge(BaseRPA):
         )
         self.logado_sienge = False
         self.credenciais_sienge: Dict[str, str] = {}
+        self.rastreamento = None
 
     async def executar(self, limite: int = 0) -> ResultadoRPA:
         """Processa contratos com status ``APROVACAO_REALIZADA`` da fila."""
@@ -100,9 +102,28 @@ class RPAReparcelamentoSienge(BaseRPA):
 
         log(f"🔧 Iniciando reparcelamento de {len(contratos)} contrato(s)...")
 
+        # Inicializar rastreamento
+        try:
+            self.rastreamento = iniciar_rastreamento("RPA_Sienge_Reparcelamento")
+            await self.rastreamento.registrar_inicio_rpa({
+                "total_contratos": len(contratos),
+                "limite": limite
+            })
+        except Exception:
+            pass  # Não quebra se rastreamento falhar
+
         self.credenciais_sienge = await carregar_credenciais_sienge()
         await self.inicializar()
         await self._fazer_login_sienge()
+        
+        # Registrar login no rastreamento
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_login_sistema(
+                    "sienge", self.credenciais_sienge.get("usuario", ""), self.logado_sienge
+                )
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
 
         contratos_sucesso: List[Dict[str, Any]] = []
         contratos_erro: List[Dict[str, Any]] = []
@@ -121,6 +142,21 @@ class RPAReparcelamentoSienge(BaseRPA):
             )
 
             try:
+                # Registrar início do processamento do contrato
+                if self.rastreamento:
+                    try:
+                        await self.rastreamento.registrar_passo(
+                            f"PROCESSAR_REPARCELAMENTO_{contrato.numero_titulo}",
+                            {
+                                "numero_titulo": contrato.numero_titulo,
+                                "codigo_cliente": contrato.codigo_cliente,
+                                "cliente": contrato.cliente
+                            },
+                            categoria="OPERACAO"
+                        )
+                    except Exception:
+                        pass  # Não quebra se rastreamento falhar
+                
                 resultado = await self._processar_reparcelamento(contrato)
 
                 if resultado.sucesso:
@@ -149,6 +185,18 @@ class RPAReparcelamentoSienge(BaseRPA):
                     })
             except Exception as erro:  # pylint: disable=broad-except
                 mensagem = str(erro)
+                
+                # Registrar erro no rastreamento
+                if self.rastreamento:
+                    try:
+                        await self.rastreamento.registrar_erro_critico(erro, {
+                            "contrato": contrato.numero_titulo,
+                            "codigo_cliente": contrato.codigo_cliente,
+                            "fase": "reparcelamento"
+                        })
+                    except Exception:
+                        pass  # Não quebra se rastreamento falhar
+                
                 self._registrar_falha(contrato, mensagem)
                 contratos_erro.append({
                     "numero_titulo": contrato.numero_titulo,
@@ -160,17 +208,27 @@ class RPAReparcelamentoSienge(BaseRPA):
 
         await self.finalizar()
 
+        resultado_final = {
+            "contratos_processados": len(contratos_sucesso),
+            "contratos_erro": contratos_erro,
+            "contratos_sucesso": contratos_sucesso,
+        }
+
+        # Finalizar rastreamento
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_sucesso_rpa(resultado_final)
+                await self.rastreamento.finalizar_rastreamento()
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
+
         return ResultadoRPA(
             sucesso=len(contratos_erro) == 0,
             mensagem=(
                 "Reparcelamento concluído." if not contratos_erro
                 else f"Reparcelamento concluído com {len(contratos_erro)} erro(s)."
             ),
-            dados={
-                "contratos_processados": len(contratos_sucesso),
-                "contratos_erro": contratos_erro,
-                "contratos_sucesso": contratos_sucesso,
-            },
+            dados=resultado_final,
         )
 
     def _buscar_contratos_aptos(self, limite: int = 0) -> List[ContratoFila]:
@@ -249,6 +307,17 @@ class RPAReparcelamentoSienge(BaseRPA):
         if not url_sienge:
             raise ValueError("URL do Sienge não configurada.")
 
+        # Registrar tentativa de login
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_passo(
+                    "TENTATIVA_LOGIN_SIENGE",
+                    {"url_sienge": url_sienge, "usuario": usuario_sienge},
+                    categoria="OPERACAO"
+                )
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
+
         self.get_page(url_sienge)
         time.sleep(3)
 
@@ -274,6 +343,16 @@ class RPAReparcelamentoSienge(BaseRPA):
             )
 
         self.logado_sienge = True
+        
+        # Registrar login bem-sucedido
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_login_sistema(
+                    "sienge", usuario_sienge, True
+                )
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
+        
         time.sleep(5)
 
         if self.check_for_error(

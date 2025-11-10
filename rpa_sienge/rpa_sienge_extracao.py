@@ -23,6 +23,7 @@ import pandas as pd
 
 from core.base_rpa import BaseRPA, ResultadoRPA
 from core.utils_sienge import carregar_credenciais_sienge
+from core.rastreamento_unificado import iniciar_rastreamento
 
 # As importações de selenium permanecem alinhadas ao módulo original
 from selenium.webdriver.common.by import By
@@ -51,6 +52,7 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
         self.credenciais_sienge: Dict[str, str] = {}
         self.pasta_planilhas = Path("dados_extraidos/planilhas_sienge")
         self.pasta_planilhas.mkdir(parents=True, exist_ok=True)
+        self.rastreamento = None
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """Executa a extração utilizando a fila de contratos pendentes."""
@@ -72,9 +74,28 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
             f"Iniciando extração de {len(contratos)} contrato(s) pendente(s)."
         )
 
+        # Inicializar rastreamento
+        try:
+            self.rastreamento = iniciar_rastreamento("RPA_Sienge_Extracao")
+            await self.rastreamento.registrar_inicio_rpa({
+                "total_contratos": len(contratos),
+                "limite": limite
+            })
+        except Exception:
+            pass  # Não quebra se rastreamento falhar
+
         self._configurar_credenciais(credenciais)
         await self.inicializar()
         await self._fazer_login_sienge()
+        
+        # Registrar login no rastreamento
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_login_sistema(
+                    "sienge", credenciais.get("usuario", ""), self.logado_sienge
+                )
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
 
         contratos_processados: List[Dict[str, Any]] = []
         erros: List[Dict[str, Any]] = []
@@ -82,6 +103,22 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
         for contrato_raw in contratos:
             try:
                 contrato = self._validar_contrato(contrato_raw)
+                
+                # Registrar início da extração
+                if self.rastreamento:
+                    try:
+                        await self.rastreamento.registrar_passo(
+                            f"EXTRAIR_RELATORIO_{contrato.numero_titulo}",
+                            {
+                                "codigo_cliente": contrato.codigo_cliente,
+                                "numero_titulo": contrato.numero_titulo,
+                                "cliente": contrato.cliente
+                            },
+                            categoria="OPERACAO"
+                        )
+                    except Exception:
+                        pass  # Não quebra se rastreamento falhar
+                
                 self.log(
                     f"Exportando relatório para contrato {contrato.codigo_cliente}-{contrato.numero_titulo}."
                 )
@@ -110,6 +147,17 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
                     f"Contrato {contrato.numero_titulo} atualizado para AGUARDANDO_APROVACAO."
                 )
             except Exception as erro:
+                # Registrar erro no rastreamento
+                if self.rastreamento:
+                    try:
+                        await self.rastreamento.registrar_erro_critico(erro, {
+                            "contrato": contrato_raw.get("numero_titulo"),
+                            "codigo_cliente": contrato_raw.get("codigo_cliente"),
+                            "fase": "extracao_relatorio"
+                        })
+                    except Exception:
+                        pass  # Não quebra se rastreamento falhar
+                
                 await self._atualizar_status_contrato(
                     numero_titulo=str(contrato_raw.get("numero_titulo", "")),
                     status="ERRO",
@@ -138,14 +186,24 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
 
         self.log(mensagem)
 
+        resultado_final = {
+            "contratos_processados": len(contratos_processados),
+            "contratos": contratos_processados,
+            "erros": erros,
+        }
+
+        # Finalizar rastreamento
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_sucesso_rpa(resultado_final)
+                await self.rastreamento.finalizar_rastreamento()
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
+
         return ResultadoRPA(
             sucesso=len(erros) == 0,
             mensagem=mensagem,
-            dados={
-                "contratos_processados": len(contratos_processados),
-                "contratos": contratos_processados,
-                "erros": erros,
-            },
+            dados=resultado_final,
         )
 
     def _validar_contrato(self, contrato_raw: Any) -> ContratoExtracao:
@@ -244,6 +302,17 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
         if not url_sienge:
             raise ValueError("URL do Sienge não configurada.")
 
+        # Registrar tentativa de login
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_passo(
+                    "TENTATIVA_LOGIN_SIENGE",
+                    {"url_sienge": url_sienge, "usuario": usuario_sienge},
+                    categoria="OPERACAO"
+                )
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
+
         self.get_page(url_sienge)
         time.sleep(3)
 
@@ -268,6 +337,16 @@ class RPAExtracaoRelatorioSienge(BaseRPA):
                 xpath="//a[contains(@class, 'Button-prim') and contains(., 'Prosseguir')]")
 
         self.logado_sienge = True
+        
+        # Registrar login bem-sucedido
+        if self.rastreamento:
+            try:
+                await self.rastreamento.registrar_login_sistema(
+                    "sienge", usuario_sienge, True
+                )
+            except Exception:
+                pass  # Não quebra se rastreamento falhar
+        
         time.sleep(5)
 
         if self.check_for_error(xpath='//a[@id="pushActionRefuse" and contains(text(), "Não, obrigado")]', timeout=15):

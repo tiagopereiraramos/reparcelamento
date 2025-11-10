@@ -18,7 +18,7 @@ from core.utils_sienge import (
     carregar_credenciais_sienge,
     get_env_or_fail
 )
-from rpa_sienge.rpa_sienge import RPASienge
+from rpa_sienge.rpa_sienge_emissao_carne import RPAEmissaoCarneSienge
 from core.gerador_anexos import gerador_anexos
 from core.templates_relatorios import templates_relatorios
 import os
@@ -383,7 +383,7 @@ def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> List[
     return contratos_aptos
 
 
-async def executar_fase_geracao_carnes(rpa: RPASienge, contratos_aptos: List[Dict[str, Any]]) -> Dict[str, Any]:
+async def executar_fase_geracao_carnes(rpa: RPAEmissaoCarneSienge, contratos_aptos: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     FASE 5: Executar geração de carnês via RPA Sienge
 
@@ -614,39 +614,45 @@ async def vincular_arquivos_gerados_banco(resultado_carnes: Dict[str, Any]) -> D
                 # Atualizar cada contrato da empresa
                 for numero_titulo in contratos_empresa:
                     if numero_titulo and numero_titulo != 'N/A':
-                # Buscar contrato pelo número do título
+                        # Buscar contrato pelo número do título
                         contratos_encontrados = repositorio_contratos_arquivo.framework.find(
-                            {"Titulo": numero_titulo})
+                            {"Titulo": numero_titulo}
+                        )
 
                         if contratos_encontrados:
                             # Pegar o primeiro (deve ser único)
                             contrato = contratos_encontrados[0]
 
-                    # Preparar dados de atualização
-                    update_data = {
-                        "status": "CARNE_GERADO",
-                        "arquivo_remessa": arquivo_remessa,
-                        "timestamp_carne_gerado": datetime.now().isoformat(),
-                        "timestamp_ultima_atualizacao": datetime.now().isoformat()
-                    }
+                            # Preparar dados de atualização
+                            update_data = {
+                                "status": "CARNE_GERADO",
+                                "arquivo_remessa": arquivo_remessa,
+                                "timestamp_carne_gerado": datetime.now().isoformat(),
+                                "timestamp_ultima_atualizacao": datetime.now().isoformat(),
+                            }
 
                             # Atualizar contrato no repositório JSON
                             contrato_id = contrato.get("_id")
                             if contrato_id:
                                 resultado = repositorio_contratos_arquivo.framework.update(
-                                    contrato_id, update_data)
+                                    contrato_id, update_data
+                                )
 
                                 if resultado:
-                        contratos_vinculados += 1
+                                    contratos_vinculados += 1
                                     log(
-                                        f"✅ Contrato {numero_titulo} vinculado ao arquivo {arquivo_remessa}")
-                    else:
+                                        f"✅ Contrato {numero_titulo} vinculado ao arquivo {arquivo_remessa}"
+                                    )
+                                else:
                                     log(
-                                        f"❌ Falha ao vincular contrato {numero_titulo}")
-                else:
+                                        f"❌ Falha ao vincular contrato {numero_titulo}"
+                                    )
+                            else:
                                 log(f"❌ Contrato {numero_titulo} sem ID válido")
                         else:
-                            log(f"❌ Contrato {numero_titulo} não encontrado no repositório")
+                            log(
+                                f"❌ Contrato {numero_titulo} não encontrado no repositório"
+                            )
 
         log(f"✅ Vinculação concluída: {contratos_vinculados} contratos vinculados")
 
@@ -735,7 +741,7 @@ Exemplos de uso:
         # Inicializar RPA Sienge
         log(f"\n🤖 INICIALIZANDO RPA SIENGE...")
         headless = False  # Browser visível para acompanhar o processo
-        rpa = RPASienge(headless=headless)
+        rpa = RPAEmissaoCarneSienge(headless=headless)
         await rpa.inicializar()
 
         # Carregar credenciais e fazer login

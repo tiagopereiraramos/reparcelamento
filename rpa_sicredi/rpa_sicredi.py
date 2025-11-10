@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 from core.notificacoes_simples import notificar_sucesso, notificar_erro
 from core.base_rpa import BaseRPA, ResultadoRPA
+from core.rastreamento_unificado import iniciar_rastreamento
 import asyncio
 import os
 import sys
@@ -55,6 +56,7 @@ class RPASicredi(BaseRPA):
         self.usuario_sicredi = None
         self.senha_sicredi = None
         self.cnpj_empresa = None
+        self.rastreamento = None
 
     async def executar(self, parametros: Dict[str, Any]) -> ResultadoRPA:
         """
@@ -70,6 +72,17 @@ class RPASicredi(BaseRPA):
             ResultadoRPA com resultado do processamento
         """
         try:
+            # Inicializar rastreamento
+            try:
+                self.rastreamento = iniciar_rastreamento("RPA_Sicredi")
+                await self.rastreamento.registrar_inicio_rpa({
+                    "arquivo_remessa": parametros.get("arquivo_remessa"),
+                    "cnpj_empresa": parametros.get("credenciais_sicredi", {}).get("cnpj"),
+                    "dados_processamento": parametros.get("dados_processamento", {})
+                })
+            except Exception as e:
+                self.log_progresso(f"⚠️ Aviso: Rastreamento não inicializado: {str(e)}")
+
             self.log_progresso("Iniciando processamento no Sicredi WebBank")
 
             # Valida parâmetros
@@ -94,6 +107,15 @@ class RPASicredi(BaseRPA):
 
             # Faz login no Sicredi WebBank
             await self._fazer_login_sicredi()
+            
+            # Registrar login no rastreamento
+            if self.rastreamento:
+                try:
+                    await self.rastreamento.registrar_login_sistema(
+                        "sicredi", self.usuario_sicredi or "", self.logado_sicredi
+                    )
+                except Exception:
+                    pass  # Não quebra se rastreamento falhar
 
             # Log de início do processamento
             self.log_progresso("Iniciando processamento do arquivo de remessa")
@@ -146,6 +168,18 @@ class RPASicredi(BaseRPA):
             # Salva dados processados (MongoDB ou JSON local)
             await self._salvar_dados_processamento(resultado_dados)
 
+            # Registrar sucesso no rastreamento
+            if self.rastreamento:
+                try:
+                    await self.rastreamento.registrar_sucesso_rpa({
+                        "arquivo_remessa": arquivo_remessa,
+                        "confirmacao": confirmacao,
+                        "resultado": resultado_dados
+                    })
+                    await self.rastreamento.finalizar_rastreamento()
+                except Exception:
+                    pass  # Não quebra se rastreamento falhar
+
             return ResultadoRPA(
                 sucesso=confirmacao["sucesso"],
                 mensagem=f"Processamento Sicredi concluído - Carnês atualizados",
@@ -153,6 +187,17 @@ class RPASicredi(BaseRPA):
             )
 
         except Exception as e:
+            # Registrar erro no rastreamento
+            if self.rastreamento:
+                try:
+                    await self.rastreamento.registrar_erro_critico(e, {
+                        "fase": "processamento_sicredi",
+                        "arquivo_remessa": parametros.get("arquivo_remessa", "")
+                    })
+                    await self.rastreamento.finalizar_rastreamento()
+                except Exception:
+                    pass  # Não quebra se rastreamento falhar
+            
             self.log_erro("Erro durante processamento no Sicredi", e)
             return ResultadoRPA(
                 sucesso=False,
