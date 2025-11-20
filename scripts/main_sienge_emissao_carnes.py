@@ -1198,6 +1198,7 @@ Exemplos de uso:
         log(f"❌ Contratos com erro: {contratos_erro}")
         log(f"🔗 Contratos vinculados ao banco: {contratos_vinculados}")
 
+        carnês_gerados = resultado_carnes.get("carnês_gerados", [])
         # ✅ LOG FINAL: CONTRATOS GERADOS AGRUPADOS POR EMPRESA
         log(f"\n📊 CONTRATOS COM CARNÊ GERADOS (AGRUPADOS POR EMPRESA):")
         log("=" * 60)
@@ -1219,7 +1220,6 @@ Exemplos de uso:
                 log(f"   ... e mais {len(titulos) - 10} carnê(s)")
 
         # Gerar relatório HTML - ajustar para template existente
-        carnês_gerados = resultado_carnes.get("carnês_gerados", [])
         empresas_processadas = resultado_carnes.get("empresas_processadas", 0)
         estatisticas = {
             'total_empresas': empresas_processadas,
