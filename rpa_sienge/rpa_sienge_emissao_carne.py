@@ -493,6 +493,24 @@ class RPAEmissaoCarneSienge(BaseRPA):
         Fecha popup de consulta (Beamer) que está dentro do iframe beamerNews.
         Fecha o popup e volta ao iframe iFramePage.
         """
+
+        def voltar_para_iframe_principal() -> None:
+            """Retorna de forma segura ao iframe principal iFramePage."""
+            try:
+                if self.browser and self.browser._driver:
+                    self.browser._driver.switch_to.default_content()
+            except Exception:
+                pass
+
+            try:
+                if self.check_for_error(xpath='//iframe[@id="iFramePage"]', timeout=2):
+                    if self.browser and self.browser._driver:
+                        iframe_original = self.browser._driver.find_element(
+                            By.XPATH, '//iframe[@id="iFramePage"]')
+                        self.browser._driver.switch_to.frame(iframe_original)
+            except Exception:
+                pass
+
         try:
             if not self.browser or not self.browser._driver:
                 return
@@ -505,6 +523,14 @@ class RPAEmissaoCarneSienge(BaseRPA):
 
             try:
                 from selenium.webdriver.support import expected_conditions as EC
+
+                # Verificar rapidamente se o iframe beamerNews existe antes de aguardar
+                if not self.check_for_error(xpath='//iframe[@id="beamerNews"]', timeout=3):
+                    self.log_progresso(
+                        "ℹ️ Popup Beamer não identificado - retornando ao iframe principal")
+                    voltar_para_iframe_principal()
+                    return
+
                 iframe_beamer = self.browser._driver_wait.until(
                     EC.presence_of_element_located(
                         (By.XPATH, '//iframe[@id="beamerNews"]'))
@@ -537,26 +563,11 @@ class RPAEmissaoCarneSienge(BaseRPA):
                 self.browser._driver.switch_to.default_content()
 
                 # Voltar ao iframe iFramePage
-                try:
-                    iframe_original = self.browser._driver_wait.until(
-                        EC.presence_of_element_located(
-                            (By.XPATH, '//iframe[@id="iFramePage"]'))
-                    )
-                    self.browser._driver.switch_to.frame(iframe_original)
-                except Exception:
-                    pass
+                voltar_para_iframe_principal()
 
             except Exception:
-                # Se não encontrar beamerNews, tentar voltar ao iFramePage
-                try:
-                    self.browser._driver.switch_to.default_content()
-                    iframe_original = self.browser._driver_wait.until(
-                        EC.presence_of_element_located(
-                            (By.XPATH, '//iframe[@id="iFramePage"]'))
-                    )
-                    self.browser._driver.switch_to.frame(iframe_original)
-                except Exception:
-                    pass
+                # Se não encontrar beamerNews, tentar voltar ao iFramePage rapidamente
+                voltar_para_iframe_principal()
 
         except Exception:
             pass  # Não quebra o fluxo se falhar

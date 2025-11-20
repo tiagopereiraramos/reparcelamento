@@ -311,7 +311,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -320,7 +320,7 @@
     },
     "_id": "1762803529179_8464631808",
     "_created_at": "2025-11-10T15:38:49.179936",
-    "_updated_at": "2025-11-20T06:14:48.827485",
+    "_updated_at": "2025-11-20T06:34:11.388918",
     "timestamp_download": "2025-11-10T16:15:20.747557",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_2493_20251110_161520.xlsx",
     "status_timestamp": "2025-11-13T15:30:30.568053",
@@ -349,8 +349,13 @@
       "10/11/2026"
     ],
     "primeiro_vencimento_carne": "10/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-20T06:14:48.827371",
-    "timestamp_ultima_atualizacao": "2025-11-20T06:14:48.827383"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:26:08.634264",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:34:11.359681",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:34:11.359646",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/52175N20.3643",
+    "empresa": "8 - OLIVEIRA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "8 - OLIVEIRA",
@@ -382,7 +387,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -391,7 +396,7 @@
     },
     "_id": "1762803529182_8464631808",
     "_created_at": "2025-11-10T15:38:49.182373",
-    "_updated_at": "2025-11-20T06:14:48.885736",
+    "_updated_at": "2025-11-20T06:34:11.473002",
     "timestamp_download": "2025-11-10T16:15:50.411503",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_8572_20251110_161550.xlsx",
     "status_timestamp": "2025-11-14T15:46:37.288640",
@@ -422,8 +427,13 @@
       "25/11/2026"
     ],
     "primeiro_vencimento_carne": "25/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-20T06:14:48.885699",
-    "timestamp_ultima_atualizacao": "2025-11-20T06:14:48.885704"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:26:08.701853",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:34:11.457218",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:34:11.457208",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/52175N20.3643",
+    "empresa": "8 - OLIVEIRA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "8 - OLIVEIRA",
@@ -623,7 +633,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -632,7 +642,7 @@
     },
     "_id": "1762803529195_8464631808",
     "_created_at": "2025-11-10T15:38:49.195900",
-    "_updated_at": "2025-11-20T06:14:48.938566",
+    "_updated_at": "2025-11-20T06:34:11.546068",
     "timestamp_download": "2025-11-10T16:17:49.096765",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6438_20251110_161749.xlsx",
     "status_timestamp": "2025-11-13T15:35:57.124790",
@@ -661,8 +671,13 @@
       "25/11/2026"
     ],
     "primeiro_vencimento_carne": "25/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-20T06:14:48.938527",
-    "timestamp_ultima_atualizacao": "2025-11-20T06:14:48.938533"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:26:08.754974",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:34:11.531317",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:34:11.531305",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/52175N20.3643",
+    "empresa": "8 - OLIVEIRA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "8 - OLIVEIRA",
@@ -856,7 +871,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -865,7 +880,7 @@
     },
     "_id": "1762803529267_8464631808",
     "_created_at": "2025-11-10T15:38:49.267292",
-    "_updated_at": "2025-11-20T06:14:48.991445",
+    "_updated_at": "2025-11-20T06:34:11.619849",
     "timestamp_download": "2025-11-10T16:19:47.436933",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_2020_20251110_161947.xlsx",
     "status_timestamp": "2025-11-13T15:39:08.121012",
@@ -894,8 +909,13 @@
       "10/11/2026"
     ],
     "primeiro_vencimento_carne": "10/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-20T06:14:48.991406",
-    "timestamp_ultima_atualizacao": "2025-11-20T06:14:48.991412"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:26:08.807372",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:34:11.604488",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:34:11.604481",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/52175N20.3643",
+    "empresa": "8 - OLIVEIRA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -927,7 +947,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -936,7 +956,7 @@
     },
     "_id": "1762803529282_8464631808",
     "_created_at": "2025-11-10T15:38:49.282529",
-    "_updated_at": "2025-11-19T22:10:08.077140",
+    "_updated_at": "2025-11-20T06:42:58.897202",
     "timestamp_download": "2025-11-10T16:20:17.108646",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_4176_20251110_162017.xlsx",
     "status_timestamp": "2025-11-13T15:40:05.939497",
@@ -965,8 +985,13 @@
       "10/12/2026"
     ],
     "primeiro_vencimento_carne": "10/01/26",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.077082",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.077091"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:35:07.915971",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:58.870776",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:58.870761",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -1162,7 +1187,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -1171,7 +1196,7 @@
     },
     "_id": "1762803529308_8464631808",
     "_created_at": "2025-11-10T15:38:49.308086",
-    "_updated_at": "2025-11-19T22:10:08.137490",
+    "_updated_at": "2025-11-20T06:42:58.962088",
     "timestamp_download": "2025-11-10T16:22:15.741806",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_4572_20251110_162215.xlsx",
     "status_timestamp": "2025-11-13T20:32:23.357910",
@@ -1202,8 +1227,13 @@
       "30/11/2026"
     ],
     "primeiro_vencimento_carne": "30/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.137456",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.137461"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:35:23.540896",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:58.949885",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:58.949877",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -1235,7 +1265,7 @@
     "Saldo devedor final": "R$  162.965,26",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -1244,7 +1274,7 @@
     },
     "_id": "1762803529315_8464631808",
     "_created_at": "2025-11-10T15:38:49.315141",
-    "_updated_at": "2025-11-19T22:10:08.187970",
+    "_updated_at": "2025-11-20T06:42:59.015927",
     "timestamp_download": "2025-11-10T16:22:45.519325",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_2357_20251110_162245.xlsx",
     "status_timestamp": "2025-11-13T15:45:23.717806",
@@ -1273,8 +1303,13 @@
       "15/12/2026"
     ],
     "primeiro_vencimento_carne": "15/01/2026",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.187936",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.187942"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:35:31.839501",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:59.003681",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:59.003675",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -1360,7 +1395,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -1369,7 +1404,7 @@
     },
     "_id": "1762803529330_8464631808",
     "_created_at": "2025-11-10T15:38:49.330361",
-    "_updated_at": "2025-11-19T22:10:08.241386",
+    "_updated_at": "2025-11-20T06:42:59.069951",
     "timestamp_download": "2025-11-10T16:23:44.934616",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5246_20251110_162344.xlsx",
     "status_timestamp": "2025-11-13T15:47:35.579364",
@@ -1398,8 +1433,13 @@
       "15/11/2026"
     ],
     "primeiro_vencimento_carne": "15/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.241351",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.241356"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:35:48.113569",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:59.058002",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:59.057993",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -1647,7 +1687,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -1656,7 +1696,7 @@
     },
     "_id": "1762803529374_8464631808",
     "_created_at": "2025-11-10T15:38:49.374755",
-    "_updated_at": "2025-11-19T22:10:08.297301",
+    "_updated_at": "2025-11-20T06:42:59.123023",
     "timestamp_download": "2025-11-10T16:26:13.514172",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7906_20251110_162613.xlsx",
     "status_timestamp": "2025-11-14T15:51:47.359534",
@@ -1687,8 +1727,13 @@
       "15/11/2026"
     ],
     "primeiro_vencimento_carne": "15/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.297266",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.297271"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:35:56.747653",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:59.111095",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:59.111091",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -1830,7 +1875,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -1839,7 +1884,7 @@
     },
     "_id": "1762803529405_8464631808",
     "_created_at": "2025-11-10T15:38:49.405236",
-    "_updated_at": "2025-11-19T22:10:08.348824",
+    "_updated_at": "2025-11-20T06:42:59.176107",
     "timestamp_download": "2025-11-10T16:27:42.757425",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5254_20251110_162742.xlsx",
     "status_timestamp": "2025-11-13T15:55:02.181728",
@@ -1868,8 +1913,13 @@
       "20/11/2026"
     ],
     "primeiro_vencimento_carne": "20/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.348789",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.348795"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:36:04.905592",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:59.164002",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:59.163994",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "15 - URUCUI SCP",
@@ -1901,7 +1951,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -1910,7 +1960,7 @@
     },
     "_id": "1762803529416_8464631808",
     "_created_at": "2025-11-10T15:38:49.416104",
-    "_updated_at": "2025-11-19T22:10:08.401030",
+    "_updated_at": "2025-11-20T06:42:59.229706",
     "timestamp_download": "2025-11-10T16:28:12.471990",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_4255_20251110_162812.xlsx",
     "status_timestamp": "2025-11-13T15:56:00.178651",
@@ -1939,8 +1989,13 @@
       "10/11/2026"
     ],
     "primeiro_vencimento_carne": "10/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:10:08.400996",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:10:08.401002"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:36:13.345580",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:42:59.217607",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:42:59.217602",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/19308N20.2379",
+    "empresa": "15 - URUCUI SCP ",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2026,7 +2081,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2035,7 +2090,7 @@
     },
     "_id": "1762803529438_8464631808",
     "_created_at": "2025-11-10T15:38:49.438628",
-    "_updated_at": "2025-11-19T22:11:18.495284",
+    "_updated_at": "2025-11-20T06:45:07.614901",
     "timestamp_download": "2025-11-10T16:29:11.997065",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6837_20251110_162911.xlsx",
     "status_timestamp": "2025-11-13T15:58:14.090054",
@@ -2064,8 +2119,13 @@
       "20/11/2026"
     ],
     "primeiro_vencimento_carne": "20/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.495240",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.495247"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.301086",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.589163",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.589142",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2097,7 +2157,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2106,7 +2166,7 @@
     },
     "_id": "1762803529450_8464631808",
     "_created_at": "2025-11-10T15:38:49.450631",
-    "_updated_at": "2025-11-19T22:11:18.551191",
+    "_updated_at": "2025-11-20T06:45:07.680148",
     "timestamp_download": "2025-11-10T16:29:41.766382",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6807_20251110_162941.xlsx",
     "status_timestamp": "2025-11-13T15:59:28.328534",
@@ -2135,8 +2195,13 @@
       "10/11/2026"
     ],
     "primeiro_vencimento_carne": "10/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.551155",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.551163"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.355011",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.667804",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.667794",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2168,7 +2233,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2177,7 +2242,7 @@
     },
     "_id": "1762803529462_8464631808",
     "_created_at": "2025-11-10T15:38:49.462900",
-    "_updated_at": "2025-11-19T22:11:18.602828",
+    "_updated_at": "2025-11-20T06:45:07.734677",
     "timestamp_download": "2025-11-10T16:30:11.408763",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6848_20251110_163011.xlsx",
     "status_timestamp": "2025-11-13T16:00:34.919918",
@@ -2206,8 +2271,13 @@
       "10/12/2026"
     ],
     "primeiro_vencimento_carne": "10/01/26",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.602795",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.602799"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.409544",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.722508",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.722502",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2239,7 +2309,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2248,7 +2318,7 @@
     },
     "_id": "1762803529475_8464631808",
     "_created_at": "2025-11-10T15:38:49.475411",
-    "_updated_at": "2025-11-19T22:11:18.654917",
+    "_updated_at": "2025-11-20T06:45:07.791968",
     "timestamp_download": "2025-11-10T16:30:41.241823",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_1594_20251110_163041.xlsx",
     "status_timestamp": "2025-11-13T16:01:42.569298",
@@ -2277,8 +2347,13 @@
       "20/11/2026"
     ],
     "primeiro_vencimento_carne": "20/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.654883",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.654889"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.463725",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.779831",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.779823",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2310,7 +2385,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2319,7 +2394,7 @@
     },
     "_id": "1762803529488_8464631808",
     "_created_at": "2025-11-10T15:38:49.488267",
-    "_updated_at": "2025-11-19T22:11:18.709975",
+    "_updated_at": "2025-11-20T06:45:07.845849",
     "timestamp_download": "2025-11-10T16:31:11.730875",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6830_20251110_163111.xlsx",
     "status_timestamp": "2025-11-13T16:02:48.753624",
@@ -2348,8 +2423,13 @@
       "15/12/2026"
     ],
     "primeiro_vencimento_carne": "15/01/26",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.709941",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.709946"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.520922",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.833798",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.833792",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2435,7 +2515,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2444,7 +2524,7 @@
     },
     "_id": "1762803529514_8464631808",
     "_created_at": "2025-11-10T15:38:49.514678",
-    "_updated_at": "2025-11-19T22:11:18.761560",
+    "_updated_at": "2025-11-20T06:45:07.899631",
     "timestamp_download": "2025-11-10T16:32:11.185931",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_393_20251110_163211.xlsx",
     "status_timestamp": "2025-11-13T16:05:02.629491",
@@ -2473,8 +2553,13 @@
       "15/11/2026"
     ],
     "primeiro_vencimento_carne": "15/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.761528",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.761532"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.574980",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.887382",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.887375",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2506,7 +2591,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2515,7 +2600,7 @@
     },
     "_id": "1762803529528_8464631808",
     "_created_at": "2025-11-10T15:38:49.528249",
-    "_updated_at": "2025-11-19T22:11:18.813785",
+    "_updated_at": "2025-11-20T06:45:07.953310",
     "timestamp_download": "2025-11-10T16:32:40.862994",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6811_20251110_163240.xlsx",
     "status_timestamp": "2025-11-13T16:06:09.474792",
@@ -2544,8 +2629,13 @@
       "26/11/2026"
     ],
     "primeiro_vencimento_carne": "26/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.813751",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.813756"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.629257",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.941241",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.941231",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2577,7 +2667,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2586,7 +2676,7 @@
     },
     "_id": "1762803529542_8464631808",
     "_created_at": "2025-11-10T15:38:49.542427",
-    "_updated_at": "2025-11-19T22:11:18.867113",
+    "_updated_at": "2025-11-20T06:45:08.007334",
     "timestamp_download": "2025-11-10T16:33:10.581724",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6889_20251110_163310.xlsx",
     "status_timestamp": "2025-11-13T16:07:16.905253",
@@ -2615,8 +2705,13 @@
       "10/12/2026"
     ],
     "primeiro_vencimento_carne": "10/01/26",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.867077",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.867083"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.683117",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:07.995328",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:07.995323",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2702,7 +2797,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2711,7 +2806,7 @@
     },
     "_id": "1762803529571_8464631808",
     "_created_at": "2025-11-10T15:38:49.571572",
-    "_updated_at": "2025-11-19T22:11:18.922635",
+    "_updated_at": "2025-11-20T06:45:08.061835",
     "timestamp_download": "2025-11-10T16:34:09.984790",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6845_20251110_163409.xlsx",
     "status_timestamp": "2025-11-13T16:08:24.222440",
@@ -2740,8 +2835,13 @@
       "10/12/2026"
     ],
     "primeiro_vencimento_carne": "10/01/26",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.922601",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.922607"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.742334",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:08.049496",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:08.049489",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2773,7 +2873,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2782,7 +2882,7 @@
     },
     "_id": "1762803529586_8464631808",
     "_created_at": "2025-11-10T15:38:49.586744",
-    "_updated_at": "2025-11-19T22:11:18.975802",
+    "_updated_at": "2025-11-20T06:45:08.116759",
     "timestamp_download": "2025-11-10T16:34:39.845804",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6696_20251110_163439.xlsx",
     "status_timestamp": "2025-11-13T16:09:31.996925",
@@ -2811,8 +2911,13 @@
       "10/11/2026"
     ],
     "primeiro_vencimento_carne": "10/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:18.975768",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:18.975774"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.796832",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:08.104400",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:08.104394",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2844,7 +2949,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2853,7 +2958,7 @@
     },
     "_id": "1762803529602_8464631808",
     "_created_at": "2025-11-10T15:38:49.602114",
-    "_updated_at": "2025-11-19T22:11:19.028460",
+    "_updated_at": "2025-11-20T06:45:08.170363",
     "timestamp_download": "2025-11-10T16:35:09.508445",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6794_20251110_163509.xlsx",
     "status_timestamp": "2025-11-13T16:10:39.681370",
@@ -2882,8 +2987,13 @@
       "10/11/2026"
     ],
     "primeiro_vencimento_carne": "10/12/25",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:19.028421",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:19.028427"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.851217",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:08.158276",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:08.158270",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -2915,7 +3025,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -2924,7 +3034,7 @@
     },
     "_id": "1762803529618_8464631808",
     "_created_at": "2025-11-10T15:38:49.618501",
-    "_updated_at": "2025-11-19T22:11:19.124722",
+    "_updated_at": "2025-11-20T06:45:08.224472",
     "timestamp_download": "2025-11-10T16:35:39.248731",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7926_20251110_163539.xlsx",
     "status_timestamp": "2025-11-13T16:11:48.415816",
@@ -2953,8 +3063,13 @@
       "20/12/2026"
     ],
     "primeiro_vencimento_carne": "20/01/26",
-    "timestamp_parcelas_calculadas": "2025-11-19T22:11:19.124679",
-    "timestamp_ultima_atualizacao": "2025-11-19T22:11:19.124687"
+    "timestamp_parcelas_calculadas": "2025-11-20T06:42:59.905860",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:45:08.212208",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:45:08.212203",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62520N20.621",
+    "empresa": "18 - URUCUI SCP 2",
+    "contratos_processados_carne": 12
   },
   {
     "Empresa": "18 - URUCUI SCP 2",
@@ -3094,7 +3209,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3103,7 +3218,7 @@
     },
     "_id": "1762803529668_8464631808",
     "_created_at": "2025-11-10T15:38:49.668138",
-    "_updated_at": "2025-11-13T16:14:53.154126",
+    "_updated_at": "2025-11-20T06:46:19.254084",
     "timestamp_download": "2025-11-10T16:37:08.156439",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_3600_20251110_163708.xlsx",
     "status_timestamp": "2025-11-13T16:14:53.154102",
@@ -3116,7 +3231,29 @@
       "numero_titulo": "4044",
       "codigo_cliente": "3600",
       "timestamp": "2025-11-13T16:14:53.154042"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:45:08.295897",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:46:19.228124",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:46:19.228101",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/01870N20.2413",
+    "empresa": "9 - SPE PARQUE DA LAGOA",
+    "contratos_processados_carne": 3
   },
   {
     "Empresa": "9 - SPE PARQUE DA LAGOA",
@@ -3148,7 +3285,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3157,7 +3294,7 @@
     },
     "_id": "1762803529685_8464631808",
     "_created_at": "2025-11-10T15:38:49.685359",
-    "_updated_at": "2025-11-13T16:15:53.203333",
+    "_updated_at": "2025-11-20T06:46:19.318781",
     "timestamp_download": "2025-11-10T16:37:37.819486",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5898_20251110_163737.xlsx",
     "status_timestamp": "2025-11-13T16:15:53.203318",
@@ -3170,7 +3307,29 @@
       "numero_titulo": "10424",
       "codigo_cliente": "5898",
       "timestamp": "2025-11-13T16:15:53.203283"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:45:08.351447",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:46:19.306384",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:46:19.306374",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/01870N20.2413",
+    "empresa": "9 - SPE PARQUE DA LAGOA",
+    "contratos_processados_carne": 3
   },
   {
     "Empresa": "9 - SPE PARQUE DA LAGOA",
@@ -3256,7 +3415,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3265,7 +3424,7 @@
     },
     "_id": "1762803529720_8464631808",
     "_created_at": "2025-11-10T15:38:49.720352",
-    "_updated_at": "2025-11-13T16:17:37.061169",
+    "_updated_at": "2025-11-20T06:46:19.373704",
     "timestamp_download": "2025-11-10T16:38:37.182043",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_3618_20251110_163837.xlsx",
     "status_timestamp": "2025-11-13T16:17:37.061142",
@@ -3278,7 +3437,29 @@
       "numero_titulo": "3931",
       "codigo_cliente": "3618",
       "timestamp": "2025-11-13T16:17:37.061038"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:45:08.406187",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:46:19.361449",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:46:19.361439",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/01870N20.2413",
+    "empresa": "9 - SPE PARQUE DA LAGOA",
+    "contratos_processados_carne": 3
   },
   {
     "Empresa": "10 - RAJ",
@@ -3472,7 +3653,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3481,7 +3662,7 @@
     },
     "_id": "1762803529794_8464631808",
     "_created_at": "2025-11-10T15:38:49.794835",
-    "_updated_at": "2025-11-13T16:21:17.932377",
+    "_updated_at": "2025-11-20T06:49:06.195057",
     "timestamp_download": "2025-11-10T16:40:35.765165",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_8391_20251110_164035.xlsx",
     "status_timestamp": "2025-11-13T16:21:17.932363",
@@ -3494,7 +3675,29 @@
       "numero_titulo": "760",
       "codigo_cliente": "8391",
       "timestamp": "2025-11-13T16:21:17.932316"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.442030",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.167636",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.167608",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -3688,7 +3891,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3697,7 +3900,7 @@
     },
     "_id": "1762803529874_8464631808",
     "_created_at": "2025-11-10T15:38:49.874009",
-    "_updated_at": "2025-11-13T16:25:01.045418",
+    "_updated_at": "2025-11-20T06:49:06.261629",
     "timestamp_download": "2025-11-10T16:42:34.280014",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6798_20251110_164234.xlsx",
     "status_timestamp": "2025-11-13T16:25:01.045393",
@@ -3710,7 +3913,29 @@
       "numero_titulo": "13443",
       "codigo_cliente": "6798",
       "timestamp": "2025-11-13T16:25:01.045329"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.496515",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.248752",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.248745",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -3796,7 +4021,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3805,7 +4030,7 @@
     },
     "_id": "1762803529915_8464631808",
     "_created_at": "2025-11-10T15:38:49.915073",
-    "_updated_at": "2025-11-13T16:26:36.685745",
+    "_updated_at": "2025-11-20T06:49:06.318679",
     "timestamp_download": "2025-11-10T16:43:33.514464",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_3506_20251110_164333.xlsx",
     "status_timestamp": "2025-11-13T16:26:36.685718",
@@ -3818,7 +4043,29 @@
       "numero_titulo": "3907",
       "codigo_cliente": "3506",
       "timestamp": "2025-11-13T16:26:36.685647"
-    }
+    },
+    "parcelas_esperadas": [
+      "15/12/2025",
+      "15/01/2026",
+      "15/02/2026",
+      "15/03/2026",
+      "15/04/2026",
+      "15/05/2026",
+      "15/06/2026",
+      "15/07/2026",
+      "15/08/2026",
+      "15/09/2026",
+      "15/10/2026",
+      "15/11/2026"
+    ],
+    "primeiro_vencimento_carne": "15/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.550666",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.306037",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.306027",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -3850,7 +4097,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3859,7 +4106,7 @@
     },
     "_id": "1762803529936_8464631808",
     "_created_at": "2025-11-10T15:38:49.936015",
-    "_updated_at": "2025-11-13T16:27:22.094991",
+    "_updated_at": "2025-11-20T06:49:06.374753",
     "timestamp_download": "2025-11-10T16:44:03.188601",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_1637_20251110_164403.xlsx",
     "status_timestamp": "2025-11-13T16:27:22.094979",
@@ -3872,7 +4119,29 @@
       "numero_titulo": "1178",
       "codigo_cliente": "1637",
       "timestamp": "2025-11-13T16:27:22.094944"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.605341",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.362078",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.362072",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -3904,7 +4173,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -3913,7 +4182,7 @@
     },
     "_id": "1762803529957_8464631808",
     "_created_at": "2025-11-10T15:38:49.957667",
-    "_updated_at": "2025-11-13T16:28:09.358709",
+    "_updated_at": "2025-11-20T06:49:06.431148",
     "timestamp_download": "2025-11-10T16:44:32.988097",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_1637_20251110_164432.xlsx",
     "status_timestamp": "2025-11-13T16:28:09.358686",
@@ -3926,7 +4195,29 @@
       "numero_titulo": "1179",
       "codigo_cliente": "1637",
       "timestamp": "2025-11-13T16:28:09.358621"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.661653",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.418545",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.418540",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4012,7 +4303,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4021,7 +4312,7 @@
     },
     "_id": "1762803530001_8464631808",
     "_created_at": "2025-11-10T15:38:50.001786",
-    "_updated_at": "2025-11-14T15:52:35.759137",
+    "_updated_at": "2025-11-20T06:49:06.487710",
     "timestamp_download": "2025-11-10T16:45:32.208889",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6902_20251110_164532.xlsx",
     "status_timestamp": "2025-11-14T15:52:35.759124",
@@ -4036,7 +4327,29 @@
       "timestamp": "2025-11-14T15:52:35.759074"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199539",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.716878",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.475065",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.475060",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4068,7 +4381,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4077,7 +4390,7 @@
     },
     "_id": "1762803530024_8464631808",
     "_created_at": "2025-11-10T15:38:50.024418",
-    "_updated_at": "2025-11-14T15:53:22.775989",
+    "_updated_at": "2025-11-20T06:49:06.543856",
     "timestamp_download": "2025-11-10T16:46:01.797347",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7185_20251110_164601.xlsx",
     "status_timestamp": "2025-11-14T15:53:22.775976",
@@ -4092,7 +4405,29 @@
       "timestamp": "2025-11-14T15:53:22.775936"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199543",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.772056",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.531116",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.531110",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4124,7 +4459,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4133,7 +4468,7 @@
     },
     "_id": "1762803530047_8464631808",
     "_created_at": "2025-11-10T15:38:50.047551",
-    "_updated_at": "2025-11-14T15:54:09.597207",
+    "_updated_at": "2025-11-20T06:49:06.599844",
     "timestamp_download": "2025-11-10T16:46:31.416868",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_1590_20251110_164631.xlsx",
     "status_timestamp": "2025-11-14T15:54:09.597201",
@@ -4148,7 +4483,29 @@
       "timestamp": "2025-11-14T15:54:09.597180"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199547",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.828193",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.587190",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.587185",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4180,7 +4537,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4189,7 +4546,7 @@
     },
     "_id": "1762803530070_8464631808",
     "_created_at": "2025-11-10T15:38:50.070933",
-    "_updated_at": "2025-11-14T15:55:01.734252",
+    "_updated_at": "2025-11-20T06:49:06.657487",
     "timestamp_download": "2025-11-10T16:47:01.060573",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_3868_20251110_164701.xlsx",
     "status_timestamp": "2025-11-14T15:55:01.734233",
@@ -4204,7 +4561,29 @@
       "timestamp": "2025-11-14T15:55:01.734166"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199551",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "20/12/2025",
+      "20/01/2026",
+      "20/02/2026",
+      "20/03/2026",
+      "20/04/2026",
+      "20/05/2026",
+      "20/06/2026",
+      "20/07/2026",
+      "20/08/2026",
+      "20/09/2026",
+      "20/10/2026",
+      "20/11/2026"
+    ],
+    "primeiro_vencimento_carne": "20/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.887569",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.644765",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.644758",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4236,7 +4615,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4245,7 +4624,7 @@
     },
     "_id": "1762803530094_8464631808",
     "_created_at": "2025-11-10T15:38:50.094584",
-    "_updated_at": "2025-11-14T15:56:02.577220",
+    "_updated_at": "2025-11-20T06:49:06.714249",
     "timestamp_download": "2025-11-10T16:47:30.665460",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6327_20251110_164730.xlsx",
     "status_timestamp": "2025-11-14T15:56:02.577207",
@@ -4260,7 +4639,29 @@
       "timestamp": "2025-11-14T15:56:02.577164"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199555",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "25/12/2025",
+      "25/01/2026",
+      "25/02/2026",
+      "25/03/2026",
+      "25/04/2026",
+      "25/05/2026",
+      "25/06/2026",
+      "25/07/2026",
+      "25/08/2026",
+      "25/09/2026",
+      "25/10/2026",
+      "25/11/2026"
+    ],
+    "primeiro_vencimento_carne": "25/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.943939",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.701204",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.701196",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4292,7 +4693,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4301,7 +4702,7 @@
     },
     "_id": "1762803530118_8464631808",
     "_created_at": "2025-11-10T15:38:50.118386",
-    "_updated_at": "2025-11-14T15:56:49.305818",
+    "_updated_at": "2025-11-20T06:49:06.770430",
     "timestamp_download": "2025-11-10T16:48:00.239869",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_1875_20251110_164800.xlsx",
     "status_timestamp": "2025-11-14T15:56:49.305804",
@@ -4316,7 +4717,29 @@
       "timestamp": "2025-11-14T15:56:49.305753"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199559",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:19.999147",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.757591",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.757582",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4348,7 +4771,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4357,7 +4780,7 @@
     },
     "_id": "1762803530142_8464631808",
     "_created_at": "2025-11-10T15:38:50.142448",
-    "_updated_at": "2025-11-14T15:57:38.820911",
+    "_updated_at": "2025-11-20T06:49:06.826992",
     "timestamp_download": "2025-11-10T16:48:29.772605",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_3994_20251110_164829.xlsx",
     "status_timestamp": "2025-11-14T15:57:38.820899",
@@ -4372,7 +4795,29 @@
       "timestamp": "2025-11-14T15:57:38.820857"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199563",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "25/12/2025",
+      "25/01/2026",
+      "25/02/2026",
+      "25/03/2026",
+      "25/04/2026",
+      "25/05/2026",
+      "25/06/2026",
+      "25/07/2026",
+      "25/08/2026",
+      "25/09/2026",
+      "25/10/2026",
+      "25/11/2026"
+    ],
+    "primeiro_vencimento_carne": "25/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:20.055797",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.814260",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.814253",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4516,7 +4961,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4525,7 +4970,7 @@
     },
     "_id": "1762803530216_8464631808",
     "_created_at": "2025-11-10T15:38:50.216957",
-    "_updated_at": "2025-11-14T16:00:04.174608",
+    "_updated_at": "2025-11-20T06:49:06.882914",
     "timestamp_download": "2025-11-10T16:49:58.447842",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5357_20251110_164958.xlsx",
     "status_timestamp": "2025-11-14T16:00:04.174564",
@@ -4540,7 +4985,29 @@
       "timestamp": "2025-11-14T16:00:04.174475"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199574",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:20.111516",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.870245",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.870238",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4572,7 +5039,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4581,7 +5048,7 @@
     },
     "_id": "1762803530242_8464631808",
     "_created_at": "2025-11-10T15:38:50.242129",
-    "_updated_at": "2025-11-14T16:00:58.598402",
+    "_updated_at": "2025-11-20T06:49:06.943382",
     "timestamp_download": "2025-11-10T16:50:27.943173",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_4028_20251110_165027.xlsx",
     "status_timestamp": "2025-11-14T16:00:58.598390",
@@ -4596,7 +5063,29 @@
       "timestamp": "2025-11-14T16:00:58.598347"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199578",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "15/12/2025",
+      "15/01/2026",
+      "15/02/2026",
+      "15/03/2026",
+      "15/04/2026",
+      "15/05/2026",
+      "15/06/2026",
+      "15/07/2026",
+      "15/08/2026",
+      "15/09/2026",
+      "15/10/2026",
+      "15/11/2026"
+    ],
+    "primeiro_vencimento_carne": "15/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:46:20.167573",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:49:06.930642",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:49:06.930633",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/79512N20.3628",
+    "empresa": "10 - RAJ",
+    "contratos_processados_carne": 14
   },
   {
     "Empresa": "10 - RAJ",
@@ -4740,7 +5229,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4749,7 +5238,7 @@
     },
     "_id": "1762803530347_8464631808",
     "_created_at": "2025-11-10T15:38:50.347757",
-    "_updated_at": "2025-11-13T20:35:55.082507",
+    "_updated_at": "2025-11-20T06:50:30.008637",
     "timestamp_download": "2025-11-10T16:52:26.759412",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7879_20251110_165226.xlsx",
     "status_timestamp": "2025-11-13T20:35:55.082500",
@@ -4764,7 +5253,29 @@
       "numero_titulo": "19450",
       "codigo_cliente": "7879",
       "timestamp": "2025-11-13T20:35:55.082476"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:49:07.015285",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:50:29.981677",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:50:29.981659",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/68852N20.163",
+    "empresa": "14 - URUCUI SCP 3",
+    "contratos_processados_carne": 5
   },
   {
     "Empresa": "14 - URUCUI SCP 3",
@@ -4796,7 +5307,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4805,7 +5316,7 @@
     },
     "_id": "1762803530374_8464631808",
     "_created_at": "2025-11-10T15:38:50.374848",
-    "_updated_at": "2025-11-13T16:38:52.073688",
+    "_updated_at": "2025-11-20T06:50:30.075685",
     "timestamp_download": "2025-11-10T16:52:56.441419",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_8426_20251110_165256.xlsx",
     "status_timestamp": "2025-11-13T16:38:52.073679",
@@ -4818,7 +5329,29 @@
       "numero_titulo": "19449",
       "codigo_cliente": "8426",
       "timestamp": "2025-11-13T16:38:52.073585"
-    }
+    },
+    "parcelas_esperadas": [
+      "20/12/2025",
+      "20/01/2026",
+      "20/02/2026",
+      "20/03/2026",
+      "20/04/2026",
+      "20/05/2026",
+      "20/06/2026",
+      "20/07/2026",
+      "20/08/2026",
+      "20/09/2026",
+      "20/10/2026",
+      "20/11/2026"
+    ],
+    "primeiro_vencimento_carne": "20/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:49:07.072332",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:50:30.062512",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:50:30.062506",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/68852N20.163",
+    "empresa": "14 - URUCUI SCP 3",
+    "contratos_processados_carne": 5
   },
   {
     "Empresa": "14 - URUCUI SCP 3",
@@ -4850,7 +5383,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4859,7 +5392,7 @@
     },
     "_id": "1762803530402_8464631808",
     "_created_at": "2025-11-10T15:38:50.402073",
-    "_updated_at": "2025-11-13T16:40:03.403263",
+    "_updated_at": "2025-11-20T06:50:30.244129",
     "timestamp_download": "2025-11-10T16:54:55.417170",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_8382_20251110_165455.xlsx",
     "status_timestamp": "2025-11-13T16:40:03.403257",
@@ -4872,7 +5405,29 @@
       "numero_titulo": "19539",
       "codigo_cliente": "7902",
       "timestamp": "2025-11-13T16:40:03.403240"
-    }
+    },
+    "parcelas_esperadas": [
+      "20/12/2025",
+      "20/01/2026",
+      "20/02/2026",
+      "20/03/2026",
+      "20/04/2026",
+      "20/05/2026",
+      "20/06/2026",
+      "20/07/2026",
+      "20/08/2026",
+      "20/09/2026",
+      "20/10/2026",
+      "20/11/2026"
+    ],
+    "primeiro_vencimento_carne": "20/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:49:07.248148",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:50:30.231518",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:50:30.231513",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/68852N20.163",
+    "empresa": "14 - URUCUI SCP 3",
+    "contratos_processados_carne": 5
   },
   {
     "Empresa": "14 - URUCUI SCP 3",
@@ -4904,7 +5459,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4913,7 +5468,7 @@
     },
     "_id": "1762803530430_8464631808",
     "_created_at": "2025-11-10T15:38:50.430285",
-    "_updated_at": "2025-11-13T16:41:15.062770",
+    "_updated_at": "2025-11-20T06:50:30.132209",
     "timestamp_download": "2025-11-10T16:53:55.789418",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7919_20251110_165355.xlsx",
     "status_timestamp": "2025-11-13T16:41:15.062761",
@@ -4926,7 +5481,29 @@
       "numero_titulo": "19601",
       "codigo_cliente": "7919",
       "timestamp": "2025-11-13T16:41:15.062730"
-    }
+    },
+    "parcelas_esperadas": [
+      "20/12/2025",
+      "20/01/2026",
+      "20/02/2026",
+      "20/03/2026",
+      "20/04/2026",
+      "20/05/2026",
+      "20/06/2026",
+      "20/07/2026",
+      "20/08/2026",
+      "20/09/2026",
+      "20/10/2026",
+      "20/11/2026"
+    ],
+    "primeiro_vencimento_carne": "20/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:49:07.129563",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:50:30.119341",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:50:30.119336",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/68852N20.163",
+    "empresa": "14 - URUCUI SCP 3",
+    "contratos_processados_carne": 5
   },
   {
     "Empresa": "14 - URUCUI SCP 3",
@@ -4958,7 +5535,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -4967,7 +5544,7 @@
     },
     "_id": "1762803530458_8464631808",
     "_created_at": "2025-11-10T15:38:50.458109",
-    "_updated_at": "2025-11-13T16:42:26.882182",
+    "_updated_at": "2025-11-20T06:50:30.188034",
     "timestamp_download": "2025-11-10T16:54:25.617600",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7864_20251110_165425.xlsx",
     "status_timestamp": "2025-11-13T16:42:26.882173",
@@ -4980,7 +5557,29 @@
       "numero_titulo": "19375",
       "codigo_cliente": "7864",
       "timestamp": "2025-11-13T16:42:26.882142"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:49:07.187339",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:50:30.175322",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:50:30.175318",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/68852N20.163",
+    "empresa": "14 - URUCUI SCP 3",
+    "contratos_processados_carne": 5
   },
   {
     "Empresa": "14 - URUCUI SCP 3",
@@ -5172,7 +5771,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5181,7 +5780,7 @@
     },
     "_id": "1762803530574_8464631808",
     "_created_at": "2025-11-10T15:38:50.574542",
-    "_updated_at": "2025-11-13T16:45:34.086571",
+    "_updated_at": "2025-11-20T06:54:40.189223",
     "timestamp_download": "2025-11-10T16:56:24.717382",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5409_20251110_165624.xlsx",
     "status_timestamp": "2025-11-13T16:45:34.086553",
@@ -5194,7 +5793,29 @@
       "numero_titulo": "9478",
       "codigo_cliente": "5409",
       "timestamp": "2025-11-13T16:45:34.086496"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:50:30.316555",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:54:40.161192",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:54:40.161167",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/24053N20.2922",
+    "empresa": "16 - TAURIDEA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "16 - TAURIDEA",
@@ -5334,7 +5955,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5343,7 +5964,7 @@
     },
     "_id": "1762803530664_8464631808",
     "_created_at": "2025-11-10T15:38:50.664811",
-    "_updated_at": "2025-11-13T16:48:53.978708",
+    "_updated_at": "2025-11-20T06:54:40.257523",
     "timestamp_download": "2025-11-10T16:57:53.587700",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5771_20251110_165753.xlsx",
     "status_timestamp": "2025-11-13T16:48:53.978696",
@@ -5356,7 +5977,29 @@
       "numero_titulo": "9813",
       "codigo_cliente": "5771",
       "timestamp": "2025-11-13T16:48:53.978654"
-    }
+    },
+    "parcelas_esperadas": [
+      "15/12/2025",
+      "15/01/2026",
+      "15/02/2026",
+      "15/03/2026",
+      "15/04/2026",
+      "15/05/2026",
+      "15/06/2026",
+      "15/07/2026",
+      "15/08/2026",
+      "15/09/2026",
+      "15/10/2026",
+      "15/11/2026"
+    ],
+    "primeiro_vencimento_carne": "15/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:50:30.375500",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:54:40.244429",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:54:40.244419",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/24053N20.2922",
+    "empresa": "16 - TAURIDEA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "16 - TAURIDEA",
@@ -5498,7 +6141,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5507,7 +6150,7 @@
     },
     "_id": "1762803530757_8464631808",
     "_created_at": "2025-11-10T15:38:50.757773",
-    "_updated_at": "2025-11-13T20:37:22.353740",
+    "_updated_at": "2025-11-20T06:54:40.315669",
     "timestamp_download": "2025-11-10T16:59:22.655507",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_8597_20251110_165922.xlsx",
     "status_timestamp": "2025-11-13T20:37:22.353733",
@@ -5522,7 +6165,29 @@
       "numero_titulo": "19615",
       "codigo_cliente": "8597",
       "timestamp": "2025-11-13T20:37:22.353711"
-    }
+    },
+    "parcelas_esperadas": [
+      "15/01/2026",
+      "15/02/2026",
+      "15/03/2026",
+      "15/04/2026",
+      "15/05/2026",
+      "15/06/2026",
+      "15/07/2026",
+      "15/08/2026",
+      "15/09/2026",
+      "15/10/2026",
+      "15/11/2026",
+      "15/12/2026"
+    ],
+    "primeiro_vencimento_carne": "15/01/26",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:50:30.433821",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:54:40.302779",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:54:40.302770",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/24053N20.2922",
+    "empresa": "16 - TAURIDEA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "16 - TAURIDEA",
@@ -5770,7 +6435,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5779,7 +6444,7 @@
     },
     "_id": "1762803530920_8464631808",
     "_created_at": "2025-11-10T15:38:50.920239",
-    "_updated_at": "2025-11-13T16:57:16.742094",
+    "_updated_at": "2025-11-20T06:54:40.373741",
     "timestamp_download": "2025-11-10T17:01:50.865280",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6802_20251110_170150.xlsx",
     "status_timestamp": "2025-11-13T16:57:16.742087",
@@ -5792,7 +6457,29 @@
       "numero_titulo": "13458",
       "codigo_cliente": "6802",
       "timestamp": "2025-11-13T16:57:16.742064"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:50:30.492374",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:54:40.360660",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:54:40.360650",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/24053N20.2922",
+    "empresa": "16 - TAURIDEA",
+    "contratos_processados_carne": 4
   },
   {
     "Empresa": "11 - TVU",
@@ -5824,7 +6511,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5833,7 +6520,7 @@
     },
     "_id": "1762803530953_8464631808",
     "_created_at": "2025-11-10T15:38:50.953486",
-    "_updated_at": "2025-11-13T16:58:04.490175",
+    "_updated_at": "2025-11-20T06:56:41.516736",
     "timestamp_download": "2025-11-10T17:02:20.399622",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_831_20251110_170220.xlsx",
     "status_timestamp": "2025-11-13T16:58:04.490170",
@@ -5846,7 +6533,29 @@
       "numero_titulo": "627",
       "codigo_cliente": "831",
       "timestamp": "2025-11-13T16:58:04.490152"
-    }
+    },
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.448681",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.488677",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.488657",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "11 - TVU",
@@ -5878,7 +6587,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5887,7 +6596,7 @@
     },
     "_id": "1762803530987_8464631808",
     "_created_at": "2025-11-10T15:38:50.987032",
-    "_updated_at": "2025-11-13T16:58:52.258853",
+    "_updated_at": "2025-11-20T06:56:41.584940",
     "timestamp_download": "2025-11-10T17:02:50.042712",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_1086_20251110_170250.xlsx",
     "status_timestamp": "2025-11-13T16:58:52.258840",
@@ -5900,7 +6609,29 @@
       "numero_titulo": "671",
       "codigo_cliente": "1086",
       "timestamp": "2025-11-13T16:58:52.258803"
-    }
+    },
+    "parcelas_esperadas": [
+      "01/12/2025",
+      "01/01/2026",
+      "01/02/2026",
+      "01/03/2026",
+      "01/04/2026",
+      "01/05/2026",
+      "01/06/2026",
+      "01/07/2026",
+      "01/08/2026",
+      "01/09/2026",
+      "01/10/2026",
+      "01/11/2026"
+    ],
+    "primeiro_vencimento_carne": "01/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.507515",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.571560",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.571553",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "11 - TVU",
@@ -5932,7 +6663,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -5941,7 +6672,7 @@
     },
     "_id": "1762803531021_8464631808",
     "_created_at": "2025-11-10T15:38:51.021127",
-    "_updated_at": "2025-11-13T16:59:53.481341",
+    "_updated_at": "2025-11-20T06:56:41.643471",
     "timestamp_download": "2025-11-10T17:03:19.599982",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_7416_20251110_170319.xlsx",
     "status_timestamp": "2025-11-13T16:59:53.481316",
@@ -5954,7 +6685,29 @@
       "numero_titulo": "10263",
       "codigo_cliente": "7416",
       "timestamp": "2025-11-13T16:59:53.481247"
-    }
+    },
+    "parcelas_esperadas": [
+      "15/12/2025",
+      "15/01/2026",
+      "15/02/2026",
+      "15/03/2026",
+      "15/04/2026",
+      "15/05/2026",
+      "15/06/2026",
+      "15/07/2026",
+      "15/08/2026",
+      "15/09/2026",
+      "15/10/2026",
+      "15/11/2026"
+    ],
+    "primeiro_vencimento_carne": "15/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.566960",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.630416",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.630409",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "11 - TVU",
@@ -6040,7 +6793,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6049,7 +6802,7 @@
     },
     "_id": "1762803531125_8464631808",
     "_created_at": "2025-11-10T15:38:51.125485",
-    "_updated_at": "2025-11-14T16:05:03.091162",
+    "_updated_at": "2025-11-20T06:56:41.701880",
     "timestamp_download": "2025-11-10T17:04:48.368478",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6354_20251110_170448.xlsx",
     "status_timestamp": "2025-11-14T16:05:03.091138",
@@ -6064,7 +6817,29 @@
       "timestamp": "2025-11-14T16:05:03.091060"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199595",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "30/12/2025",
+      "30/01/2026",
+      "28/02/2026",
+      "30/03/2026",
+      "30/04/2026",
+      "30/05/2026",
+      "30/06/2026",
+      "30/07/2026",
+      "30/08/2026",
+      "30/09/2026",
+      "30/10/2026",
+      "30/11/2026"
+    ],
+    "primeiro_vencimento_carne": "30/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.625293",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.688551",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.688545",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "11 - TVU",
@@ -6096,7 +6871,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6105,7 +6880,7 @@
     },
     "_id": "1762803531160_8464631808",
     "_created_at": "2025-11-10T15:38:51.160534",
-    "_updated_at": "2025-11-14T16:05:51.209847",
+    "_updated_at": "2025-11-20T06:56:41.760183",
     "timestamp_download": "2025-11-10T17:05:18.043893",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_972_20251110_170518.xlsx",
     "status_timestamp": "2025-11-14T16:05:51.209837",
@@ -6120,7 +6895,29 @@
       "timestamp": "2025-11-14T16:05:51.209795"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199600",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.688032",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.746990",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.746983",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "11 - TVU",
@@ -6208,7 +7005,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6217,7 +7014,7 @@
     },
     "_id": "1762803531231_8464631808",
     "_created_at": "2025-11-10T15:38:51.231649",
-    "_updated_at": "2025-11-14T16:07:40.282050",
+    "_updated_at": "2025-11-20T06:56:41.818794",
     "timestamp_download": "2025-11-10T17:06:17.411595",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6818_20251110_170617.xlsx",
     "status_timestamp": "2025-11-14T16:07:40.282038",
@@ -6232,7 +7029,29 @@
       "timestamp": "2025-11-14T16:07:40.282000"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199610",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026",
+      "10/12/2026"
+    ],
+    "primeiro_vencimento_carne": "10/01/26",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.746860",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.805532",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.805522",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "11 - TVU",
@@ -6264,7 +7083,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "ok",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6273,7 +7092,7 @@
     },
     "_id": "1762803531267_8464631808",
     "_created_at": "2025-11-10T15:38:51.267912",
-    "_updated_at": "2025-11-14T16:08:33.257486",
+    "_updated_at": "2025-11-20T06:56:41.877172",
     "timestamp_download": "2025-11-10T17:06:47.042735",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_5402_20251110_170647.xlsx",
     "status_timestamp": "2025-11-14T16:08:33.257451",
@@ -6288,7 +7107,29 @@
       "timestamp": "2025-11-14T16:08:33.257400"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199615",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/12/2025",
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026"
+    ],
+    "primeiro_vencimento_carne": "10/12/25",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:54:40.806079",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:56:41.863940",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:56:41.863933",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/62502N20.4597",
+    "empresa": "11 - TVU",
+    "contratos_processados_carne": 7
   },
   {
     "Empresa": "6 - CATACUY",
@@ -6320,7 +7161,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6329,7 +7170,7 @@
     },
     "_id": "1762803531305_8464631808",
     "_created_at": "2025-11-10T15:38:51.305017",
-    "_updated_at": "2025-11-14T16:09:38.628372",
+    "_updated_at": "2025-11-20T06:58:00.147262",
     "timestamp_download": "2025-11-10T17:07:16.716353",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6877_20251110_170716.xlsx",
     "status_timestamp": "2025-11-14T16:09:38.628360",
@@ -6344,7 +7185,29 @@
       "timestamp": "2025-11-14T16:09:38.628324"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199620",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026",
+      "10/12/2026"
+    ],
+    "primeiro_vencimento_carne": "10/01/26",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:56:41.953101",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:58:00.120146",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:58:00.120129",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/12890N20.666",
+    "empresa": "6 - CATACUY",
+    "contratos_processados_carne": 3
   },
   {
     "Empresa": "6 - CATACUY",
@@ -6376,7 +7239,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "não",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6385,7 +7248,7 @@
     },
     "_id": "1762803531341_8464631808",
     "_created_at": "2025-11-10T15:38:51.341920",
-    "_updated_at": "2025-11-14T16:10:43.494641",
+    "_updated_at": "2025-11-20T06:58:00.223156",
     "timestamp_download": "2025-11-10T17:07:46.389455",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6879_20251110_170746.xlsx",
     "status_timestamp": "2025-11-14T16:10:43.494631",
@@ -6400,7 +7263,29 @@
       "timestamp": "2025-11-14T16:10:43.494604"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199625",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "10/01/2026",
+      "10/02/2026",
+      "10/03/2026",
+      "10/04/2026",
+      "10/05/2026",
+      "10/06/2026",
+      "10/07/2026",
+      "10/08/2026",
+      "10/09/2026",
+      "10/10/2026",
+      "10/11/2026",
+      "10/12/2026"
+    ],
+    "primeiro_vencimento_carne": "10/01/26",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:56:42.012478",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:58:00.209598",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:58:00.209591",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/12890N20.666",
+    "empresa": "6 - CATACUY",
+    "contratos_processados_carne": 3
   },
   {
     "Empresa": "6 - CATACUY",
@@ -6432,7 +7317,7 @@
     "Saldo devedor final": "",
     "Próximo reajuste": "",
     "Data de Migração": "jan.-26",
-    "status": "REPARCELADO",
+    "status": "CARNE_GERADO",
     "_metadata": {
       "prioridade": 11,
       "origem_identificacao": "rpa_analise_planilhas",
@@ -6441,7 +7326,7 @@
     },
     "_id": "1762803531379_8464631808",
     "_created_at": "2025-11-10T15:38:51.379172",
-    "_updated_at": "2025-11-14T16:11:48.515563",
+    "_updated_at": "2025-11-20T06:58:00.282258",
     "timestamp_download": "2025-11-10T17:08:16.138876",
     "arquivo_relatorio": "dados_extraidos/planilhas_sienge/sienge_6876_20251110_170816.xlsx",
     "status_timestamp": "2025-11-14T16:11:48.515554",
@@ -6456,6 +7341,28 @@
       "timestamp": "2025-11-14T16:11:48.515527"
     },
     "status_atualizado_em": "2025-11-14T15:37:28.199629",
-    "status_anterior": "APROVACAO_REALIZADA"
+    "status_anterior": "APROVACAO_REALIZADA",
+    "parcelas_esperadas": [
+      "25/01/2026",
+      "25/02/2026",
+      "25/03/2026",
+      "25/04/2026",
+      "25/05/2026",
+      "25/06/2026",
+      "25/07/2026",
+      "25/08/2026",
+      "25/09/2026",
+      "25/10/2026",
+      "25/11/2026",
+      "25/12/2026"
+    ],
+    "primeiro_vencimento_carne": "25/01/26",
+    "timestamp_parcelas_calculadas": "2025-11-20T06:56:42.071805",
+    "timestamp_ultima_atualizacao": "2025-11-20T06:58:00.268831",
+    "resultado_final": "CARNE_GERADO",
+    "timestamp_carne_gerado": "2025-11-20T06:58:00.268822",
+    "arquivo_remessa": "/Users/tiagopereiraramos/Documents/Projetos/Tragetoria/reparcelamentov3/reparcelamento/outputs/remessas/12890N20.666",
+    "empresa": "6 - CATACUY",
+    "contratos_processados_carne": 3
   }
 ]
