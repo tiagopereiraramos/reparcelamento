@@ -1257,9 +1257,104 @@ cp data/fila_contratos.json data/fila_contratos.json.backup_$(date +%Y%m%d_%H%M%
 
 ---
 
-## 12. ANEXOS TÉCNICOS
+## 12. MIGRAÇÃO PARA MÁQUINA DO CLIENTE
 
-### 12.1 Variáveis de Ambiente Completas
+### 12.1 Visão Geral
+
+Este projeto foi preparado para migração fácil entre ambientes (Linux, Windows, macOS) com suporte completo a:
+- Gerenciamento de dependências com **uv**
+- Detecção automática de drivers (Firefox e Chrome)
+- Configuração segura de credenciais
+- Agendamento multiplataforma (cron/Task Scheduler)
+
+### 12.2 Processo de Migração Rápido
+
+**Passo 1: Verificar Pré-requisitos**
+```bash
+python scripts/verificar_pre_requisitos.py
+```
+
+**Passo 2: Setup Completo**
+```bash
+python scripts/setup_completo.py
+```
+
+**Passo 3: Configurar Credenciais**
+```bash
+python scripts/configurar_ambiente.py
+```
+
+**Passo 4: Validar Instalação**
+```bash
+python scripts/validar_credenciais.py
+python scripts/testar_instalacao.py
+```
+
+**Passo 5: Configurar Agendamento**
+```bash
+python scripts/configurar_agendamento.py
+```
+
+### 12.3 Documentação de Migração
+
+Para guias detalhados, consulte:
+
+- **`docs/MIGRACAO_CLIENTE.md`**: Guia completo de migração
+- **`docs/AGENDAMENTO.md`**: Configuração de agendamento
+- **`docs/SEGURANCA_CREDENCIAIS.md`**: Boas práticas de segurança
+- **`docs/GUIA_RAPIDO_MIGRACAO.md`**: Referência rápida
+
+### 12.4 Scripts de Migração Disponíveis
+
+| Script | Descrição |
+|--------|-----------|
+| `scripts/verificar_pre_requisitos.py` | Verifica pré-requisitos do sistema |
+| `scripts/setup_uv.py` | Instala e configura uv |
+| `scripts/instalar_dependencias.py` | Instala dependências do projeto |
+| `scripts/configurar_chrome_driver.py` | Configura Chrome driver |
+| `scripts/configurar_ambiente.py` | Configuração interativa de .env |
+| `scripts/validar_credenciais.py` | Valida credenciais configuradas |
+| `scripts/configurar_agendamento.py` | Configura agendamento (cron/Task Scheduler) |
+| `scripts/executar_agendado.py` | Wrapper para execução agendada |
+| `scripts/testar_agendamento.py` | Testa configuração de agendamento |
+| `scripts/setup_completo.py` | Orquestra todo o processo de setup |
+| `scripts/testar_instalacao.py` | Valida instalação completa |
+
+### 12.5 Suporte Multiplataforma
+
+O projeto suporta automaticamente:
+
+- **Linux**: Ubuntu 20.04+, Debian 11+, CentOS 8+
+- **Windows**: Windows 10/11 (64-bit)
+- **macOS**: macOS 11 (Big Sur) ou superior
+
+Todos os scripts detectam automaticamente o sistema operacional e ajustam comportamentos conforme necessário.
+
+### 12.6 Troubleshooting de Migração
+
+**Problema: Drivers não funcionam**
+```bash
+python scripts/configurar_chrome_driver.py
+```
+
+**Problema: Credenciais inválidas**
+```bash
+python scripts/validar_credenciais.py
+```
+
+**Problema: Agendamento não executa**
+```bash
+python scripts/testar_agendamento.py
+python scripts/configurar_agendamento.py
+```
+
+Para mais detalhes, consulte `docs/GUIA_RAPIDO_MIGRACAO.md`.
+
+---
+
+## 13. ANEXOS TÉCNICOS
+
+### 13.1 Variáveis de Ambiente Completas
 
 ```env
 # ============================================
@@ -1300,7 +1395,7 @@ SENDGRID_API_KEY=sua_chave_aqui
 HEADLESS=1  # 1 = headless, 0 = com navegador visível
 ```
 
-### 12.2 Estrutura de Dados - Fila de Contratos
+### 13.2 Estrutura de Dados - Fila de Contratos
 
 ```json
 [
@@ -1325,7 +1420,7 @@ HEADLESS=1  # 1 = headless, 0 = com navegador visível
 ]
 ```
 
-### 12.3 Comandos Úteis
+### 13.3 Comandos Úteis
 
 **Executar todos os processos da Etapa 1:**
 ```bash

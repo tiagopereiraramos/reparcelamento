@@ -372,7 +372,7 @@ def main() -> None:
     sucesso = True
     erro_msg = ""
     try:
-        asyncio.run(main_async())
+    asyncio.run(main_async())
     except Exception as e:  # pylint: disable=broad-exception-caught
         sucesso = False
         erro_msg = str(e)

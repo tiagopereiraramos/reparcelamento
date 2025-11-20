@@ -8,6 +8,8 @@ Desenvolvido em Português Brasileiro
 
 import logging
 import os
+import platform
+import shutil
 from contextlib import contextmanager
 import random
 from time import sleep
@@ -116,108 +118,251 @@ class RPABrowser:
         else:
             self._inicializar_firefox(headless, eager_load)
 
+    def _detectar_versao_chrome(self) -> Optional[int]:
+        """Detecta a versão do Chrome instalada no sistema"""
+        try:
+            sistema = platform.system()
+            if sistema == "Windows":
+                # Windows: verificar no registro ou executável
+                try:
+                    import winreg
+                except ImportError:
+                    # winreg não disponível (não é Windows ou Python incompleto)
+                    pass
+                else:
+                    try:
+                        key = winreg.OpenKey(
+                            winreg.HKEY_CURRENT_USER,
+                            r"Software\Google\Chrome\BLBeacon"
+                        )
+                        version = winreg.QueryValueEx(key, "version")[0]
+                        winreg.CloseKey(key)
+                        version_main = int(version.split('.')[0])
+                        self.logger.info(f"✅ Versão do Chrome detectada: {version} (main: {version_main})")
+                        return version_main
+                    except Exception:
+                        pass
+            elif sistema == "Darwin":  # macOS
+                # macOS: verificar via comando
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '--version'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        version_str = result.stdout.strip()
+                        version_main = int(version_str.split()[-1].split('.')[0])
+                        self.logger.info(f"✅ Versão do Chrome detectada: {version_str} (main: {version_main})")
+                        return version_main
+                except Exception:
+                    pass
+            else:  # Linux
+                # Linux: verificar via comando
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        ['google-chrome', '--version'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        version_str = result.stdout.strip()
+                        version_main = int(version_str.split()[-1].split('.')[0])
+                        self.logger.info(f"✅ Versão do Chrome detectada: {version_str} (main: {version_main})")
+                        return version_main
+                except Exception:
+                    pass
+            
+            self.logger.warning("⚠️ Não foi possível detectar versão do Chrome automaticamente")
+            return None
+        except Exception as e:
+            self.logger.warning(f"⚠️ Erro ao detectar versão do Chrome: {e}")
+            return None
+
     def _inicializar_chrome_uc(self, headless: bool, eager_load: bool):
-        """Inicializa Chrome com Undetected Chromedriver"""
+        """Inicializa Chrome com Undetected Chromedriver com retry e validação robusta"""
         if not UC_CHROME_DISPONIVEL or uc is None:
             raise ImportError("undetected-chromedriver não instalado")
 
         self.logger.info(
             "🚀 Inicializando Chrome com Undetected Chromedriver...")
 
-        try:
-            # Configurar opções do Chrome
-            chrome_options = uc.ChromeOptions()
+        # Detectar versão do Chrome
+        version_main = self._detectar_versao_chrome()
+        
+        # Estratégias de inicialização (sem versão, com versão detectada, fallback)
+        estrategias = []
+        if version_main:
+            estrategias.append({"version_main": version_main, "desc": f"versão detectada ({version_main})"})
+        estrategias.append({"version_main": None, "desc": "detecção automática"})
+        # Fallback para versões comuns se detecção falhar
+        for v in [140, 139, 138, 137, 136]:
+            if not version_main or abs(version_main - v) <= 5:
+                estrategias.append({"version_main": v, "desc": f"fallback versão {v}"})
 
-            # Configurar headless de forma compatível
-            if headless:
-                chrome_options.add_argument("--headless=new")
-
-            # Argumentos essenciais para estabilidade (reduzidos)
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-extensions")
-            chrome_options.add_argument("--disable-web-security")
-            chrome_options.add_argument("--allow-running-insecure-content")
-
-            # ✅ CORREÇÃO: Configurar diretório de downloads para Chrome UC
-            from platformdirs import user_downloads_dir
-
-            rpa_downloads_folder = os.getenv(
-                'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
-
-            # Tratar barra inicial se houver (como no rpa_sienge.py)
-            if rpa_downloads_folder and rpa_downloads_folder.startswith('/'):
-                rpa_downloads_folder = rpa_downloads_folder[1:]
-
-            # Usar platformdirs para cross-platform automático
-            downloads_dir = os.path.join(
-                user_downloads_dir(), rpa_downloads_folder)
-
-            os.makedirs(downloads_dir, exist_ok=True)
-
-            # ✅ CONFIGURAÇÃO DE DOWNLOADS PARA CHROME UC
-            chrome_options.add_experimental_option(
-                "prefs", {
-                    "download.default_directory": downloads_dir,
-                    "download.prompt_for_download": False,
-                    "download.directory_upgrade": True,
-                    "safebrowsing.enabled": True,
-                    "safebrowsing.disable_download_protection": True,
-                    "profile.default_content_setting_values.automatic_downloads": 1,
-                    "profile.default_content_settings.popups": 0,
-                    "profile.content_settings.exceptions.automatic_downloads.*.http://*": {
-                        "setting": 1
-                    },
-                    "profile.content_settings.exceptions.automatic_downloads.*.https://*": {
-                        "setting": 1
-                    }
-                }
-            )
-
-            # ✅ CONFIGURAR TIPOS DE ARQUIVO PARA DOWNLOAD AUTOMÁTICO
-            # Removidas opções incompatíveis com undetected-chromedriver
-
-            self.logger.info(
-                f"📁 Diretório de downloads configurado: {downloads_dir}")
-
-            # Adicionar perfil do Chrome se fornecido
-            if self._chrome_profile_path:
+        ultimo_erro = None
+        for tentativa, estrategia in enumerate(estrategias, 1):
+            try:
                 self.logger.info(
-                    f"✅ Usando perfil do Chrome: {self._chrome_profile_path}")
-                chrome_options.add_argument(
-                    f'--user-data-dir={self._chrome_profile_path}')
+                    f"🔄 Tentativa {tentativa}/{len(estrategias)}: {estrategia['desc']}")
 
-            # Inicializar Chrome UC com versão compatível
-            self._driver = uc.Chrome(
-                options=chrome_options,
-                use_subprocess=True,
-                suppress_welcome=True,
-                version_main=140  # Versão compatível com Chrome atual
-            )
+                # Configurar opções do Chrome
+                chrome_options = uc.ChromeOptions()
 
-            # ✅ CONFIGURAÇÃO ADICIONAL APÓS INICIALIZAÇÃO
-            # Configurar para evitar detecção
-            self._driver.execute_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                # Configurar headless de forma compatível
+                if headless:
+                    chrome_options.add_argument("--headless=new")
 
-            # ✅ CONFIGURAR DOWNLOADS APÓS INICIALIZAÇÃO (reforço)
-            self._driver.execute_cdp_cmd('Page.setDownloadBehavior', {
-                'behavior': 'allow',
-                'downloadPath': downloads_dir
-            })
+                # Argumentos essenciais para estabilidade
+                chrome_options.add_argument("--no-sandbox")
+                chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--disable-gpu")
+                chrome_options.add_argument("--disable-extensions")
+                chrome_options.add_argument("--disable-web-security")
+                chrome_options.add_argument("--allow-running-insecure-content")
+                # Argumentos adicionais para estabilidade
+                chrome_options.add_argument("--disable-software-rasterizer")
+                chrome_options.add_argument("--disable-background-timer-throttling")
+                chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+                chrome_options.add_argument("--disable-renderer-backgrounding")
 
-            self.logger.info("✅ Chrome UC inicializado com sucesso")
-            self.logger.info(f"📁 Downloads serão salvos em: {downloads_dir}")
+                # ✅ CORREÇÃO: Configurar diretório de downloads para Chrome UC
+                from platformdirs import user_downloads_dir
 
-        except Exception as e:
-            self.logger.error(f"❌ Erro ao inicializar Chrome UC: {e}")
-            raise Exception(f"Falha ao inicializar Chrome UC: {e}")
+                rpa_downloads_folder = os.getenv(
+                    'RPA_DOWNLOADS_FOLDER', 'RPA_DOWNLOADS')
+
+                # Tratar barra inicial se houver (como no rpa_sienge.py)
+                if rpa_downloads_folder and rpa_downloads_folder.startswith('/'):
+                    rpa_downloads_folder = rpa_downloads_folder[1:]
+
+                # Usar platformdirs para cross-platform automático
+                downloads_dir = os.path.join(
+                    user_downloads_dir(), rpa_downloads_folder)
+
+                os.makedirs(downloads_dir, exist_ok=True)
+
+                # ✅ CONFIGURAÇÃO DE DOWNLOADS PARA CHROME UC
+                chrome_options.add_experimental_option(
+                    "prefs", {
+                        "download.default_directory": downloads_dir,
+                        "download.prompt_for_download": False,
+                        "download.directory_upgrade": True,
+                        "safebrowsing.enabled": True,
+                        "safebrowsing.disable_download_protection": True,
+                        "profile.default_content_setting_values.automatic_downloads": 1,
+                        "profile.default_content_settings.popups": 0,
+                        "profile.content_settings.exceptions.automatic_downloads.*.http://*": {
+                            "setting": 1
+                        },
+                        "profile.content_settings.exceptions.automatic_downloads.*.https://*": {
+                            "setting": 1
+                        }
+                    }
+                )
+
+                self.logger.info(
+                    f"📁 Diretório de downloads configurado: {downloads_dir}")
+
+                # Adicionar perfil do Chrome se fornecido
+                if self._chrome_profile_path:
+                    self.logger.info(
+                        f"✅ Usando perfil do Chrome: {self._chrome_profile_path}")
+                    chrome_options.add_argument(
+                        f'--user-data-dir={self._chrome_profile_path}')
+
+                # Preparar parâmetros de inicialização
+                init_params = {
+                    "options": chrome_options,
+                    "use_subprocess": True,
+                    "suppress_welcome": True,
+                }
+                
+                # Adicionar version_main apenas se especificado
+                if estrategia["version_main"] is not None:
+                    init_params["version_main"] = estrategia["version_main"]
+
+                # Inicializar Chrome UC
+                self._driver = uc.Chrome(**init_params)
+
+                # ✅ VALIDAÇÃO CRÍTICA: Verificar se o driver está realmente funcionando
+                try:
+                    # Tentar obter a URL atual (isso valida que o browser está vivo)
+                    _ = self._driver.current_url
+                    # Tentar executar um script simples
+                    self._driver.execute_script("return document.readyState")
+                    self.logger.info("✅ Validação inicial do browser: OK")
+                except Exception as validacao_erro:
+                    self.logger.error(f"❌ Browser inicializado mas não está respondendo: {validacao_erro}")
+                    if self._driver:
+                        try:
+                            self._driver.quit()
+                        except:
+                            pass
+                    self._driver = None
+                    raise Exception(f"Browser não está respondendo após inicialização: {validacao_erro}")
+
+                # ✅ CONFIGURAÇÃO ADICIONAL APÓS INICIALIZAÇÃO
+                # Configurar para evitar detecção
+                self._driver.execute_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+                # ✅ CONFIGURAR DOWNLOADS APÓS INICIALIZAÇÃO (reforço)
+                try:
+                    self._driver.execute_cdp_cmd('Page.setDownloadBehavior', {
+                        'behavior': 'allow',
+                        'downloadPath': downloads_dir
+                    })
+                except Exception as cdp_erro:
+                    self.logger.warning(f"⚠️ Erro ao configurar CDP para downloads (não crítico): {cdp_erro}")
+
+                self.logger.info("✅ Chrome UC inicializado com sucesso")
+                self.logger.info(f"📁 Downloads serão salvos em: {downloads_dir}")
+                return  # Sucesso - sair do loop
+
+            except Exception as e:
+                ultimo_erro = e
+                erro_msg = str(e)
+                self.logger.warning(
+                    f"⚠️ Tentativa {tentativa} falhou: {erro_msg}")
+                
+                # Limpar driver se foi criado mas falhou
+                if self._driver:
+                    try:
+                        self._driver.quit()
+                    except:
+                        pass
+                    self._driver = None
+                
+                # Se for erro de processo fechado, tentar próxima estratégia
+                if "Process unexpectedly closed" in erro_msg or "status 0" in erro_msg:
+                    self.logger.info(f"🔄 Processo fechou inesperadamente, tentando próxima estratégia...")
+                    sleep(2)  # Pequeno delay entre tentativas
+                    continue
+                else:
+                    # Outros erros também podem se beneficiar de retry
+                    if tentativa < len(estrategias):
+                        sleep(2)
+                        continue
+
+        # Se chegou aqui, todas as tentativas falharam
+        erro_final = f"Falha ao inicializar Chrome UC após {len(estrategias)} tentativas"
+        if ultimo_erro:
+            erro_final += f": {ultimo_erro}"
+        self.logger.error(f"❌ {erro_final}")
+        raise Exception(erro_final)
 
     def _inicializar_firefox(self, headless: bool, eager_load: bool):
-        """Inicializa Firefox seguindo sua estrutura original"""
+        """Inicializa Firefox seguindo sua estrutura original (multiplataforma)"""
         if not SELENIUM_DISPONIVEL:
             return
+
+        import platform
+        sistema = platform.system()
 
         self.options = Options()
 
@@ -263,12 +408,50 @@ class RPABrowser:
         self.options.set_preference("browser.download.useDownloadDir", True)
         self.options.set_preference("pdfjs.disabled", True)
 
-        # Tentar usar GeckoDriver
+        # Tentar usar GeckoDriver com detecção multiplataforma
+        gecko_driver_path = None
         try:
+            # Usar webdriver-manager que detecta automaticamente o SO
             gecko_driver_path = GeckoDriverManager().install()
-        except Exception:
-            # Fallback para caminho padrão
-            gecko_driver_path = "/usr/local/bin/geckodriver"
+            self.logger.info(f"✅ GeckoDriver instalado: {gecko_driver_path}")
+        except Exception as e:
+            self.logger.warning(f"⚠️  Erro ao instalar GeckoDriver via webdriver-manager: {e}")
+            # Fallback para caminhos padrão por SO
+            if sistema == "Windows":
+                caminhos_fallback = [
+                    os.path.expanduser(r"~\AppData\Local\geckodriver\geckodriver.exe"),
+                    r"C:\WebDriver\bin\geckodriver.exe",
+                    "geckodriver.exe"  # No PATH
+                ]
+            elif sistema == "Darwin":  # macOS
+                caminhos_fallback = [
+                    "/usr/local/bin/geckodriver",
+                    "/opt/homebrew/bin/geckodriver",
+                    "geckodriver"  # No PATH
+                ]
+            else:  # Linux
+                caminhos_fallback = [
+                    "/usr/local/bin/geckodriver",
+                    "/usr/bin/geckodriver",
+                    "~/.local/bin/geckodriver",
+                    "geckodriver"  # No PATH
+                ]
+            
+            for caminho in caminhos_fallback:
+                caminho_expandido = os.path.expanduser(caminho)
+                if os.path.exists(caminho_expandido) or shutil.which(caminho_expandido):
+                    gecko_driver_path = caminho_expandido
+                    self.logger.info(f"✅ GeckoDriver encontrado: {gecko_driver_path}")
+                    break
+            
+            if not gecko_driver_path:
+                # Último fallback: tentar encontrar no PATH
+                gecko_driver_path = shutil.which("geckodriver")
+                if gecko_driver_path:
+                    self.logger.info(f"✅ GeckoDriver encontrado no PATH: {gecko_driver_path}")
+                else:
+                    self.logger.error("❌ GeckoDriver não encontrado. Instale manualmente ou use webdriver-manager")
+                    raise Exception("GeckoDriver não encontrado")
 
         # Usar perfil Firefox se fornecido
         if self._firefox_profile_path:
@@ -280,10 +463,78 @@ class RPABrowser:
         service = Service(gecko_driver_path)
         service.start_error_message = "Erro ao iniciar GeckoDriver"
 
-        self._driver = webdriver.Firefox(service=service, options=self.options)
+        # ✅ INICIALIZAÇÃO COM RETRY E VALIDAÇÃO
+        max_tentativas = 3
+        ultimo_erro = None
+        
+        for tentativa in range(1, max_tentativas + 1):
+            try:
+                self.logger.info(f"🔄 Tentativa {tentativa}/{max_tentativas} de inicializar Firefox...")
+                
+                # Limpar driver anterior se existir
+                if self._driver:
+                    try:
+                        self._driver.quit()
+                    except:
+                        pass
+                    self._driver = None
+                
+                # Inicializar Firefox
+                self._driver = webdriver.Firefox(service=service, options=self.options)
 
-        self._driver.delete_all_cookies()
-        self.logger.info("✅ Browser Firefox inicializado")
+                # ✅ VALIDAÇÃO CRÍTICA: Verificar se o driver está realmente funcionando
+                try:
+                    # Tentar obter a URL atual (isso valida que o browser está vivo)
+                    _ = self._driver.current_url
+                    # Tentar executar um script simples
+                    self._driver.execute_script("return document.readyState")
+                    self.logger.info("✅ Validação inicial do browser Firefox: OK")
+                except Exception as validacao_erro:
+                    self.logger.error(f"❌ Firefox inicializado mas não está respondendo: {validacao_erro}")
+                    if self._driver:
+                        try:
+                            self._driver.quit()
+                        except:
+                            pass
+                    self._driver = None
+                    raise Exception(f"Firefox não está respondendo após inicialização: {validacao_erro}")
+                
+                # Limpar cookies e finalizar
+                self._driver.delete_all_cookies()
+                self.logger.info("✅ Browser Firefox inicializado com sucesso")
+                return  # Sucesso - sair do loop
+                
+            except Exception as e:
+                ultimo_erro = e
+                erro_msg = str(e)
+                self.logger.warning(f"⚠️ Tentativa {tentativa} falhou: {erro_msg}")
+                
+                # Limpar driver se foi criado mas falhou
+                if self._driver:
+                    try:
+                        self._driver.quit()
+                    except:
+                        pass
+                    self._driver = None
+                
+                # Se for erro de processo fechado, tentar novamente
+                if "Process unexpectedly closed" in erro_msg or "status 0" in erro_msg or "connection refused" in erro_msg.lower():
+                    if tentativa < max_tentativas:
+                        self.logger.info(f"🔄 Processo fechou inesperadamente, tentando novamente em 2 segundos...")
+                        sleep(2)  # Pequeno delay entre tentativas
+                        continue
+                
+                # Se não for erro de processo fechado e ainda há tentativas, continuar
+                if tentativa < max_tentativas:
+                    sleep(2)
+                    continue
+        
+        # Se chegou aqui, todas as tentativas falharam
+        erro_final = f"Falha ao inicializar Firefox após {max_tentativas} tentativas"
+        if ultimo_erro:
+            erro_final += f": {ultimo_erro}"
+        self.logger.error(f"❌ {erro_final}")
+        raise Exception(erro_final)
 
     def set_timeout(self, timeout: int):
         """Define timeout personalizado"""

@@ -28,10 +28,7 @@ import asyncio
 import argparse
 import traceback
 from datetime import datetime
-from typing import Dict, Any, Optional, List, Tuple
-import calendar
-import json
-import csv
+from typing import Dict, Any, Optional, List
 
 # Garante execução com browser visível para debug
 os.environ["HEADLESS"] = "0"
@@ -287,24 +284,22 @@ def verificar_pendencias_contrato(contrato: Dict[str, Any]) -> Dict[str, Any]:
     pendencias_sienge = obter_valor_coluna("PENDENCIAS SIENGE")
 
     # ✅ LÓGICA CORRETA CONFORME PDD ATUALIZADO:
-    # IPTU: "NÃO" = SEM pendências (apto); vazio ou qualquer outro valor = COM pendências (inapto)
-    # INADIMPLÊNCIA: vazio = adimplente (apto); qualquer valor preenchido (incluindo "Inadimplência" ou "OK") = COM pendência (inapto)
-    # OUTRAS PENDÊNCIAS: "OK" = SEM pendências (apto); vazio ou qualquer outro valor = COM pendência (inapto)
+    # IPTU: "SIM" = COM pendências (inapto), "NÃO" ou vazio = SEM pendências (apto)
+    # INADIMPLÊNCIA: "Inadimplência" = COM pendência (inapto); vazio ou "OK" = adimplente (apto)
+    # OUTRAS PENDÊNCIAS: qualquer valor preenchido = COM pendência (inapto); vazio = SEM pendências (apto)
+    pmfi_ok = not pendencias_pmfi or pendencias_pmfi.upper() == "NÃO"
 
-    # ✅ Apenas "NÃO" é considerado apto para PENDENCIAS PMFI (vazio = inapto)
-    # Normalizar para garantir comparação correta (remover espaços e converter para maiúsculo)
-    pendencias_pmfi_normalizada = pendencias_pmfi.strip().upper() if pendencias_pmfi else ""
-    pmfi_ok = pendencias_pmfi_normalizada == "NÃO"
+    sienge_inad_normalizado = pendencias_sienge_inad.casefold()
+    sienge_inad_ok = (
+        not pendencias_sienge_inad
+        or sienge_inad_normalizado == "ok"
+    )
 
-    # ✅ Apenas vazio é considerado apto para PENDENCIAS SIENGE INAD (qualquer valor preenchido = inapto)
-    # Verificar se está realmente vazio (após strip) - obter_valor_coluna sempre retorna string
-    sienge_inad_ok = not pendencias_sienge_inad.strip()
-
-    # ✅ Apenas "OK" é considerado apto para PENDENCIAS SIENGE (vazio = inapto)
-    # Normalizar para garantir comparação correta (remover espaços e converter para maiúsculo)
-    pendencia_sienge_normalizada = pendencias_sienge.strip(
-    ).upper() if pendencias_sienge else ""
-    sienge_ok = pendencia_sienge_normalizada == "OK"
+    pendencia_sienge_normalizada = pendencias_sienge.upper()
+    sienge_ok = (
+        not pendencias_sienge
+        or pendencia_sienge_normalizada == "OK"
+    )
 
     # Contrato apto se TODAS as pendências estão OK
     contrato_apto = pmfi_ok and sienge_inad_ok and sienge_ok
@@ -318,28 +313,23 @@ def verificar_pendencias_contrato(contrato: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     status_msg = "APTO" if contrato_apto else "PENDENTE"
-    codigo_cliente = contrato.get('Código Cliente', 'N/A')
-    titulo = contrato.get('Titulo', 'N/A')
-    log(f"   🔍 {cliente} (Código: {codigo_cliente}, Título: {titulo}): {status_msg}")
+    log(f"   🔍 {cliente}: {status_msg}")
 
-    if contrato_apto:
-        # ✅ Log detalhado para contratos APTOS (para debug e conferência)
-        log(f"      ✅ PMFI: '{pendencias_pmfi}' | SIENGE INAD: '{pendencias_sienge_inad}' | SIENGE: '{pendencias_sienge}'")
-    else:
+    if not contrato_apto:
         if not pmfi_ok:
             log(
-                f"      ❌ PENDÊNCIAS PMFI: '{pendencias_pmfi}' (deve ser 'NÃO' para ser apto)")
+                f"      ❌ PENDÊNCIAS PMFI: '{pendencias_pmfi}' (deve ser 'NÃO' ou vazio para ser apto)")
         if not sienge_inad_ok:
             log(
-                f"      ❌ PENDÊNCIAS SIENGE INAD: '{pendencias_sienge_inad}' (deve estar vazio para ser adimplente)")
+                f"      ❌ PENDÊNCIAS SIENGE INAD: '{pendencias_sienge_inad}' (deve estar vazio ou 'OK' para ser adimplente)")
         if not sienge_ok:
             log(
-                f"      ❌ PENDÊNCIAS SIENGE: '{pendencias_sienge}' (deve ser 'OK' para ser apto)")
+                f"      ❌ PENDÊNCIAS SIENGE: '{pendencias_sienge}' (deve estar vazio ou 'OK' para ser apto)")
 
     return resultado
 
 
-def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     FASE 4: Filtrar contratos aptos para geração de carnê
 
@@ -347,8 +337,7 @@ def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> Tuple
         contratos_associados: Lista de contratos com dados da planilha
 
     Returns:
-        Tupla com (contratos_aptos, contratos_com_pendencias)
-        contratos_com_pendencias: Lista de dicts com 'contrato' e 'motivo'
+        Lista de contratos aptos para geração de carnê
     """
     log("\n🔍 FASE 4: VERIFICANDO PENDÊNCIAS E FILTRANDO CONTRATOS APTOS...")
     log("=" * 60)
@@ -362,24 +351,8 @@ def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> Tuple
         if resultado_verificacao["contrato_apto"]:
             contratos_aptos.append(contrato)
         else:
-            # Montar motivo detalhado
-            motivos = []
-            if resultado_verificacao["pendencias_pmfi"] != "OK":
-                motivos.append(
-                    f"Pendências PMFI: {resultado_verificacao['pendencias_pmfi']}")
-            if resultado_verificacao["pendencias_sienge_inad"] != "OK":
-                motivos.append(
-                    f"Pendências SIENGE INAD: {resultado_verificacao['pendencias_sienge_inad']}")
-            if resultado_verificacao["pendencias_sienge"] != "OK":
-                motivos.append(
-                    f"Pendências SIENGE: {resultado_verificacao['pendencias_sienge']}")
-
-            motivo_completo = " | ".join(
-                motivos) if motivos else "Pendências não especificadas"
-
             contratos_com_pendencias.append({
                 "contrato": contrato,
-                "motivo": motivo_completo,
                 "pendencias": resultado_verificacao
             })
 
@@ -392,7 +365,7 @@ def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> Tuple
         for item in contratos_com_pendencias:
             contrato = item["contrato"]
             pendencias = item["pendencias"]
-            cliente = contrato.get('Cliente', 'N/A')
+            cliente = contrato.get('cliente', 'N/A')
             log(f"   ❌ {cliente}:")
             if pendencias["pendencias_pmfi"] != "OK":
                 log(f"      📋 PMFI: {pendencias['pendencias_pmfi']}")
@@ -407,49 +380,7 @@ def filtrar_contratos_aptos(contratos_associados: List[Dict[str, Any]]) -> Tuple
         raise Exception(
             "Nenhum contrato apto para geração de carnê encontrado - sem fallback")
 
-    return contratos_aptos, contratos_com_pendencias
-
-
-def calcular_12_parcelas_esperadas(primeiro_vencimento: str) -> List[str]:
-    """
-    Calcula as 12 datas de vencimento esperadas a partir do 1º vencimento.
-
-    Args:
-        primeiro_vencimento: Data no formato DD/MM/YYYY ou DD/MM/YY
-
-    Returns:
-        Lista com 12 datas no formato DD/MM/YYYY
-    """
-    try:
-        # Parse flexível da data
-        if "/" in primeiro_vencimento:
-            if len(primeiro_vencimento.split("/")[2]) == 2:
-                data_base = datetime.strptime(primeiro_vencimento, "%d/%m/%y")
-            else:
-                data_base = datetime.strptime(primeiro_vencimento, "%d/%m/%Y")
-        else:
-            raise ValueError(
-                f"Formato de data não reconhecido: {primeiro_vencimento}")
-
-        parcelas = []
-        for i in range(12):
-            # Adicionar i meses à data base
-            mes_novo = data_base.month + i
-            ano_novo = data_base.year + (mes_novo - 1) // 12
-            mes_novo = ((mes_novo - 1) % 12) + 1
-
-            # Garantir que o dia existe no mês (ex: 31/01 -> 31 não existe em fevereiro)
-            ultimo_dia_mes = calendar.monthrange(ano_novo, mes_novo)[1]
-            dia_parcela = min(data_base.day, ultimo_dia_mes)
-
-            parcela = datetime(ano_novo, mes_novo, dia_parcela)
-            parcelas.append(parcela.strftime("%d/%m/%Y"))
-
-        return parcelas
-    except Exception as e:
-        log(
-            f"❌ Erro ao calcular 12 parcelas para {primeiro_vencimento}: {str(e)}")
-        raise
+    return contratos_aptos
 
 
 async def executar_fase_geracao_carnes(rpa: RPAEmissaoCarneSienge, contratos_aptos: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -527,7 +458,6 @@ async def executar_fase_geracao_carnes(rpa: RPAEmissaoCarneSienge, contratos_apt
         contratos_processados = 0
         contratos_erro = 0
         carnês_gerados = []  # Lista para armazenar todos os carnês processados
-        contratos_nao_gerados = []  # ✅ Lista para rastrear contratos não gerados com motivo
 
         # Processar cada empresa
         log(f"\n🔄 INICIANDO LOOP DE PROCESSAMENTO...")
@@ -539,142 +469,50 @@ async def executar_fase_geracao_carnes(rpa: RPAEmissaoCarneSienge, contratos_apt
             log(f"📋 {len(contratos_empresa)} contratos para esta empresa")
 
             try:
-                # ✅ NOVA LÓGICA: Calcular 12 parcelas esperadas para cada contrato
-                log(
-                    f"📅 Calculando parcelas esperadas para {len(contratos_empresa)} contratos...")
-
-                primeiros_vencimentos = []
-                todas_parcelas = []  # Todas as parcelas de todos os contratos
-
+                # Preparar parâmetros para _gerar_carne_empresa_sienge
+                # Incluir datas calculadas dos dados da planilha
+                primeiro_vencimento = None
                 for contrato in contratos_empresa:
                     dados_planilha = contrato.get('dados_planilha', {})
+                    vencimento = dados_planilha.get('1º vencimento carnê', '')
+                    if vencimento:
+                        primeiro_vencimento = vencimento
+                        break
 
-                    # ✅ USAR PARCELAS JÁ CALCULADAS (se existirem) ou calcular agora
-                    if 'parcelas_esperadas' in contrato and contrato['parcelas_esperadas']:
-                        parcelas_12 = contrato['parcelas_esperadas']
-                        vencimento = contrato.get(
-                            'primeiro_vencimento', dados_planilha.get('1º vencimento carnê', ''))
-                        log(
-                            f"   ✅ Contrato {contrato.get('Titulo', 'N/A')}: Usando parcelas já calculadas")
+                if not primeiro_vencimento:
+                    raise Exception(
+                        f"1º vencimento carnê não encontrado para empresa {empresa} - sem fallback")
+
+                # Calcular datas conforme PDD 10.2
+                from datetime import datetime
+                if "/" in primeiro_vencimento:
+                    if len(primeiro_vencimento.split("/")[2]) == 2:
+                        data_temp = datetime.strptime(
+                            primeiro_vencimento, "%d/%m/%y")
                     else:
-                        vencimento = dados_planilha.get(
-                            '1º vencimento carnê', '')
-                        if not vencimento:
-                            log(
-                                f"⚠️ Contrato {contrato.get('Titulo', 'N/A')} sem 1º vencimento carnê")
-                            continue
-                        # Calcular 12 parcelas para este contrato
-                        parcelas_12 = calcular_12_parcelas_esperadas(
-                            vencimento)
-                        contrato['parcelas_esperadas'] = parcelas_12
-                        contrato['primeiro_vencimento'] = vencimento
-                        log(f"   ✅ Contrato {contrato.get('Titulo', 'N/A')}: 1º vencimento = {vencimento}, 12 parcelas calculadas")
-
-                    primeiros_vencimentos.append(vencimento)
-                    todas_parcelas.extend(parcelas_12)
-
-                    log(
-                        f"      📅 Parcelas: {parcelas_12[0]} até {parcelas_12[-1]}")
-
-                    # ✅ GRAVAR PARCELAS ESPERADAS NO REPOSITÓRIO JSON
-                    try:
-                        from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
-                        numero_titulo = contrato.get('Titulo', '')
-                        if numero_titulo:
-                            # Buscar contrato no repositório
-                            contratos_encontrados = repositorio_contratos_arquivo.framework.find(
-                                {"Titulo": numero_titulo}
-                            )
-                            if contratos_encontrados:
-                                contrato_encontrado = contratos_encontrados[0]
-                                contrato_id = contrato_encontrado.get("_id")
-                                if contrato_id:
-                                    # Atualizar com parcelas esperadas e primeiro vencimento
-                                    dados_atualizacao = {
-                                        "parcelas_esperadas": parcelas_12,
-                                        "primeiro_vencimento_carne": vencimento,
-                                        "timestamp_parcelas_calculadas": datetime.now().isoformat(),
-                                        "timestamp_ultima_atualizacao": datetime.now().isoformat()
-                                    }
-                                    repositorio_contratos_arquivo.framework.update(
-                                        {"_id": contrato_id}, dados_atualizacao
-                                    )
-                                    log(
-                                        f"      💾 Parcelas gravadas no repositório para título {numero_titulo}")
-                                else:
-                                    log(
-                                        f"      ⚠️ Contrato {numero_titulo} sem ID válido para gravação")
-                            else:
-                                log(
-                                    f"      ⚠️ Contrato {numero_titulo} não encontrado no repositório para gravação")
-                    except Exception as e:
-                        log(
-                            f"      ⚠️ Erro ao gravar parcelas no repositório para título {numero_titulo}: {str(e)}")
-                        # Não quebra o fluxo se a gravação falhar
-
-                if not primeiros_vencimentos:
+                        data_temp = datetime.strptime(
+                            primeiro_vencimento, "%d/%m/%Y")
+                else:
                     raise Exception(
-                        f"Nenhum 1º vencimento carnê encontrado para empresa {empresa} - sem fallback")
+                        f"Formato de data não reconhecido: {primeiro_vencimento}")
 
-                # ✅ Calcular data_inicial: MENOR mês entre todos os 1º vencimentos
-                datas_primeiro_vencimento = []
-                for venc in primeiros_vencimentos:
-                    if "/" in venc:
-                        if len(venc.split("/")[2]) == 2:
-                            data_temp = datetime.strptime(venc, "%d/%m/%y")
-                        else:
-                            data_temp = datetime.strptime(venc, "%d/%m/%Y")
-                        # Usar dia 1 do mês para data_inicial
-                        datas_primeiro_vencimento.append(
-                            data_temp.replace(day=1))
-
-                if not datas_primeiro_vencimento:
-                    raise Exception(
-                        f"Erro ao processar primeiros vencimentos para empresa {empresa}")
-
-                # Encontrar a menor data (mês mais antigo)
-                data_inicial = min(datas_primeiro_vencimento)
+                # Define data inicial sempre como dia 1 do mês/ano do primeiro vencimento
+                data_inicial = data_temp.replace(day=1)
                 data_inicial_formatada = data_inicial.strftime("%d/%m/%Y")
-                log(
-                    f"📅 Data inicial calculada: {data_inicial_formatada} (menor mês entre todos os 1º vencimentos)")
 
-                # ✅ Calcular data_final: MAIOR mês entre todas as 12ª parcelas + 2 meses (margem)
-                datas_ultima_parcela = []
-                for parcela_str in todas_parcelas:
-                    if "/" in parcela_str:
-                        if len(parcela_str.split("/")[2]) == 2:
-                            data_parcela = datetime.strptime(
-                                parcela_str, "%d/%m/%y")
-                        else:
-                            data_parcela = datetime.strptime(
-                                parcela_str, "%d/%m/%Y")
-                        # Usar último dia do mês para data_final
-                        ultimo_dia = calendar.monthrange(
-                            data_parcela.year, data_parcela.month)[1]
-                        datas_ultima_parcela.append(
-                            data_parcela.replace(day=ultimo_dia))
-
-                if not datas_ultima_parcela:
-                    raise Exception(
-                        f"Erro ao processar parcelas para empresa {empresa}")
-
-                # Encontrar a maior data (mês mais recente)
-                data_final_base = max(datas_ultima_parcela)
-
-                # Adicionar 2 meses de margem para garantir que todas as parcelas apareçam na grid
-                mes_final = data_final_base.month + 2
-                ano_final = data_final_base.year
-                if mes_final > 12:
-                    mes_final = mes_final - 12
-                    ano_final += 1
-
-                ultimo_dia_mes_final = calendar.monthrange(
+                # Data final: último dia do mês 12 meses após a data inicial
+                import calendar
+                meses_adiantados = data_inicial.month + 11
+                ano_final = data_inicial.year + (meses_adiantados - 1) // 12
+                mes_final = ((meses_adiantados - 1) % 12) + 1
+                ultimo_dia = calendar.monthrange(
                     ano_final, mes_final)[1]
-                data_final = data_final_base.replace(
-                    year=ano_final, month=mes_final, day=ultimo_dia_mes_final)
+                data_final = data_inicial.replace(
+                    year=ano_final,
+                    month=mes_final,
+                    day=ultimo_dia
+                )
                 data_final_formatada = data_final.strftime("%d/%m/%Y")
-                log(
-                    f"📅 Data final calculada: {data_final_formatada} (maior mês + 2 meses de margem)")
 
                 parametros_empresa = {
                     "empresa": empresa,
@@ -696,34 +534,15 @@ async def executar_fase_geracao_carnes(rpa: RPAEmissaoCarneSienge, contratos_apt
                         "arquivo_remessa": resultado_carne.get("arquivo_remessa", ""),
                         "contratos_processados": len(contratos_empresa),
                         "timestamp_geracao": resultado_carne.get("timestamp_geracao", ""),
-                        "contratos": [c.get('Titulo', c.get('numero_titulo', 'N/A')) for c in contratos_empresa]
+                        "contratos": [c.get('numero_titulo', 'N/A') for c in contratos_empresa]
                     })
                 else:
                     contratos_erro += len(contratos_empresa)
-                    erro_msg = resultado_carne.get(
-                        "erro", "Erro não especificado na geração de carnê")
-                    log(
-                        f"❌ Erro na geração de carnê para {empresa}: {erro_msg}")
-
-                    # ✅ RASTREAR CONTRATOS NÃO GERADOS
-                    for contrato in contratos_empresa:
-                        contratos_nao_gerados.append({
-                            "contrato": contrato,
-                            "motivo": f"Erro na geração de carnê: {erro_msg}"
-                        })
+                    log(f"❌ Erro na geração de carnê para {empresa}")
 
             except Exception as e:
                 contratos_erro += len(contratos_empresa)
-                erro_msg = str(e)
-                log(
-                    f"❌ Exceção na geração de carnê para {empresa}: {erro_msg}")
-
-                # ✅ RASTREAR CONTRATOS NÃO GERADOS
-                for contrato in contratos_empresa:
-                    contratos_nao_gerados.append({
-                        "contrato": contrato,
-                        "motivo": f"Exceção na geração: {erro_msg}"
-                    })
+                log(f"❌ Exceção na geração de carnê para {empresa}: {str(e)}")
 
             log(f"✅ EMPRESA {i}/{len(contratos_por_empresa)} CONCLUÍDA: {empresa}")
 
@@ -737,9 +556,7 @@ async def executar_fase_geracao_carnes(rpa: RPAEmissaoCarneSienge, contratos_apt
             "contratos_processados": contratos_processados,
             "contratos_erro": contratos_erro,
             "empresas_processadas": len(contratos_por_empresa),
-            "carnês_gerados": carnês_gerados,  # ✅ LISTA DE TODOS OS CARNÊS PROCESSADOS
-            # ✅ LISTA DE CONTRATOS NÃO GERADOS COM MOTIVO
-            "contratos_nao_gerados": contratos_nao_gerados
+            "carnês_gerados": carnês_gerados  # ✅ LISTA DE TODOS OS CARNÊS PROCESSADOS
         }
 
         if not resultado.get("sucesso"):
@@ -898,16 +715,17 @@ Exemplos de uso:
 
     try:
         arquivo_log_execucao, stdout_original, stderr_original = preparar_logs_execucao()
+        # Notificar início
+        notificar_sucesso_simples(
+            "🚀 EMISSÃO DE CARNÊS INICIADA",
+            "Fluxo: Banco → Planilha → Verificação → Geração → Vinculação"
+        )
 
         # FASE 1: Buscar contratos reparcelados no banco
         contratos_reparcelados = await obter_contratos_reparcelados()
 
         if not contratos_reparcelados:
             log("✅ Nenhum contrato para processar. Execução concluída.")
-            notificar_sucesso_simples(
-                "✅ EMISSÃO DE CARNÊS",
-                "Nenhum contrato com status REPARCELADO encontrado para processar."
-            )
             return 0
 
         # FASE 2: Carregar dados da planilha
@@ -917,241 +735,8 @@ Exemplos de uso:
         contratos_associados, contratos_nao_encontrados = associar_contratos_com_planilha(
             contratos_reparcelados, dados_planilha)
 
-        # ✅ NOTIFICAÇÃO INICIAL DETALHADA: Mostrar resultados da busca e associação
-        # Usar HTML para formatação adequada no email
-        mensagem_notificacao = f"<p><strong>📋 SELEÇÃO DE CONTRATOS PARA GERAÇÃO DE CARNÊS</strong></p>"
-        mensagem_notificacao += f"<p>⚠️ <strong>ATENÇÃO:</strong> Os carnês e arquivos de remessa AINDA NÃO foram gerados.<br>"
-        mensagem_notificacao += f"Os contratos abaixo foram SELECIONADOS e serão processados em seguida.</p>"
-        mensagem_notificacao += f"<p><strong>Contratos encontrados para reparcelar:</strong> {len(contratos_reparcelados)}</p>"
-        mensagem_notificacao += f"<p><strong>Carnês não encontrados:</strong> {len(contratos_nao_encontrados)}</p>"
-
-        if contratos_nao_encontrados:
-            mensagem_notificacao += f"<p><strong>Listar não gerados:</strong></p>"
-            mensagem_notificacao += f"<ul style=\"margin: 10px 0; padding-left: 20px;\">"
-            for i, contrato in enumerate(contratos_nao_encontrados, 1):
-                codigo = contrato.get('Código Cliente', 'N/A')
-                titulo = contrato.get('Titulo', 'N/A')
-                cliente = contrato.get('Cliente', 'N/A')
-                mensagem_notificacao += f"<li><strong>Contrato não encontrado na planilha</strong> - {cliente} (Código: {codigo}, Título: {titulo})</li>"
-            mensagem_notificacao += f"</ul>"
-
-        mensagem_notificacao += f"<p>📎 Verifique o anexo 'parcelas_esperadas.csv' para ver as 12 parcelas que serão geradas para cada contrato.</p>"
-
         # FASE 4: Verificar pendências e filtrar contratos aptos
-        contratos_aptos, contratos_com_pendencias = filtrar_contratos_aptos(
-            contratos_associados)
-
-        # ✅ AGRUPAR CONTRATOS APTOS POR EMPRESA E MOSTRAR NOS LOGS
-        log(f"\n📊 CONTRATOS ELEGÍVEIS PARA EMISSÃO DE CARNÊS (AGRUPADOS POR EMPRESA):")
-        log("=" * 60)
-        contratos_aptos_por_empresa = {}
-        for contrato in contratos_aptos:
-            dados_planilha = contrato.get('dados_planilha', {})
-            empresa = dados_planilha.get('Empresa', 'SEM EMPRESA')
-            if empresa not in contratos_aptos_por_empresa:
-                contratos_aptos_por_empresa[empresa] = []
-            contratos_aptos_por_empresa[empresa].append(contrato)
-
-        for empresa, contratos_empresa in contratos_aptos_por_empresa.items():
-            log(f"\n🏢 {empresa}: {len(contratos_empresa)} contrato(s) elegível(eis)")
-            for i, contrato in enumerate(contratos_empresa, 1):
-                codigo = contrato.get('Código Cliente', 'N/A')
-                titulo = contrato.get('Titulo', 'N/A')
-                cliente = contrato.get('Cliente', 'N/A')
-                dados_planilha_contrato = contrato.get('dados_planilha', {})
-                loteamento = dados_planilha_contrato.get('Loteamento', 'N/A')
-                log(f"   {i}. {cliente} (Código: {codigo}, Título: {titulo}, Loteamento: {loteamento})")
-
-        log(
-            f"\n✅ Total de contratos elegíveis: {len(contratos_aptos)} em {len(contratos_aptos_por_empresa)} empresa(s)")
-
-        # ✅ CALCULAR PARCELAS E CRIAR ARQUIVO COM TODAS AS PARCELAS ESPERADAS
-        # Isso é feito DEPOIS de filtrar contratos aptos para incluir apenas os elegíveis
-        arquivo_parcelas = None
-        try:
-            import json
-
-            # Preparar dados das parcelas esperadas - CALCULAR AGORA
-            # Usar apenas contratos aptos (elegíveis) para o arquivo de parcelas
-            dados_parcelas = []
-            for contrato in contratos_aptos:
-                numero_titulo = contrato.get('Titulo', '')
-                codigo_cliente = contrato.get('Código Cliente', '')
-                cliente = contrato.get('Cliente', 'N/A')
-                dados_planilha_contrato = contrato.get('dados_planilha', {})
-                empresa = dados_planilha_contrato.get('Empresa', 'N/A')
-                loteamento = dados_planilha_contrato.get('Loteamento', 'N/A')
-                primeiro_vencimento = dados_planilha_contrato.get(
-                    '1º vencimento carnê', '')
-
-                # ✅ CALCULAR AS 12 PARCELAS AGORA (mesma lógica do loop)
-                parcelas_esperadas = []
-                if primeiro_vencimento:
-                    try:
-                        parcelas_esperadas = calcular_12_parcelas_esperadas(
-                            primeiro_vencimento)
-                        # Armazenar no contrato para usar depois no loop
-                        contrato['parcelas_esperadas'] = parcelas_esperadas
-                        contrato['primeiro_vencimento'] = primeiro_vencimento
-                    except Exception as e:
-                        log(
-                            f"⚠️ Erro ao calcular parcelas para contrato {numero_titulo}: {str(e)}")
-                        parcelas_esperadas = []
-                        primeiro_vencimento = 'N/A'
-
-                dados_parcelas.append({
-                    "empresa": empresa,
-                    "loteamento": loteamento,
-                    "codigo_cliente": codigo_cliente,
-                    "cliente": cliente,
-                    "titulo": numero_titulo,
-                    "primeiro_vencimento": primeiro_vencimento,
-                    "parcelas_esperadas": parcelas_esperadas,
-                    "total_parcelas": len(parcelas_esperadas)
-                })
-
-            # Salvar arquivo CSV com TODOS os contratos e TODAS as parcelas
-            diretorio_outputs = Path("outputs/relatorios")
-            diretorio_outputs.mkdir(parents=True, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            arquivo_parcelas = diretorio_outputs / \
-                f"parcelas_esperadas_{timestamp}.csv"
-
-            # Criar CSV com estrutura: Empresa, Loteamento, Código Cliente, Cliente, Título, Primeiro Vencimento, Parcela 1, Parcela 2, ..., Parcela 12, Total Parcelas
-            with open(arquivo_parcelas, 'w', encoding='utf-8', newline='') as f:
-                writer = csv.writer(f, delimiter=';')
-
-                # Cabeçalho
-                cabecalho = [
-                    'Empresa',
-                    'Loteamento',
-                    'Código Cliente',
-                    'Cliente',
-                    'Título',
-                    'Primeiro Vencimento',
-                    'Parcela 1',
-                    'Parcela 2',
-                    'Parcela 3',
-                    'Parcela 4',
-                    'Parcela 5',
-                    'Parcela 6',
-                    'Parcela 7',
-                    'Parcela 8',
-                    'Parcela 9',
-                    'Parcela 10',
-                    'Parcela 11',
-                    'Parcela 12',
-                    'Total Parcelas'
-                ]
-                writer.writerow(cabecalho)
-
-                # Dados
-                for item in dados_parcelas:
-                    parcelas = item.get('parcelas_esperadas', [])
-                    # Garantir que sempre temos 12 parcelas (preencher com vazio se necessário)
-                    parcelas_completas = parcelas + [''] * (12 - len(parcelas))
-
-                    linha = [
-                        item.get('empresa', ''),
-                        item.get('loteamento', ''),
-                        item.get('codigo_cliente', ''),
-                        item.get('cliente', ''),
-                        item.get('titulo', ''),
-                        item.get('primeiro_vencimento', ''),
-                    ] + parcelas_completas[:12] + [
-                        item.get('total_parcelas', len(parcelas))
-                    ]
-                    writer.writerow(linha)
-
-            log(f"📄 Arquivo de parcelas esperadas criado: {arquivo_parcelas}")
-            log(f"   📊 Total de contratos: {len(dados_parcelas)}")
-            log(f"   📊 Total de parcelas: {sum(len(d.get('parcelas_esperadas', [])) for d in dados_parcelas)}")
-
-        except Exception as e:
-            log(f"⚠️ Erro ao criar arquivo de parcelas esperadas: {str(e)}")
-            # Não quebra o fluxo se falhar
-
-        # ✅ SIMPLIFICAR NOTIFICAÇÃO INICIAL: Apenas resumos no email, detalhes no TXT
-        mensagem_notificacao += f"<p><strong>Contratos elegíveis para emissão de carnê:</strong> {len(contratos_aptos)}</p>"
-        if contratos_aptos_por_empresa:
-            mensagem_notificacao += f"<p><strong>Resumo por empresa:</strong></p>"
-            for empresa, contratos_empresa in contratos_aptos_por_empresa.items():
-                mensagem_notificacao += f"<p style=\"margin: 5px 0;\"><strong>{empresa}:</strong> {len(contratos_empresa)} contrato(s)</p>"
-            mensagem_notificacao += f"<p style=\"margin-top: 15px; color: #666; font-size: 0.9em;\">📎 Ver detalhamento completo no arquivo TXT anexo</p>"
-
-        # ✅ GERAR ARQUIVO TXT COM DETALHAMENTO COMPLETO
-        arquivo_detalhamento_txt = None
-        try:
-            diretorio_outputs = Path("outputs/relatorios")
-            diretorio_outputs.mkdir(parents=True, exist_ok=True)
-            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-            arquivo_detalhamento_txt = diretorio_outputs / \
-                f"detalhamento_contratos_elegiveis_{timestamp_str}.txt"
-
-            with open(arquivo_detalhamento_txt, 'w', encoding='utf-8') as f:
-                f.write("=" * 80 + "\n")
-                f.write(
-                    "DETALHAMENTO COMPLETO - CONTRATOS ELEGÍVEIS PARA EMISSÃO DE CARNÊS\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(
-                    f"Data/Hora: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n")
-                f.write(
-                    f"Total de contratos elegíveis: {len(contratos_aptos)}\n\n")
-
-                if contratos_aptos_por_empresa:
-                    for empresa, contratos_empresa in contratos_aptos_por_empresa.items():
-                        f.write("-" * 80 + "\n")
-                        f.write(f"EMPRESA: {empresa}\n")
-                        f.write(
-                            f"Total de contratos: {len(contratos_empresa)}\n")
-                        f.write("-" * 80 + "\n\n")
-
-                        for i, contrato in enumerate(contratos_empresa, 1):
-                            codigo = contrato.get('Código Cliente', 'N/A')
-                            titulo = contrato.get('Titulo', 'N/A')
-                            cliente = contrato.get('Cliente', 'N/A')
-                            primeiro_venc = contrato.get(
-                                'primeiro_vencimento_carne', 'N/A')
-
-                            f.write(f"  {i}. Cliente: {cliente}\n")
-                            f.write(f"     Código Cliente: {codigo}\n")
-                            f.write(f"     Título: {titulo}\n")
-                            f.write(
-                                f"     Primeiro Vencimento: {primeiro_venc}\n")
-
-                            # Listar parcelas esperadas
-                            parcelas = contrato.get('parcelas_esperadas', [])
-                            if parcelas:
-                                f.write(
-                                    f"     Parcelas Esperadas ({len(parcelas)}):\n")
-                                for j, parcela in enumerate(parcelas, 1):
-                                    f.write(f"       {j}. {parcela}\n")
-
-                            f.write("\n")
-
-            log(
-                f"📄 Arquivo de detalhamento criado: {arquivo_detalhamento_txt}")
-
-        except Exception as e:
-            log(f"⚠️ Erro ao criar arquivo de detalhamento: {str(e)}")
-            arquivo_detalhamento_txt = None
-
-        # Enviar notificação inicial com todas as informações (incluindo contratos elegíveis)
-        from core.notificacoes_simples import notificar_sucesso
-        anexos = []
-        if arquivo_parcelas and arquivo_parcelas.exists():
-            anexos.append(str(arquivo_parcelas))
-        if arquivo_detalhamento_txt and arquivo_detalhamento_txt.exists():
-            anexos.append(str(arquivo_detalhamento_txt))
-        notificar_sucesso(
-            nome_rpa="RPA Sienge - Emissão Carnês",
-            tempo_execucao="-",
-            resultados={
-                "titulo": "🚀 EMISSÃO DE CARNÊS INICIADA - CONTRATOS SELECIONADOS",
-                "mensagem": mensagem_notificacao,
-                "caminhos_anexos": anexos
-            }
-        )
+        contratos_aptos = filtrar_contratos_aptos(contratos_associados)
 
         # Inicializar RPA Sienge
         log(f"\n🤖 INICIALIZANDO RPA SIENGE...")
@@ -1198,26 +783,6 @@ Exemplos de uso:
         log(f"❌ Contratos com erro: {contratos_erro}")
         log(f"🔗 Contratos vinculados ao banco: {contratos_vinculados}")
 
-        # ✅ LOG FINAL: CONTRATOS GERADOS AGRUPADOS POR EMPRESA
-        log(f"\n📊 CONTRATOS COM CARNÊ GERADOS (AGRUPADOS POR EMPRESA):")
-        log("=" * 60)
-        contratos_gerados_por_empresa_log = {}
-        for carne in carnês_gerados:
-            empresa = carne.get("empresa", "SEM EMPRESA")
-            contratos_titulos = carne.get("contratos", [])
-            if empresa not in contratos_gerados_por_empresa_log:
-                contratos_gerados_por_empresa_log[empresa] = []
-            contratos_gerados_por_empresa_log[empresa].extend(
-                contratos_titulos)
-
-        for empresa, titulos in contratos_gerados_por_empresa_log.items():
-            log(f"\n🏢 {empresa}: {len(titulos)} carnê(s) gerado(s)")
-            # Limitar a 10 para não sobrecarregar
-            for i, titulo in enumerate(titulos[:10], 1):
-                log(f"   {i}. Título: {titulo}")
-            if len(titulos) > 10:
-                log(f"   ... e mais {len(titulos) - 10} carnê(s)")
-
         # Gerar relatório HTML - ajustar para template existente
         carnês_gerados = resultado_carnes.get("carnês_gerados", [])
         empresas_processadas = resultado_carnes.get("empresas_processadas", 0)
@@ -1250,132 +815,13 @@ Exemplos de uso:
 
         log(f"📄 Relatório HTML salvo: {arquivo_html}")
 
-        # ✅ PREPARAR MENSAGEM FINAL COM LAYOUT SOLICITADO
-        contratos_nao_gerados_final = []
-
-        # Adicionar contratos não encontrados na planilha
-        for contrato in contratos_nao_encontrados:
-            contratos_nao_gerados_final.append({
-                "contrato": contrato,
-                "motivo": "Contrato não encontrado na planilha"
-            })
-
-        # Adicionar contratos com pendências
-        for item in contratos_com_pendencias:
-            contratos_nao_gerados_final.append({
-                "contrato": item["contrato"],
-                "motivo": item["motivo"]
-            })
-
-        # Adicionar contratos que falharam na geração
-        contratos_nao_gerados_final.extend(
-            resultado_carnes.get("contratos_nao_gerados", []))
-
-        # ✅ AGRUPAR CONTRATOS GERADOS POR EMPRESA PARA NOTIFICAÇÃO FINAL
-        contratos_gerados_por_empresa = {}
-        for carne in carnês_gerados:
-            empresa = carne.get("empresa", "SEM EMPRESA")
-            contratos_titulos = carne.get("contratos", [])
-            if empresa not in contratos_gerados_por_empresa:
-                contratos_gerados_por_empresa[empresa] = []
-            contratos_gerados_por_empresa[empresa].extend(contratos_titulos)
-
-        # Montar mensagem final com HTML para formatação adequada
-        mensagem_final = f"<p><strong>📊 RELATÓRIO FINAL DE EMISSÃO DE CARNÊS</strong></p>"
-        mensagem_final += f"<p><strong>Contratos reparcelados:</strong> {len(contratos_reparcelados)}</p>"
-        mensagem_final += f"<p><strong>Contratos com carnê gerados:</strong> {contratos_processados}</p>"
-        mensagem_final += f"<p><strong>Carnês não gerados:</strong> {len(contratos_nao_gerados_final)}</p>"
-
-        # ✅ SIMPLIFICAR NOTIFICAÇÃO FINAL: Apenas resumos no email, detalhes no TXT
-        if contratos_gerados_por_empresa:
-            mensagem_final += f"<p><strong>Contratos com carnê gerados (resumo por empresa):</strong></p>"
-            for empresa, titulos in contratos_gerados_por_empresa.items():
-                mensagem_final += f"<p style=\"margin: 5px 0;\"><strong>{empresa}:</strong> {len(titulos)} carnê(s) gerado(s)</p>"
-
-        if contratos_nao_gerados_final:
-            mensagem_final += f"<p style=\"margin-top: 15px;\"><strong>Carnês não gerados:</strong> {len(contratos_nao_gerados_final)}</p>"
-            mensagem_final += f"<p style=\"margin-top: 10px; color: #666; font-size: 0.9em;\">📎 Ver detalhamento completo no arquivo TXT anexo</p>"
-
-        mensagem_final += f"<p style=\"margin-top: 15px;\">⏱️ <strong>Duração:</strong> {duracao}</p>"
-
-        # ✅ GERAR ARQUIVO TXT COM DETALHAMENTO COMPLETO DA NOTIFICAÇÃO FINAL
-        arquivo_detalhamento_final_txt = None
-        try:
-            diretorio_outputs = Path("outputs/relatorios")
-            diretorio_outputs.mkdir(parents=True, exist_ok=True)
-            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-            arquivo_detalhamento_final_txt = diretorio_outputs / \
-                f"detalhamento_final_emissao_carnes_{timestamp_str}.txt"
-
-            with open(arquivo_detalhamento_final_txt, 'w', encoding='utf-8') as f:
-                f.write("=" * 80 + "\n")
-                f.write(
-                    "DETALHAMENTO COMPLETO - RELATÓRIO FINAL DE EMISSÃO DE CARNÊS\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(
-                    f"Data/Hora: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n")
-                f.write(f"Duração: {duracao}\n\n")
-
-                f.write(
-                    f"Contratos reparcelados: {len(contratos_reparcelados)}\n")
-                f.write(
-                    f"Contratos com carnê gerados: {contratos_processados}\n")
-                f.write(
-                    f"Carnês não gerados: {len(contratos_nao_gerados_final)}\n\n")
-
-                # Detalhamento de contratos gerados por empresa
-                if contratos_gerados_por_empresa:
-                    f.write("=" * 80 + "\n")
-                    f.write(
-                        "CONTRATOS COM CARNÊ GERADOS (DETALHAMENTO POR EMPRESA)\n")
-                    f.write("=" * 80 + "\n\n")
-
-                    for empresa, titulos in contratos_gerados_por_empresa.items():
-                        f.write("-" * 80 + "\n")
-                        f.write(f"EMPRESA: {empresa}\n")
-                        f.write(f"Total de carnês gerados: {len(titulos)}\n")
-                        f.write("-" * 80 + "\n")
-                        for i, titulo in enumerate(titulos, 1):
-                            f.write(f"  {i}. Título: {titulo}\n")
-                        f.write("\n")
-
-                # Detalhamento de contratos não gerados
-                if contratos_nao_gerados_final:
-                    f.write("=" * 80 + "\n")
-                    f.write("CARNÊS NÃO GERADOS (DETALHAMENTO COMPLETO)\n")
-                    f.write("=" * 80 + "\n\n")
-
-                    for i, item in enumerate(contratos_nao_gerados_final, 1):
-                        contrato = item["contrato"]
-                        motivo = item["motivo"]
-                        codigo = contrato.get('Código Cliente', 'N/A')
-                        titulo = contrato.get('Titulo', 'N/A')
-                        cliente = contrato.get('Cliente', 'N/A')
-
-                        f.write(f"{i}. Motivo: {motivo}\n")
-                        f.write(f"   Cliente: {cliente}\n")
-                        f.write(f"   Código Cliente: {codigo}\n")
-                        f.write(f"   Título: {titulo}\n")
-                        f.write("\n")
-
-            log(
-                f"📄 Arquivo de detalhamento final criado: {arquivo_detalhamento_final_txt}")
-
-        except Exception as e:
-            log(f"⚠️ Erro ao criar arquivo de detalhamento final: {str(e)}")
-            arquivo_detalhamento_final_txt = None
-
         # Notificar sucesso
         from core.notificacoes_simples import notificar_sucesso
 
-        anexos_final = [str(ARQUIVO_LOG_ATUAL), str(arquivo_html)]
-        if arquivo_detalhamento_final_txt and arquivo_detalhamento_final_txt.exists():
-            anexos_final.append(str(arquivo_detalhamento_final_txt))
-
         resultados_notificacao = {
             "titulo": "🎉 RPA SIENGE: Emissão de carnês concluída",
-            "mensagem": mensagem_final,
-            "caminhos_anexos": anexos_final
+            "mensagem": f"Duração: {duracao} | Carnês: {contratos_processados} | Erros: {contratos_erro} | Vinculados: {contratos_vinculados} | Não encontrados: {len(contratos_nao_encontrados)}",
+            "caminhos_anexos": [str(ARQUIVO_LOG_ATUAL), str(arquivo_html)]
         }
 
         notificar_sucesso(

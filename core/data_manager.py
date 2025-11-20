@@ -21,6 +21,7 @@ try:
     MONGODB_DISPONIVEL = True
 except ImportError:
     MONGODB_DISPONIVEL = False
+    mongodb_manager = None  # Define como None quando não disponível
 
 logger = logging.getLogger(__name__)
 

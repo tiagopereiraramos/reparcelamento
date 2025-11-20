@@ -307,7 +307,10 @@ async def executar_reparcelamento(args: argparse.Namespace) -> Dict[str, Any]:
     indices = await carregar_indices_economicos()
 
     # 4. Executar reparcelamento
-    rpa = RPAReparcelamentoSienge(headless=args.headless == "0")
+    rpa = RPAReparcelamentoSienge(
+        headless=args.headless == "0",
+        notificar=args.notificar
+    )
     # O RPA busca contratos internamente, não recebe lista
     resultado = await rpa.executar(limite=len(contratos))
 
@@ -340,7 +343,15 @@ def montar_argumentos() -> argparse.Namespace:
     parser.add_argument(
         "--notificar",
         action="store_true",
-        help="Ativa notificações para acompanhamento humano durante o processamento.",
+        default=True,
+        help="Ativa notificações para acompanhamento humano durante o processamento (padrão: ativado).",
+    )
+    parser.add_argument(
+        "--sem-notificar",
+        "--no-notificar",
+        action="store_false",
+        dest="notificar",
+        help="Desativa notificações durante o processamento.",
     )
     parser.add_argument(
         "--status",

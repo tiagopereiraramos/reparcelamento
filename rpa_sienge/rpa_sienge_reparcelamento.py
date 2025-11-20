@@ -12,6 +12,7 @@ Desenvolvido em Português Brasileiro seguindo as diretrizes oficiais.
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -27,6 +28,17 @@ from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
 from core.status_contratos import StatusContrato
 from core.utils_sienge import carregar_credenciais_sienge, log
 from core.rastreamento_unificado import iniciar_rastreamento
+
+# Importar notificações (com fallback se não disponível)
+try:
+    from core.notificacoes_simples import notificar_sucesso, notificar_erro
+    NOTIFICACOES_DISPONIVEIS = True
+except ImportError:
+    NOTIFICACOES_DISPONIVEIS = False
+    def notificar_sucesso(*args, **kwargs):  # type: ignore
+        pass
+    def notificar_erro(*args, **kwargs):  # type: ignore
+        pass
 
 
 @dataclass
@@ -78,7 +90,7 @@ class ContratoFila:
 class RPAReparcelamentoSienge(BaseRPA):
     """Automação end-to-end do reparcelamento usando fila JSON."""
 
-    def __init__(self, headless: Optional[bool] = None) -> None:
+    def __init__(self, headless: Optional[bool] = None, notificar: bool = True) -> None:
         super().__init__(
             nome_rpa="SiengeReparcelamento",
             usar_browser=True,
@@ -87,9 +99,13 @@ class RPAReparcelamentoSienge(BaseRPA):
         self.logado_sienge = False
         self.credenciais_sienge: Dict[str, str] = {}
         self.rastreamento = None
+        self.notificar = notificar
 
     async def executar(self, limite: int = 0) -> ResultadoRPA:
         """Processa contratos com status ``APROVACAO_REALIZADA`` da fila."""
+
+        # Registrar início da execução para cálculo de tempo
+        self.inicio_execucao = datetime.now()
 
         contratos = self._buscar_contratos_aptos(limite=limite)
         if not contratos:
@@ -221,6 +237,46 @@ class RPAReparcelamentoSienge(BaseRPA):
                 await self.rastreamento.finalizar_rastreamento()
             except Exception:
                 pass  # Não quebra se rastreamento falhar
+
+        # Enviar notificações se habilitado
+        if self.notificar and NOTIFICACOES_DISPONIVEIS:
+            try:
+                tempo_execucao = f"{(datetime.now() - self.inicio_execucao).total_seconds():.1f}s" if self.inicio_execucao else "N/A"
+                
+                if len(contratos_erro) == 0:
+                    # Sucesso total
+                    notificar_sucesso(
+                        "RPA Sienge - Reparcelamento",
+                        tempo_execucao,
+                        {
+                            "contratos_processados": len(contratos_sucesso),
+                            "contratos_sucesso": len(contratos_sucesso),
+                            "contratos_erro": 0,
+                            "resumo": f"{len(contratos_sucesso)} contrato(s) reparcelado(s) com sucesso"
+                        }
+                    )
+                elif len(contratos_sucesso) > 0:
+                    # Sucesso parcial
+                    notificar_sucesso(
+                        "RPA Sienge - Reparcelamento (Parcial)",
+                        tempo_execucao,
+                        {
+                            "contratos_processados": len(contratos_sucesso),
+                            "contratos_sucesso": len(contratos_sucesso),
+                            "contratos_erro": len(contratos_erro),
+                            "resumo": f"{len(contratos_sucesso)} sucesso(s), {len(contratos_erro)} erro(s)",
+                            "erros": contratos_erro
+                        }
+                    )
+                else:
+                    # Apenas erros
+                    notificar_erro(
+                        "RPA Sienge - Reparcelamento",
+                        f"Nenhum contrato foi reparcelado com sucesso",
+                        f"Total de erros: {len(contratos_erro)}\nErros: {json.dumps(contratos_erro, indent=2, ensure_ascii=False)}"
+                    )
+            except Exception as e:
+                log(f"⚠️ Erro ao enviar notificações: {str(e)}")
 
         return ResultadoRPA(
             sucesso=len(contratos_erro) == 0,
@@ -738,6 +794,40 @@ class RPAReparcelamentoSienge(BaseRPA):
     # Métodos auxiliares para seleção de parcelas
     # ============================================================
 
+    def _parse_data_flexivel(self, data_str: str) -> datetime:
+        """
+        Faz parse de data aceitando formatos com ano de 2 ou 4 dígitos.
+        
+        Args:
+            data_str: String de data no formato 'DD/MM/YY' ou 'DD/MM/YYYY'
+        
+        Returns:
+            Objeto datetime
+        
+        Raises:
+            ValueError: Se a data não puder ser parseada
+        """
+        data_str = data_str.strip()
+        
+        # Tentar primeiro com formato de 4 dígitos (padrão)
+        try:
+            return datetime.strptime(data_str, "%d/%m/%Y")
+        except ValueError:
+            pass
+        
+        # Tentar com formato de 2 dígitos
+        # IMPORTANTE: strptime com %y já converte automaticamente:
+        # - 00-68 → 2000-2068
+        # - 69-99 → 1969-1999
+        # Então NÃO precisamos adicionar nada, apenas usar o resultado direto
+        try:
+            return datetime.strptime(data_str, "%d/%m/%y")
+        except ValueError:
+            pass
+        
+        # Se ambos falharem, lançar erro
+        raise ValueError(f"Formato de data inválido: '{data_str}'. Esperado 'DD/MM/YYYY' ou 'DD/MM/YY'")
+
     def _selecionar_parcelas_individualmente(self, data_reparcelamento: str, max_parcelas: int = 12, tabela_idx: int = 1) -> int:
         """
         Seleciona individualmente as parcelas com vencimento >= data atual.
@@ -772,8 +862,7 @@ class RPAReparcelamentoSienge(BaseRPA):
 
             # 3. Preparar data vencimento 1 carne para comparação
             # Precisa usar a data do 1º vencimento do carnê que já vem como string no parametro, porém é preciso considerar apenas mes e ignorar o dia para fazer a comparação ou sempre mudar para dia 1, caso não sejá para facilitar o código
-            data_vencimento_1_carne = datetime.strptime(
-                data_reparcelamento, "%d/%m/%Y").replace(day=1)
+            data_vencimento_1_carne = self._parse_data_flexivel(data_reparcelamento).replace(day=1)
             parcelas_selecionadas = 0
 
             self.log_progresso(
@@ -796,8 +885,7 @@ class RPAReparcelamentoSienge(BaseRPA):
                             f"Linha {idx+1}: Data de vencimento vazia")
                         continue
 
-                    data_vencimento = datetime.strptime(
-                        data_vencimento_str, "%d/%m/%Y")
+                    data_vencimento = self._parse_data_flexivel(data_vencimento_str)
 
                 except Exception as e:
                     self.log_warning(

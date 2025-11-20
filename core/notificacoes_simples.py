@@ -274,21 +274,34 @@ class GeradorTemplates:
         """
 
         if resultados:
-            conteudo += """
-            <div style=\"background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;\">
-                <h4 style=\"margin-top: 0; color: #0056b3;\">📊 Resultados Principais</h4>
-                <ul style=\"margin: 10px 0; padding-left: 20px;\">
-            """
+            # ✅ TRATAR MENSAGEM DE FORMA ESPECIAL (renderizar HTML diretamente)
+            mensagem = resultados.get("mensagem")
+            if mensagem:
+                conteudo += f"""
+                <div style=\"background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff; margin: 20px 0;\">
+                    <h4 style=\"margin-top: 0; color: #0056b3;\">📊 Resultados Principais</h4>
+                    <div style=\"margin: 10px 0; color: #333; line-height: 1.6; overflow: visible; display: block; white-space: normal; text-overflow: clip; max-width: 100%;\">
+                        {mensagem}
+                    </div>
+                </div>
+                """
+            else:
+                # Se não houver mensagem, usar formato de lista tradicional
+                conteudo += """
+                <div style=\"background-color: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;\">
+                    <h4 style=\"margin-top: 0; color: #0056b3;\">📊 Resultados Principais</h4>
+                    <ul style=\"margin: 10px 0; padding-left: 20px;\">
+                """
 
-            for chave, valor in resultados.items():
-                if chave in {"relatorio", "titulo", "caminhos_anexos", "arquivo_html"}:
-                    continue
-                conteudo += f"<li><strong>{chave}:</strong> {valor}</li>"
+                for chave, valor in resultados.items():
+                    if chave in {"relatorio", "titulo", "caminhos_anexos", "arquivo_html", "mensagem"}:
+                        continue
+                    conteudo += f"<li><strong>{chave}:</strong> {valor}</li>"
 
-            conteudo += """
-                </ul>
-            </div>
-            """
+                conteudo += """
+                    </ul>
+                </div>
+                """
 
             # ✅ NOVO: Seção de anexos
             anexos_total = []

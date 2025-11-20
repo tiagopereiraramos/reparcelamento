@@ -156,7 +156,7 @@ async def diagnosticar_arquivos_remessa() -> Dict[str, Any]:
         log(
             f"📊 DIAGNÓSTICO DE ARQUIVOS DE REMESSA (MODO TESTE - EMPRESA {MODO_TESTE_EMPRESA})")
     else:
-        log("📊 DIAGNÓSTICO DE ARQUIVOS DE REMESSA")
+    log("📊 DIAGNÓSTICO DE ARQUIVOS DE REMESSA")
     log("=" * 60)
 
     try:
@@ -217,9 +217,9 @@ async def diagnosticar_arquivos_remessa() -> Dict[str, Any]:
             log(
                 f"   📄 Total de contratos da empresa {MODO_TESTE_EMPRESA} com carnê gerado: {diagnostico['total_contratos_carne_gerado']}")
         else:
-            log(f"📋 ESTATÍSTICAS DOS ARQUIVOS:")
-            log(
-                f"   📄 Total de contratos com carnê gerado: {diagnostico['total_contratos_carne_gerado']}")
+        log(f"📋 ESTATÍSTICAS DOS ARQUIVOS:")
+        log(
+            f"   📄 Total de contratos com carnê gerado: {diagnostico['total_contratos_carne_gerado']}")
 
         log(
             f"   🏢 Empresas com arquivos: {diagnostico['empresas_com_arquivos']}")
@@ -245,7 +245,7 @@ async def diagnosticar_arquivos_remessa() -> Dict[str, Any]:
                 log(
                     f"⚠️ Nenhum arquivo de remessa válido encontrado para empresa {MODO_TESTE_EMPRESA}")
             else:
-                log("⚠️ Nenhum arquivo de remessa válido encontrado")
+            log("⚠️ Nenhum arquivo de remessa válido encontrado")
             return diagnostico
 
         modo_texto = "MODO TESTE" if MODO_TESTE_EMPRESA else "MODO PRODUÇÃO"
@@ -288,35 +288,35 @@ async def processar_empresa_sicredi(
         # o primeiro arquivo de remessa é o que deve ser processado, porque é o mesmo arquivo agrupado por empresa
         arquivo_remessa = arquivos_remessa[0]
 
-        log(f"📁 Processando arquivo: {arquivo_remessa}")
+            log(f"📁 Processando arquivo: {arquivo_remessa}")
 
-        # Preparar parâmetros
-        parametros = {
-            "arquivo_remessa": arquivo_remessa,
-            "credenciais_sicredi": credenciais,
-            "dados_processamento": {
-                "empresa": empresa,
-                "contratos": contratos,
-                "arquivo": arquivo_remessa
+            # Preparar parâmetros
+            parametros = {
+                "arquivo_remessa": arquivo_remessa,
+                "credenciais_sicredi": credenciais,
+                "dados_processamento": {
+                    "empresa": empresa,
+                    "contratos": contratos,
+                    "arquivo": arquivo_remessa
+                }
             }
-        }
 
-        # Executar processamento
-        resultado = await rpa.executar(parametros)
+            # Executar processamento
+            resultado = await rpa.executar(parametros)
 
-        if resultado.sucesso:
-            sucessos += 1
-            log(f"✅ Arquivo processado com sucesso: {arquivo_remessa}")
-        else:
-            erros += 1
-            log(f"❌ Erro no arquivo: {arquivo_remessa} - {resultado.erro}")
+            if resultado.sucesso:
+                sucessos += 1
+                log(f"✅ Arquivo processado com sucesso: {arquivo_remessa}")
+            else:
+                erros += 1
+                log(f"❌ Erro no arquivo: {arquivo_remessa} - {resultado.erro}")
 
-        resultados_arquivos.append({
-            "arquivo": arquivo_remessa,
-            "sucesso": resultado.sucesso,
-            "mensagem": resultado.mensagem,
-            "erro": resultado.erro if not resultado.sucesso else None
-        })
+            resultados_arquivos.append({
+                "arquivo": arquivo_remessa,
+                "sucesso": resultado.sucesso,
+                "mensagem": resultado.mensagem,
+                "erro": resultado.erro if not resultado.sucesso else None
+            })
 
         await rpa.finalizar()
 
@@ -414,7 +414,7 @@ async def atualizar_status_contratos(empresa: str, contratos: List[Dict[str, Any
             try:
                 # Preparar dados de atualização
                 dados_atualizacao = {
-                    "status": novo_status,
+                            "status": novo_status,
                     "data_processamento_sicredi": datetime.now().isoformat(),
                     "empresa_processada": empresa,
                     "timestamp_ultima_atualizacao": datetime.now().isoformat()
@@ -436,7 +436,7 @@ async def atualizar_status_contratos(empresa: str, contratos: List[Dict[str, Any
                 else:
                     log(f"⚠️ Contrato {titulo} não encontrado ou não foi atualizado")
 
-            except Exception as e:
+    except Exception as e:
                 log(f"❌ Erro ao atualizar contrato {titulo}: {str(e)}")
                 import traceback
                 log(f"   Traceback: {traceback.format_exc()}")

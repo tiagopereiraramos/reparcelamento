@@ -107,7 +107,7 @@ class RPASicredi(BaseRPA):
 
             # Faz login no Sicredi WebBank
             await self._fazer_login_sicredi()
-            
+
             # Registrar login no rastreamento
             if self.rastreamento:
                 try:
@@ -599,8 +599,8 @@ class RPASicredi(BaseRPA):
             dados_existentes = []
             if os.path.exists(arquivo_dados):
                 try:
-                    with open(arquivo_dados, 'r', encoding='utf-8') as f:
-                        dados_existentes = json.load(f)
+                with open(arquivo_dados, 'r', encoding='utf-8') as f:
+                    dados_existentes = json.load(f)
                 except json.JSONDecodeError as e:
                     self.log_error(
                         f"❌ Arquivo JSON corrompido, criando novo: {str(e)}")

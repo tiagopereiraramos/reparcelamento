@@ -410,11 +410,11 @@ class RPAAnalisePlanilhas(BaseRPA):
 
             # Envia notificação de sucesso (opcional, preferimos centralizar no main)
             if parametros.get("notificar", False):
-                notificar_sucesso(
-                    nome_rpa="RPA Análise de Planilhas",
-                    tempo_execucao=f"{(datetime.now() - self.inicio_execucao).total_seconds():.2f}s",
-                    resultados=resultados_notificacao
-                )
+            notificar_sucesso(
+                nome_rpa="RPA Análise de Planilhas",
+                tempo_execucao=f"{(datetime.now() - self.inicio_execucao).total_seconds():.2f}s",
+                resultados=resultados_notificacao
+            )
 
             return ResultadoRPA(
                 sucesso=True,

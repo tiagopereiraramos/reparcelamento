@@ -21,8 +21,12 @@
     "python.linting.flake8Enabled": false,
     "python.formatting.provider": "black",
     "editor.formatOnSave": true,
-    "editor.rulers": [88],
+    "editor.rulers": [
+        88
+    ],
     "files.associations": {
         "*.py": "python"
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.pythonProjects": []
 }

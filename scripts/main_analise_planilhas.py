@@ -132,9 +132,9 @@ async def main():
                 }
             )
         else:
-            notificar_erro(
-                nome_rpa="RPA Análise de Planilhas",
-                erro=resultado.mensagem,
+        notificar_erro(
+            nome_rpa="RPA Análise de Planilhas",
+            erro=resultado.mensagem,
                 detalhes={
                     "titulo": "❌ RPA ANÁLISE DE PLANILHAS: Falhou",
                     "mensagem": resultado.erro or resultado.mensagem,

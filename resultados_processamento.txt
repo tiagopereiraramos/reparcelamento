@@ -1,18 +1,18 @@
 Resumo do processamento
 {
-  "duracao": "0:00:17.720824",
-  "timestamp": "2025-10-22 17:17:56",
-  "mes_base": "11/2025",
+  "duracao": "0:00:18.677991",
+  "timestamp": "2025-11-10 17:18:21",
+  "mes_base": "12/2025",
   "tipo_reajuste": null,
   "dia_aniversario": 1,
   "estatisticas": {
-    "arquivos_processados": 162,
-    "contratos_processados": 165,
-    "contratos_sucesso": 165,
-    "erros": 0,
-    "contratos_com_inadimplencia": 54,
+    "arquivos_processados": 271,
+    "contratos_processados": 110,
+    "contratos_sucesso": 109,
+    "erros": 2,
+    "contratos_com_inadimplencia": 30,
     "contratos_com_outras_pendencias": 0,
-    "contratos_anuais": 79,
-    "contratos_aniversario": 86
+    "contratos_anuais": 56,
+    "contratos_aniversario": 53
   }
 }

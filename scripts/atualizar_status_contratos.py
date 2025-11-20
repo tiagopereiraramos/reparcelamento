@@ -12,7 +12,6 @@ Uso:
     python scripts/atualizar_status_contratos.py --titulo 715 --status APROVACAO_REALIZADA
 """
 
-from core.status_enum import StatusContrato
 import argparse
 import json
 import os
@@ -22,7 +21,9 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 # Adicionar o diretório raiz ao path para importar módulos
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from core.status_enum import StatusContrato
 
 
 def carregar_fila_contratos(caminho_arquivo: str) -> List[dict]:
@@ -97,6 +98,28 @@ def encontrar_contratos_por_titulo(contratos: List[dict], titulos: List[str]) ->
     for contrato in contratos:
         titulo = str(contrato.get("Titulo", "")).strip()
         if titulo in titulos_str:
+            encontrados.append(contrato)
+
+    return encontrados
+
+
+def encontrar_contratos_por_status(contratos: List[dict], status_atual: StatusContrato) -> List[dict]:
+    """
+    Encontra contratos pelo status atual.
+
+    Args:
+        contratos: Lista de contratos
+        status_atual: Status atual dos contratos a buscar
+
+    Returns:
+        Lista de contratos encontrados
+    """
+    encontrados = []
+    status_str = status_atual.value
+
+    for contrato in contratos:
+        status_contrato = str(contrato.get("status", "")).strip()
+        if status_contrato == status_str:
             encontrados.append(contrato)
 
     return encontrados
@@ -182,6 +205,9 @@ Exemplos de uso:
   # Atualizar um único contrato
   python scripts/atualizar_status_contratos.py --codigo 657 --status PROCESSANDO
   
+  # Atualizar todos os contratos com status REPARCELADO para APROVACAO_REALIZADA
+  python scripts/atualizar_status_contratos.py --status-atual REPARCELADO --status APROVACAO_REALIZADA
+  
   # Listar status disponíveis
   python scripts/atualizar_status_contratos.py --listar-status
         """
@@ -209,6 +235,11 @@ Exemplos de uso:
         type=str,
         help="Números de título separados por vírgula (ex: 715,1234,5678)"
     )
+    grupo_busca.add_argument(
+        "--status-atual",
+        type=str,
+        help=f"Status atual dos contratos a atualizar (ex: REPARCELADO). Status válidos: {', '.join(StatusContrato.list_all())}"
+    )
 
     # Argumentos para status
     parser.add_argument(
@@ -235,6 +266,16 @@ Exemplos de uso:
         help="Lista todos os status disponíveis e sai"
     )
     parser.add_argument(
+        "--listar-diferentes",
+        type=str,
+        help="Lista todos os contratos que NÃO têm o status especificado (ex: --listar-diferentes REPARCELADO)"
+    )
+    parser.add_argument(
+        "--contar-por-status",
+        action="store_true",
+        help="Conta quantos contratos existem para cada status no arquivo"
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Mostra o que seria feito sem fazer as alterações"
@@ -254,9 +295,68 @@ Exemplos de uso:
             print(f"  - {status.value}")
         return
 
+    # Contar por status se solicitado
+    if args.contar_por_status:
+        try:
+            contratos = carregar_fila_contratos(args.arquivo)
+            from collections import Counter
+            status_count = Counter(contrato.get(
+                'status', 'SEM_STATUS') for contrato in contratos)
+
+            print(f"📊 Total de contratos: {len(contratos)}")
+            print(f"\n📋 Distribuição por status:")
+            for status, count in sorted(status_count.items()):
+                print(f"   {status}: {count}")
+            return
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+            sys.exit(1)
+
+    # Listar diferentes se solicitado
+    if args.listar_diferentes:
+        try:
+            status_excluido = StatusContrato.from_string(
+                args.listar_diferentes)
+            contratos = carregar_fila_contratos(args.arquivo)
+
+            # Filtrar contratos que NÃO têm o status especificado
+            contratos_diferentes = [
+                c for c in contratos
+                if str(c.get('status', '')).strip() != status_excluido.value
+            ]
+
+            print(f"📂 Carregando fila de contratos: {args.arquivo}")
+            print(f"✅ {len(contratos)} contratos carregados")
+            print(
+                f"\n🔍 Contratos com status DIFERENTE de '{status_excluido.value}': {len(contratos_diferentes)}")
+
+            if contratos_diferentes:
+                from collections import Counter
+                status_count = Counter(c.get('status', 'SEM_STATUS')
+                                       for c in contratos_diferentes)
+
+                print(f"\n📋 Distribuição dos status diferentes:")
+                for status, count in sorted(status_count.items()):
+                    print(f"   {status}: {count}")
+
+                print(f"\n📄 Lista completa de contratos:")
+                exibir_contratos_encontrados(contratos_diferentes)
+            else:
+                print(
+                    f"✅ Todos os contratos têm status '{status_excluido.value}'")
+
+            return
+        except ValueError as e:
+            print(f"❌ Erro: {e}")
+            print(f"Status válidos: {', '.join(StatusContrato.list_all())}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+            sys.exit(1)
+
     # Validar argumentos obrigatórios
-    if not any([args.codigo, args.codigos, args.titulo, args.titulos]):
-        print("❌ Erro: É necessário especificar --codigo, --codigos, --titulo ou --titulos")
+    if not any([args.codigo, args.codigos, args.titulo, args.titulos, args.status_atual]):
+        print("❌ Erro: É necessário especificar --codigo, --codigos, --titulo, --titulos ou --status-atual")
         parser.print_help()
         sys.exit(1)
 
@@ -305,6 +405,20 @@ Exemplos de uso:
             contratos_encontrados = encontrar_contratos_por_titulo(
                 contratos, titulos)
             print(f"🔍 Buscando por títulos: {', '.join(titulos)}")
+
+        elif args.status_atual:
+            try:
+                status_atual_enum = StatusContrato.from_string(
+                    args.status_atual)
+                contratos_encontrados = encontrar_contratos_por_status(
+                    contratos, status_atual_enum)
+                print(
+                    f"🔍 Buscando por status atual: {status_atual_enum.value}")
+            except ValueError as e:
+                print(f"❌ Erro: {e}")
+                print(
+                    f"Status válidos: {', '.join(StatusContrato.list_all())}")
+                sys.exit(1)
 
         # Exibir contratos encontrados
         exibir_contratos_encontrados(contratos_encontrados)

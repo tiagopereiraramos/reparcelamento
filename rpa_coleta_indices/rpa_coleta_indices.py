@@ -1064,29 +1064,29 @@ async def executar_coleta_indices(
 
         # Notificações automáticas opcionais (preferimos centralizar no main)
         if notificar:
-            if resultado.sucesso:
-                notificar_sucesso(
-                    "RPA Coleta de Índices",
-                    f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
-                    resultados=resultado.dados
-                )
-            else:
-                notificar_erro(
-                    "RPA Coleta de Índices",
-                    erro=resultado.mensagem,
-                    detalhes=resultado.erro or "Erro desconhecido"
-                )
+        if resultado.sucesso:
+            notificar_sucesso(
+                "RPA Coleta de Índices",
+                f"{resultado.tempo_execucao:.1f}s" if resultado.tempo_execucao else "N/A",
+                resultados=resultado.dados
+            )
+        else:
+            notificar_erro(
+                "RPA Coleta de Índices",
+                erro=resultado.mensagem,
+                detalhes=resultado.erro or "Erro desconhecido"
+            )
 
         return resultado
 
     except Exception as e:
         erro_msg = f"Erro crítico na execução: {str(e)}"
         if notificar:
-            notificar_erro(
-                "RPA Coleta de Índices",
-                erro=erro_msg,
-                detalhes=str(e)
-            )
+        notificar_erro(
+            "RPA Coleta de Índices",
+            erro=erro_msg,
+            detalhes=str(e)
+        )
         return ResultadoRPA(
             sucesso=False,
             mensagem=erro_msg,
