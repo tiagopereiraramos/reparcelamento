@@ -355,8 +355,11 @@ class RetroalimentadorUltimoReajuste:
             valor_gravar = validar_data(
                 self._configuracao.valor_ultimo_reajuste_lote)
         else:
-            # Usar a data do dia no formato DD/MM/AAAA quando não informada
-            valor_gravar = datetime.now().strftime("%d/%m/%Y")
+            # Usar o dia 1 do mês de reparcelamento quando não informada
+            # alvo_mm_aaaa já está no formato "MM/AAAA" (ex: "12/2025")
+            mm, aaaa = alvo_mm_aaaa.split("/")
+            data_reajuste = datetime(int(aaaa), int(mm), 1)
+            valor_gravar = data_reajuste.strftime("%d/%m/%Y")
 
         linhas_afetadas_indices: list[int] = []
         atualizacoes_batch: list[dict] = []

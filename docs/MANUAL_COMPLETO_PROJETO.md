@@ -2,10 +2,10 @@
 ## Sistema de Automação de Reparcelamento de Contratos
 
 **Cliente:** J M  
-**Versão:** 1.1  
-**Data:** Outubro 2025  
+**Versão:** 1.2  
+**Data:** Novembro 2025  
 **Baseado em:** PDD Original Reescrito (12/03/2025)  
-**Última atualização:** Outubro 2025 - Sistema de Auditoria Completa implementado
+**Última atualização:** Novembro 2025 - Revisão completa e atualização de documentação
 
 ---
 
@@ -60,11 +60,15 @@ O processo é executado **mensalmente** em duas etapas:
 ### 1.4 Tecnologias Utilizadas
 
 - **Python 3.11+** - Linguagem principal
-- **Selenium/ChromeDriver** - Automação web
-- **Google Sheets API** - Integração com planilhas
-- **MongoDB + JSON** - Persistência híbrida de dados
+- **Selenium 4.33+** - Automação web
+- **Undetected ChromeDriver** - Navegador anti-detecção
+- **Google Sheets API (gspread)** - Integração com planilhas
+- **MongoDB + JSON** - Persistência híbrida de dados (simultânea)
 - **Pandas/OpenPyXL** - Processamento de planilhas
 - **SendGrid** - Envio de e-mails
+- **uv** - Gerenciador de pacotes moderno (opcional, recomendado)
+- **JSONRPAFramework** - Framework transacional para JSON com WAL
+- **Structlog** - Logging estruturado
 
 ---
 
@@ -174,7 +178,22 @@ reparcelamento/
 │   ├── main_extracao_relatorio_sienge.py
 │   ├── main_reparcelamento_sienge.py
 │   ├── main_sienge_emissao_carnes.py
-│   └── main_sicredi.py
+│   ├── main_sicredi.py
+│   │
+│   ├── # Scripts de configuração e setup
+│   ├── verificar_pre_requisitos.py
+│   ├── setup_uv.py
+│   ├── setup_completo.py
+│   ├── instalar_dependencias.py
+│   ├── configurar_chrome_driver.py
+│   ├── configurar_ambiente.py
+│   ├── configurar_agendamento.py
+│   ├── validar_credenciais.py
+│   ├── testar_instalacao.py
+│   ├── testar_agendamento.py
+│   ├── executar_agendado.py
+│   ├── atualizar_status_contratos.py
+│   └── schedule_atualizar_ultimo_reajuste.py
 │
 ├── data/                        # Dados persistentes
 │   ├── fila_contratos.json      # Fila principal de contratos
@@ -197,21 +216,75 @@ reparcelamento/
 - Classe base para todos os RPAs
 - Gerencia logs, navegadores e tratamento de erros
 - Implementa padrões comuns de automação
+- Suporte a webhooks e logging avançado
+
+**BrowserManager** (`core/browser_manager.py`)
+- Gerenciamento unificado de navegadores (Chrome/Firefox)
+- Suporte a perfis personalizados
+- Detecção automática de drivers
 
 **RepositorioContratosArquivo** (`core/repositorio_contratos_arquivo.py`)
 - Gerencia persistência de contratos em JSON
-- Implementa transações atômicas
+- Implementa transações atômicas via JSONRPAFramework
 - Garante integridade dos dados
+
+**JSONRPAFramework** (`core/json_rpa_framework.py`)
+- Framework transacional para operações em JSON
+- Sistema WAL (Write-Ahead Logging) para recuperação
+- Índices automáticos para consultas rápidas
+- Suporte a concorrência com locks
 
 **RelatorioRPA** (`core/relatorio_rpa.py`)
 - Sistema unificado de relatórios
 - Gera relatórios JSON e TXT
 - Categoriza sucessos/erros
 
+**RelatorioSicredi** (`core/relatorio_sicredi.py`)
+- Relatórios especializados para processamento Sicredi
+- Métricas específicas de importação
+
 **NotificacoesSimples** (`core/notificacoes_simples.py`)
 - Envio de e-mails via SendGrid
 - Suporte a anexos
 - Templates de notificação
+
+**SistemaNotificacoes** (`core/sistema_notificacoes.py`)
+- Sistema avançado de notificações
+- Suporte a múltiplos canais (e-mail, Teams)
+- Priorização de notificações
+
+**RastreamentoUnificado** (`core/rastreamento_unificado.py`)
+- Sistema central de auditoria e rastreamento
+- Registro de todos os passos de execução
+- Persistência em MongoDB + JSON simultânea
+
+**ProcessadorRegrasPDD** (`core/processador_regras_pdd.py`)
+- Processador centralizado de regras de negócio
+- Implementação completa das regras PDD seção 9.1.1
+- Validação de inadimplência
+- Cálculos financeiros de reparcelamento
+
+**GeradorAnexos** (`core/gerador_anexos.py`)
+- Geração de anexos para e-mails
+- Suporte a múltiplos formatos (TXT, CSV, Excel)
+
+**TemplatesRelatorios** (`core/templates_relatorios.py`)
+- Templates HTML para relatórios
+- Formatação profissional de saídas
+
+**UtilsSienge** (`core/utils_sienge.py`)
+- Utilitários específicos para operações Sienge
+- Funções auxiliares de processamento
+
+**DataManager** (`core/data_manager.py`)
+- Gerenciador híbrido de dados (MongoDB + JSON)
+- Persistência simultânea garantida
+- Fallback automático
+
+**LoggerAvancado** (`core/logger_avancado.py`)
+- Sistema de logging estruturado
+- Suporte a webhooks
+- Rastreamento detalhado de execuções
 
 #### 3.2.2 RPAs Especializados
 
@@ -693,31 +766,66 @@ python scripts/main_sicredi.py
 
 #### Visão Técnica
 
-O sistema utiliza um enum de status definido em `core/status_enum.py`:
+O sistema possui **dois módulos de status** para compatibilidade e evolução:
+
+**1. StatusEnum** (`core/status_enum.py`)
+- Enum básico com status principais
+- Compatibilidade com código legado
+
+**2. StatusContratos** (`core/status_contratos.py`) - **RECOMENDADO**
+- Sistema completo com validações e transições
+- Descrições amigáveis
+- Fluxos definidos
+- Transições validadas
+
+**Status Disponíveis:**
 
 ```python
-class StatusContrato(Enum):
-    PENDENTE = "PENDENTE"
-    PROCESSANDO = "PROCESSANDO"
-    AGUARDANDO_APROVACAO = "AGUARDANDO_APROVACAO"
-    APROVACAO_REALIZADA = "APROVACAO_REALIZADA"
-    REPARCELADO = "REPARCELADO"
-    CARNE_GERADO = "CARNE_GERADO"
-    PROCESSADO_SICREDI = "PROCESSADO_SICREDI"
-    ERRO = "ERRO"
-    CANCELADO = "CANCELADO"
-    IGNORADO = "IGNORADO"
-    REJEITADO = "REJEITADO"
-    FINALIZADO = "FINALIZADO"
+# Status Principais
+PENDENTE = "PENDENTE"
+EXTRAIDO = "EXTRAIDO"
+PROCESSANDO = "PROCESSANDO"
+REPARCELADO = "REPARCELADO"
+CARNE_GERADO = "CARNE_GERADO"
+PROCESSADO = "PROCESSADO"  # (anteriormente PROCESSADO_SICREDI)
+ERRO = "ERRO"
+
+# Status de Aprovação
+AGUARDANDO_APROVACAO = "AGUARDANDO_APROVACAO"
+APROVACAO_REALIZADA = "APROVACAO_REALIZADA"
+APROVACAO_REJEITADA = "APROVACAO_REJEITADA"
+APROVACAO_EXPIRADA = "APROVACAO_EXPIRADA"
+
+# Status de Validação
+PENDENTE_VALIDACAO = "PENDENTE_VALIDACAO"
+VALIDACAO_APROVADA = "VALIDACAO_APROVADA"
+VALIDACAO_REJEITADA = "VALIDACAO_REJEITADA"
+
+# Status de Controle
+CANCELADO = "CANCELADO"
+IGNORADO = "IGNORADO"
+REJEITADO = "REJEITADO"
+FINALIZADO = "FINALIZADO"
 ```
 
-**Fluxo de status típico:**
+**Fluxo de status típico (com aprovação):**
 
 ```
-PENDENTE → PROCESSANDO → AGUARDANDO_APROVACAO → 
-APROVACAO_REALIZADA → REPARCELADO → CARNE_GERADO → 
-PROCESSADO_SICREDI → FINALIZADO
+PENDENTE → EXTRAIDO → REPARCELADO → AGUARDANDO_APROVACAO → 
+APROVACAO_REALIZADA → CARNE_GERADO → PROCESSADO → FINALIZADO
 ```
+
+**Fluxo de status direto (sem aprovação):**
+
+```
+PENDENTE → EXTRAIDO → REPARCELADO → CARNE_GERADO → 
+PROCESSADO → FINALIZADO
+```
+
+**Validação de Transições:**
+- O sistema valida transições entre status
+- Use `StatusTransicoes.pode_transicionar()` para verificar
+- Transições inválidas são bloqueadas
 
 ### 6.2 Repositório de Contratos
 
@@ -726,12 +834,16 @@ PROCESSADO_SICREDI → FINALIZADO
 #### Visão Técnica
 
 **Funcionalidades:**
-- Persistência em JSON com transações atômicas
+- Persistência em JSON com transações atômicas via `JSONRPAFramework`
+- Sistema WAL (Write-Ahead Logging) para recuperação de falhas
+- Índices automáticos para consultas rápidas
+- Suporte a concorrência com locks de arquivo
 - Métodos principais:
-  - `find()` - Busca contratos
-  - `update()` - Atualiza contrato
+  - `find()` - Busca contratos (com suporte a índices)
+  - `update()` - Atualiza contrato (transacional)
   - `insert()` - Insere novo contrato
   - `delete()` - Remove contrato
+  - `find_all()` - Lista todos os contratos
 
 **Estrutura de dados:**
 
@@ -815,20 +927,50 @@ git clone <repositorio>
 cd reparcelamento
 ```
 
-**2. Crie ambiente virtual:**
+**2. Setup Automático (Recomendado):**
 ```bash
+python scripts/setup_completo.py
+```
+
+Este script executa automaticamente:
+- Verificação de pré-requisitos
+- Instalação do `uv` (gerenciador de pacotes moderno)
+- Instalação de dependências
+- Configuração do ChromeDriver
+
+**3. Instalação Manual (Alternativa):**
+
+**Opção A - Usando uv (Recomendado):**
+```bash
+# Instalar uv
+python scripts/setup_uv.py
+
+# Instalar dependências
+uv pip install -r requirements.txt
+```
+
+**Opção B - Usando pip tradicional:**
+```bash
+# Criar ambiente virtual
 python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 # ou
 .venv\Scripts\activate  # Windows
-```
 
-**3. Instale dependências:**
-```bash
+# Instalar dependências
 pip install -r requirements.txt
 ```
 
+**Nota:** O projeto utiliza `pyproject.toml` para definição de dependências. O `requirements.txt` é mantido para compatibilidade.
+
 **4. Configure variáveis de ambiente:**
+
+**Opção A - Configuração Interativa (Recomendado):**
+```bash
+python scripts/configurar_ambiente.py
+```
+
+**Opção B - Configuração Manual:**
 
 Crie arquivo `.env` na raiz do projeto:
 
@@ -886,9 +1028,25 @@ credentials/gspread-459713-aab8a657f9b0.json
 
 ### 7.4 Teste de Instalação
 
-**Teste básico:**
+**Teste completo automatizado:**
+```bash
+python scripts/testar_instalacao.py
+```
+
+Este script verifica:
+- Pré-requisitos do sistema
+- Instalação de dependências
+- Configuração de credenciais
+- Executabilidade dos scripts principais
+
+**Teste básico manual:**
 ```bash
 python scripts/main_coleta_indices.py --teste
+```
+
+**Validar credenciais:**
+```bash
+python scripts/validar_credenciais.py
 ```
 
 **Verificar logs:**
@@ -943,7 +1101,9 @@ ls -la logs/
 └──────────────┘
 ```
 
-### 8.2 Status de Erro
+**Nota:** O status `PROCESSADO_SICREDI` foi renomeado para `PROCESSADO` no sistema atual. O código mantém compatibilidade com ambos.
+
+### 8.2 Status de Erro e Controle
 
 ```
 ┌─────────────┐
@@ -961,6 +1121,26 @@ ls -la logs/
 ┌─────────────┐
 │  REJEITADO  │ ← Rejeitado na análise
 └─────────────┘
+
+**Status de Aprovação:**
+```
+┌──────────────────────┐
+│ AGUARDANDO_APROVACAO │ ← Aguardando autorização
+└──────┬───────────────┘
+       │
+       ├─> APROVACAO_REALIZADA → Continua fluxo
+       ├─> APROVACAO_REJEITADA → Finaliza com erro
+       └─> APROVACAO_EXPIRADA → Finaliza com erro
+```
+
+**Status de Validação:**
+```
+┌──────────────────┐
+│ PENDENTE_VALIDACAO │ ← Aguardando validação
+└──────┬────────────┘
+       │
+       ├─> VALIDACAO_APROVADA → Continua fluxo
+       └─> VALIDACAO_REJEITADA → Finaliza com erro
 ```
 
 ### 8.3 Consulta de Status
@@ -968,13 +1148,28 @@ ls -la logs/
 **Via código:**
 ```python
 from core.repositorio_contratos_arquivo import repositorio_contratos_arquivo
+from core.status_contratos import StatusContrato, StatusFiltros
 
-contratos = repositorio_contratos_arquivo.framework.find({"status": "PENDENTE"})
+# Busca simples
+contratos = repositorio_contratos_arquivo.framework.find({"status": StatusContrato.PENDENTE})
+
+# Usando filtros úteis
+contratos_ativos = repositorio_contratos_arquivo.framework.find_all()
+ativos = [c for c in contratos_ativos if c.get('status') in StatusFiltros.contratos_ativos()]
+
+# Validar transição de status
+from core.status_contratos import StatusTransicoes
+pode_transicionar = StatusTransicoes.pode_transicionar("PENDENTE", "EXTRAIDO")
 ```
 
 **Via arquivo JSON:**
 ```bash
 cat data/fila_contratos.json | jq '.[] | select(.status == "PENDENTE")'
+```
+
+**Via script utilitário:**
+```bash
+python scripts/atualizar_status_contratos.py --listar --status PENDENTE
 ```
 
 ---
@@ -1482,12 +1677,23 @@ cat dados_processamento/auditoria_completa/CONSOLIDADO_RPA_Sienge_20250830_08503
 - ✅ Validação de inadimplência (60 dias)
 - ✅ Nomenclatura de arquivos de remessa
 - ✅ Processo completo de autorização via planilha Google Sheets
+- ✅ Processador centralizado de regras PDD (`core/processador_regras_pdd.py`)
 
 **Sistema de Auditoria:**
 - ✅ Todos os 7 RPAs principais registram auditoria completa
-- ✅ Rastreamento de cada passo de execução
+- ✅ Rastreamento de cada passo de execução via `RastreamentoUnificado`
+- ✅ Persistência simultânea MongoDB + JSON (fallback garantido)
 - ✅ Histórico imutável para compliance
 - ✅ Ferramenta poderosa para debugging e análise de performance
+
+**Melhorias Técnicas Implementadas:**
+- ✅ Framework transacional JSON com WAL (`JSONRPAFramework`)
+- ✅ Sistema híbrido de dados (MongoDB + JSON simultâneo)
+- ✅ Gerenciamento avançado de navegadores com suporte a perfis
+- ✅ Sistema de notificações multi-canal
+- ✅ Logging estruturado com webhooks
+- ✅ Validação de transições de status
+- ✅ Scripts automatizados de setup e configuração
 
 ---
 
@@ -1509,7 +1715,8 @@ cat dados_processamento/auditoria_completa/CONSOLIDADO_RPA_Sienge_20250830_08503
 
 **Fim do Manual**
 
-*Documento gerado em: Outubro 2025*  
-*Versão: 1.0*  
-*Baseado em: PDD Original Reescrito (12/03/2025)*
+*Documento gerado em: Novembro 2025*  
+*Versão: 1.2*  
+*Baseado em: PDD Original Reescrito (12/03/2025)*  
+*Última revisão: Novembro 2025*
 

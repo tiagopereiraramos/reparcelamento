@@ -1,32 +1,33 @@
 {
-    "python.defaultInterpreterPath": "python3",
-    "python.terminal.activateEnvironment": false,
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}",
-        "${workspaceFolder}/core",
-        "${workspaceFolder}/rpa_sicredi",
-        "${workspaceFolder}/rpa_sienge"
-    ],
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.typeCheckingMode": "basic",
-    "files.exclude": {
-        "**/__pycache__": true,
-        "**/*.pyc": true,
-        "**/.pytest_cache": true
-    },
-    "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": false,
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": false,
-    "python.formatting.provider": "black",
-    "editor.formatOnSave": true,
-    "editor.rulers": [
-        88
-    ],
-    "files.associations": {
-        "*.py": "python"
-    },
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
-    "python-envs.pythonProjects": []
+  "python.defaultInterpreterPath": "python3",
+  "python.terminal.activateEnvironment": false,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/core",
+    "${workspaceFolder}/rpa_sicredi",
+    "${workspaceFolder}/rpa_sienge"
+  ],
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true
+  },
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": false,
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": false,
+  "python.formatting.provider": "black",
+  "editor.formatOnSave": true,
+  "editor.rulers": [
+    88
+  ],
+  "files.associations": {
+    "*.py": "python"
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.pythonProjects": [],
+  "terminal.integrated.cwd": "${workspaceFolder}"
 }
